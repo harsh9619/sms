@@ -1,0 +1,25 @@
+{
+  "name": "school-server",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node --loader ts-node/esm --no-warnings --enable-source-maps src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.json",
+    "db:init": "node --loader ts-node/esm --no-warnings --enable-source-maps src/initDb.ts"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "~5.6.2",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.6.2",
+    "@types/pg": "^8.11.2"
+  }
+}
