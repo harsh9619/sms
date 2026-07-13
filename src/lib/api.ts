@@ -3,15 +3,19 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   const headers = {
     "Content-Type": "application/json",
     ...options.headers,
-    ...(schoolId ? { "X-School-Id": schoolId } : {}),
   } as Record<string, string>;
 
   // Clean up content-type for non-json requests if they occur
   if (options.body instanceof FormData) {
     delete headers["Content-Type"];
   }
-  debugger;
-  return fetch(url, {
+
+  let finalUrl = url;
+  if (schoolId && finalUrl.startsWith('/api/') && !finalUrl.startsWith('/api/schools')) {
+    finalUrl = finalUrl.replace(/^\/api\//, `/api/${schoolId}/`);
+  }
+
+  return fetch(finalUrl, {
     ...options,
     headers,
   });
