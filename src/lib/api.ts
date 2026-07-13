@@ -10,7 +10,7 @@ async function apiFetch(url: string, options: RequestInit = {}) {
   if (options.body instanceof FormData) {
     delete headers["Content-Type"];
   }
-debugger;
+  debugger;
   return fetch(url, {
     ...options,
     headers,
@@ -275,6 +275,33 @@ export async function updateMarks(id: string, m: any) {
 export async function deleteMarks(id: string) {
   const res = await apiFetch(`/api/marks/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete marks');
+  return res.json();
+}
+
+export async function createStudent(student: any) {
+  const res = await apiFetch('/api/students', { method: 'POST', body: JSON.stringify(student) });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to create student');
+  }
+  return res.json();
+}
+
+export async function updateStudent(id: string, student: any) {
+  const res = await apiFetch(`/api/students/${id}`, { method: 'PUT', body: JSON.stringify(student) });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to update student');
+  }
+  return res.json();
+}
+
+export async function deleteStudent(id: string) {
+  const res = await apiFetch(`/api/students/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to delete student');
+  }
   return res.json();
 }
 
