@@ -1,7 +1,16 @@
+import type { User } from "../types";
+
+export interface LoginResponse {
+  token: string;
+  user: User;
+}
+
 async function apiFetch(url: string, options: RequestInit = {}) {
   const schoolId = localStorage.getItem("sms_active_school_id");
+  const token = localStorage.getItem("sms_token");
   const headers = {
     "Content-Type": "application/json",
+    Authorization: token ? `Bearer ${token}` : undefined,
     ...options.headers,
   } as Record<string, string>;
 
@@ -19,6 +28,31 @@ async function apiFetch(url: string, options: RequestInit = {}) {
     ...options,
     headers,
   });
+}
+
+export async function loginUser(email: string, password: string) {
+  const res = await apiFetch('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (!res.ok) {
+    debugger;
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Invalid email or password');
+  }
+
+  return res.json() as Promise<LoginResponse>;
+}
+
+export async function fetchCurrentUser() {
+  const res = await apiFetch('/auth/me');
+  if (!res.ok) {
+    throw new Error('Failed to fetch current user');
+  }
+
+  const data = await res.json();
+  return data.user as User;
 }
 
 export async function fetchSchools() {
