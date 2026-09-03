@@ -682,3 +682,40 @@ GRANT ALL ON TABLE public.salary_records TO postgres;
 
 GRANT ALL ON SCHEMA public TO pg_database_owner;
 GRANT USAGE ON SCHEMA public TO public;
+
+-- public.academic_years definition
+
+-- Drop table
+
+-- DROP TABLE public.academic_years;
+
+CREATE SEQUENCE IF NOT EXISTS public.academic_years_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+
+ALTER SEQUENCE public.academic_years_id_seq OWNER TO postgres;
+GRANT ALL ON SEQUENCE public.academic_years_id_seq TO postgres;
+
+CREATE TABLE public.academic_years (
+	id int4 GENERATED ALWAYS AS IDENTITY( INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START 1 CACHE 1 NO CYCLE) NOT NULL,
+	school_id int4 NOT NULL,
+	label varchar(20) NOT NULL,
+	start_date date NOT NULL,
+	end_date date NOT NULL,
+	is_current bool DEFAULT false NOT NULL,
+	created_at timestamptz DEFAULT now() NULL,
+	updated_at timestamptz DEFAULT now() NULL,
+	CONSTRAINT academic_years_pkey PRIMARY KEY (id),
+	CONSTRAINT academic_years_school_id_label_key UNIQUE (school_id, label),
+	CONSTRAINT academic_years_school_id_fkey FOREIGN KEY (school_id) REFERENCES public.schools(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_academic_years_school ON public.academic_years USING btree (school_id);
+
+-- Permissions
+
+ALTER TABLE public.academic_years OWNER TO postgres;
+GRANT ALL ON TABLE public.academic_years TO postgres;

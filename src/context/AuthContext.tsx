@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { User, UserRole } from "../types";
-import { fetchUsers, fetchAllUsers, loginUser, fetchCurrentUser } from "../lib/api";
-
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import {
+  loginRequest,
+  fetchCurrentUserRequest,
+  fetchAllUsersRequest,
+  setSimulatedRole as setSimulatedRoleAction,
+  logout as logoutAction,
+} from "../store/slices/authSlice";
+import { fetchUsersRequest } from "../store/slices/usersSlice";
 
 interface AuthContextType {
   user: User | null;
@@ -17,20 +24,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem("sms_user");
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("sms_token");
-  });
-
-  const [simulatedRole, setSimulatedRoleState] = useState<UserRole | null>(() => {
-    return (localStorage.getItem("sms_simulated_role") as UserRole) || null;
-  });
-
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const dispatch = useAppDispatch();
+  const { user, token, simulatedRole, allUsers, error: authError } = useAppSelector((state) => state.auth);
 
   const [activeSchoolId, setActiveSchoolId] = useState<string | null>(() => {
     return localStorage.getItem("sms_active_school_id");
@@ -47,73 +42,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Fetch all users to map role switcher profiles if user is admin
+  // Fetch all users via Redux Saga if user is admin
   useEffect(() => {
     if (user && user.role === "admin") {
-      fetchAllUsers()
-        .then((data) => setAllUsers(data))
-        .catch((err) => console.error("AuthContext: fetchAllUsers failed", err));
-    } else {
-      setAllUsers([]);
+      dispatch(fetchAllUsersRequest());
     }
-  }, [user]);
+  }, [user, dispatch]);
 
-  // Prefetch users from API to enable server-side auth simulation
+  // Prefetch users via Redux Saga to enable server-side auth simulation
   useEffect(() => {
-    fetchUsers().catch(() => { });
-  }, []);
+    dispatch(fetchUsersRequest());
+  }, [dispatch]);
 
+  // Fetch current user via Redux Saga if token exists but user state is empty
   useEffect(() => {
-    if (!token || user) return;
+    if (token && !user) {
+      dispatch(fetchCurrentUserRequest());
+    }
+  }, [token, user, dispatch]);
 
-    fetchCurrentUser()
-      .then((currentUser) => {
-        setUser(currentUser);
-        localStorage.setItem("sms_user", JSON.stringify(currentUser));
-      })
-      .catch((err) => {
-        console.error("AuthContext: fetchCurrentUser failed", err);
-        localStorage.removeItem("sms_token");
-        setToken(null);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      dispatch(loginRequest({ email, password }));
+      // Return a promise that resolves based on Redux state outcome
+      return new Promise<{ success: boolean; error?: string }>((resolve) => {
+        const checkInterval = setInterval(() => {
+          const currentToken = localStorage.getItem("sms_token");
+          if (currentToken) {
+            clearInterval(checkInterval);
+            resolve({ success: true });
+          } else {
+            const err = localStorage.getItem("sms_auth_error");
+            if (err) {
+              clearInterval(checkInterval);
+              localStorage.removeItem("sms_auth_error");
+              resolve({ success: false, error: err });
+            }
+          }
+        }, 100);
+        // Timeout safeguard
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          if (localStorage.getItem("sms_token")) {
+            resolve({ success: true });
+          } else {
+            resolve({ success: false, error: authError || "Login request timed out" });
+          }
+        }, 2500);
       });
-  }, [token, user]);
+    },
+    [dispatch, authError]
+  );
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      debugger;
-      const auth = await loginUser(email, password);
-      setToken(auth.token);
-      setUser(auth.user);
-      localStorage.setItem("sms_token", auth.token);
-      localStorage.setItem("sms_user", JSON.stringify(auth.user));
-      return { success: true };
-    } catch (err) {
-      console.error("Auth: loginUser failed", err);
-      if (err instanceof Error) {
-        return { success: false, error: err.message };
-      }
-      return { success: false, error: "Invalid email or password" };
-    }
-  }, []);
-
-  const setSimulatedRole = useCallback((role: UserRole | null) => {
-    setSimulatedRoleState(role);
-    if (role) {
-      localStorage.setItem("sms_simulated_role", role);
-    } else {
-      localStorage.removeItem("sms_simulated_role");
-    }
-  }, []);
+  const setSimulatedRole = useCallback(
+    (role: UserRole | null) => {
+      dispatch(setSimulatedRoleAction(role));
+    },
+    [dispatch]
+  );
 
   const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    setSimulatedRoleState(null);
-    localStorage.removeItem("sms_user");
-    localStorage.removeItem("sms_token");
-    localStorage.removeItem("sms_simulated_role");
-    localStorage.removeItem("sms_active_school_id");
-  }, []);
+    dispatch(logoutAction());
+  }, [dispatch]);
 
   const getDemoCredentials = useCallback(() => {
     return [
@@ -131,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const matched = allUsers.find(
-      (u) => u.role === simulatedRole && u.schoolIds && u.schoolIds.includes(activeSchoolId)
+      (u) => u.role === simulatedRole && u.schoolIds && u.schoolIds.includes(activeSchoolId || "")
     );
 
     if (matched) {

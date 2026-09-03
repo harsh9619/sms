@@ -96,9 +96,8 @@ export function DashboardLayout({ children }: SidebarProps) {
     <div className="flex h-screen overflow-hidden animate-fade-in">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 ${
-          sidebarOpen ? "w-64" : "w-20"
-        } lg:relative`}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar transition-all duration-300 ${sidebarOpen ? "w-64" : "w-20"
+          } lg:relative`}
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-white/10 flex-shrink-0">
@@ -133,9 +132,8 @@ export function DashboardLayout({ children }: SidebarProps) {
         {/* User Profile */}
         <div className="p-3 border-t border-white/10 flex-shrink-0">
           <div
-            className={`flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors ${
-              !sidebarOpen ? "justify-center" : ""
-            }`}
+            className={`flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors ${!sidebarOpen ? "justify-center" : ""
+              }`}
             onClick={() => setShowProfileMenu(!showProfileMenu)}
           >
             <Avatar size="sm">
@@ -183,9 +181,8 @@ export function DashboardLayout({ children }: SidebarProps) {
               <div className="relative mr-2">
                 <button
                   onClick={() => canSwitchSchools && setShowSchoolDropdown(!showSchoolDropdown)}
-                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-border bg-gradient-to-b from-background to-muted/20 hover:from-accent/50 hover:to-accent transition-all duration-200 ${
-                    canSwitchSchools ? "cursor-pointer" : "cursor-default"
-                  }`}
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-border bg-gradient-to-b from-background to-muted/20 hover:from-accent/50 hover:to-accent transition-all duration-200 ${canSwitchSchools ? "cursor-pointer" : "cursor-default"
+                    }`}
                 >
                   <div className="h-6 w-6 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center text-[10px] font-bold shadow-inner">
                     {activeSchool.name.substring(0, 2).toUpperCase()}
@@ -221,11 +218,10 @@ export function DashboardLayout({ children }: SidebarProps) {
                             setActiveSchool(s);
                             setShowSchoolDropdown(false);
                           }}
-                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-3.5 ${
-                            activeSchool.id === s.id
+                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-3.5 ${activeSchool.id === s.id
                               ? "bg-primary/10 text-primary font-semibold"
                               : "text-foreground/80 hover:bg-muted hover:text-foreground"
-                          }`}
+                            }`}
                         >
                           <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center text-[10px] font-bold border border-border flex-shrink-0">
                             {s.name.substring(0, 2).toUpperCase()}
@@ -249,14 +245,13 @@ export function DashboardLayout({ children }: SidebarProps) {
                   onClick={() => setShowRoleDropdown(!showRoleDropdown)}
                   className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl border border-border bg-gradient-to-b from-background to-muted/20 hover:from-accent/50 hover:to-accent transition-all duration-200 cursor-pointer"
                 >
-                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center shadow-inner ${
-                    user?.role === "admin" ? "bg-red-500/10 border border-red-500/20 text-red-500" :
-                    user?.role === "teacher" ? "bg-blue-500/10 border border-blue-500/20 text-blue-500" :
-                    "bg-green-500/10 border border-green-500/20 text-green-500"
-                  }`}>
+                  <div className={`h-6 w-6 rounded-lg flex items-center justify-center shadow-inner ${user?.role === "admin" ? "bg-red-500/10 border border-red-500/20 text-red-500" :
+                      user?.role === "teacher" ? "bg-blue-500/10 border border-blue-500/20 text-blue-500" :
+                        "bg-green-500/10 border border-green-500/20 text-green-500"
+                    }`}>
                     {user?.role === "admin" ? <Shield className="h-3.5 w-3.5" /> :
-                     user?.role === "teacher" ? <BookOpen className="h-3.5 w-3.5" /> :
-                     <GraduationCap className="h-3.5 w-3.5" />}
+                      user?.role === "teacher" ? <BookOpen className="h-3.5 w-3.5" /> :
+                        <GraduationCap className="h-3.5 w-3.5" />}
                   </div>
                   <div className="text-left hidden md:block">
                     <p className="text-[9px] text-muted-foreground leading-tight">View Mode</p>
@@ -281,11 +276,10 @@ export function DashboardLayout({ children }: SidebarProps) {
                         <button
                           key={item.role}
                           onClick={() => handleRoleChange(item.role as UserRole)}
-                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2.5 ${
-                            user?.role === item.role
+                          className={`w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2.5 ${user?.role === item.role
                               ? "bg-primary/10 text-primary font-semibold"
                               : "text-foreground/80 hover:bg-muted hover:text-foreground"
-                          }`}
+                            }`}
                         >
                           <item.icon className="h-4 w-4" />
                           <span className="font-medium">{item.label}</span>
@@ -318,9 +312,8 @@ export function DashboardLayout({ children }: SidebarProps) {
                           setTheme(t.name);
                           setShowThemePicker(false);
                         }}
-                        className={`h-8 w-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
-                          theme === t.name ? "border-foreground scale-110 ring-2 ring-offset-2 ring-offset-card ring-foreground/20" : "border-transparent"
-                        }`}
+                        className={`h-8 w-8 rounded-full border-2 transition-all duration-200 hover:scale-110 ${theme === t.name ? "border-foreground scale-110 ring-2 ring-offset-2 ring-offset-card ring-foreground/20" : "border-transparent"
+                          }`}
                         style={{ backgroundColor: t.color }}
                         title={t.label}
                       />

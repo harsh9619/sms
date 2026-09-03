@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { fetchSchools } from "../lib/api";
 import { useAuth } from "./AuthContext";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { fetchSchoolsRequest, setActiveSchool as setActiveSchoolAction } from "../store/slices/schoolSlice";
 
 export interface School {
   id: string;
@@ -23,23 +24,14 @@ interface SchoolContextType {
 const SchoolContext = createContext<SchoolContextType | undefined>(undefined);
 
 export function SchoolProvider({ children }: { children: ReactNode }) {
+  const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAuth();
-  const [allSchools, setAllSchools] = useState<School[]>([]);
-  const [activeSchool, setActiveSchoolState] = useState<School | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { schools: allSchools, activeSchool, loading } = useAppSelector((state) => state.school);
 
-  // Fetch all schools from backend
+  // Trigger school fetch via Redux Saga
   const refetchSchools = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await fetchSchools();
-      setAllSchools(data);
-    } catch (err) {
-      console.error("SchoolContext: fetchSchools failed", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    dispatch(fetchSchoolsRequest());
+  }, [dispatch]);
 
   // Fetch schools on initial mount
   useEffect(() => {
@@ -60,7 +52,6 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     }
     
     // Non-admins (teachers/students) must be restricted to their explicit schools.
-    // If none are specified, they fallback safely to only the first school in the system to prevent unauthorized access.
     if (userSchoolIds.length === 0) {
       return allSchools.slice(0, 1);
     }
@@ -68,28 +59,27 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     return allSchools.filter((school) => userSchoolIds.includes(school.id));
   }, [allSchools, user, isAuthenticated]);
 
-  // Handle setting active school and syncing with localStorage
-  const setActiveSchool = useCallback((schoolInput: School | string) => {
-    let selected: School | null = null;
-    if (typeof schoolInput === "string") {
-      selected = allSchools.find((s) => s.id === schoolInput) || null;
-    } else {
-      selected = schoolInput;
-    }
+  // Handle setting active school and dispatching to Redux store
+  const setActiveSchool = useCallback(
+    (schoolInput: School | string) => {
+      let selected: School | null = null;
+      if (typeof schoolInput === "string") {
+        selected = allSchools.find((s) => s.id === schoolInput) || null;
+      } else {
+        selected = schoolInput;
+      }
 
-    if (selected) {
-      setActiveSchoolState(selected);
-      localStorage.setItem("sms_active_school_id", selected.id);
-      window.dispatchEvent(new Event("sms_active_school_changed"));
-    }
-  }, [allSchools]);
+      if (selected) {
+        dispatch(setActiveSchoolAction(selected));
+      }
+    },
+    [allSchools, dispatch]
+  );
 
   // Sync active school when user logs in or list of user schools changes
   useEffect(() => {
     if (!isAuthenticated || userSchools.length === 0) {
-      setActiveSchoolState(null);
-      localStorage.removeItem("sms_active_school_id");
-      window.dispatchEvent(new Event("sms_active_school_changed"));
+      dispatch(setActiveSchoolAction(null));
       return;
     }
 
@@ -97,23 +87,13 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     const matchedSaved = userSchools.find((s) => s.id === savedId);
 
     if (matchedSaved) {
-      setActiveSchoolState(matchedSaved);
-      window.dispatchEvent(new Event("sms_active_school_changed"));
+      dispatch(setActiveSchoolAction(matchedSaved));
     } else if (userSchools.length === 1) {
-      // Default to the single accessible school
-      const defaultSchool = userSchools[0];
-      setActiveSchoolState(defaultSchool);
-      localStorage.setItem("sms_active_school_id", defaultSchool.id);
-      window.dispatchEvent(new Event("sms_active_school_changed"));
+      dispatch(setActiveSchoolAction(userSchools[0]));
     } else {
-      // If there are multiple schools and no saved choice, default to the first one
-      const defaultSchool = userSchools[0];
-      setActiveSchoolState(defaultSchool);
-      localStorage.setItem("sms_active_school_id", defaultSchool.id);
-      window.dispatchEvent(new Event("sms_active_school_changed"));
+      dispatch(setActiveSchoolAction(userSchools[0]));
     }
-
-  }, [isAuthenticated, userSchools]);
+  }, [isAuthenticated, userSchools, dispatch]);
 
   return (
     <SchoolContext.Provider
