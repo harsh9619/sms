@@ -31,6 +31,7 @@ import {
   CreditCard,
   Coins,
   Shield,
+  PlusCircle,
 } from "lucide-react";
 import type { UserRole } from "../../types";
 
@@ -129,6 +130,7 @@ export function DashboardLayout({ children }: SidebarProps) {
     { path: "/my-salary", icon: Coins, label: "Salary", roles: ["teacher"] },
     { path: "/reports/attendance", icon: BarChart3, label: "Reports", roles: ["admin", "teacher"] },
     { path: "/reports/fee-salary", icon: DollarSign, label: "Finance", roles: ["admin"] },
+    { path: "/schools/create", icon: PlusCircle, label: "New School", roles: ["admin"] },
     { path: "/settings", icon: Settings, label: "Settings", roles: ["admin"] },
   ];
 

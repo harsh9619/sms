@@ -6,7 +6,12 @@ const initialState: SchoolState = {
   activeSchool: null,
   loading: false,
   error: null,
+  creating: false,
+  createError: null,
+  updating: false,
+  updateError: null,
 };
+
 
 export function schoolReducer(state: SchoolState = initialState, action: any): SchoolState {
   switch (action.type) {
@@ -29,7 +34,36 @@ export function schoolReducer(state: SchoolState = initialState, action: any): S
       }
       return { ...state, activeSchool: action.payload };
 
+    case types.CREATE_SCHOOL_REQUEST:
+      return { ...state, creating: true, createError: null };
+
+    case types.CREATE_SCHOOL_SUCCESS:
+      return { ...state, creating: false, schools: [...state.schools, action.payload] };
+
+    case types.CREATE_SCHOOL_FAILURE:
+      return { ...state, creating: false, createError: action.payload };
+
+    case types.UPDATE_SCHOOL_REQUEST:
+      return { ...state, updating: true, updateError: null };
+
+    case types.UPDATE_SCHOOL_SUCCESS:
+      return {
+        ...state,
+        updating: false,
+        schools: state.schools.map((s) =>
+          s.id === action.payload.id ? { ...s, ...action.payload } : s
+        ),
+        activeSchool:
+          state.activeSchool?.id === action.payload.id
+            ? { ...state.activeSchool, ...action.payload }
+            : state.activeSchool,
+      };
+
+    case types.UPDATE_SCHOOL_FAILURE:
+      return { ...state, updating: false, updateError: action.payload };
+
     default:
       return state;
   }
 }
+

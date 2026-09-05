@@ -36,10 +36,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setMode(mode === "light" ? "dark" : "light");
   }, [mode, setMode]);
 
-  // Sync theme when active school changes
+  // Sync theme when active school changes or when activeSchool is null
   useEffect(() => {
     if (activeSchool && activeSchool.theme) {
       setThemeState(activeSchool.theme as ThemeName);
+    } else if (!activeSchool) {
+      setThemeState("default");
+      localStorage.setItem("sms_theme", "default");
     }
   }, [activeSchool]);
 

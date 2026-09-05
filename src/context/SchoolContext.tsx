@@ -21,6 +21,8 @@ export interface School {
   email?: string;
   type?: string;
   theme?: string;
+  appearanceMode?: string;
+  logoUrl?: string;
   isActive?: boolean;
   subscription?: string;
   maxStudents?: number;

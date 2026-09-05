@@ -22,6 +22,7 @@ import { MarksPage } from "./pages/Marks/MarksPage";
 import { MyFeesPage } from "./pages/Fees/MyFeesPage";
 import { MySalaryPage } from "./pages/Salary/MySalaryPage";
 import { UsersPage } from "./pages/Users/UsersPage";
+import { CreateSchoolPage } from "./pages/Schools/CreateSchoolPage";
 import "./index.css";
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
@@ -185,6 +186,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["teacher"]}>
             <MySalaryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/school/:schoolId/schools/create"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <CreateSchoolPage />
           </ProtectedRoute>
         }
       />

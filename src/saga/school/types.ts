@@ -5,4 +5,9 @@ export interface SchoolState {
   activeSchool: School | null;
   loading: boolean;
   error: string | null;
+  creating: boolean;
+  createError: string | null;
+  updating: boolean;
+  updateError: string | null;
 }
+

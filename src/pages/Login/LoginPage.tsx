@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
+import { useTheme } from "../../context/ThemeContext";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/Card";
@@ -16,10 +17,17 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const { login, getDemoCredentials, logout, isAuthenticated } = useAuth();
   const { schools, setActiveSchool } = useSchool();
+  const { setTheme } = useTheme();
   const [showSchoolSelect, setShowSchoolSelect] = useState(false);
   const [justLoggedIn, setJustLoggedIn] = useState(false);
   const [selectedSchoolId, setSelectedSchoolId] = useState("");
   const navigate = useNavigate();
+
+  // Reset theme to default on login page
+  React.useEffect(() => {
+    setTheme("default");
+    localStorage.setItem("sms_theme", "default");
+  }, [setTheme]);
 
   // Monitor user login state and schools list to decide whether to show school selector
   React.useEffect(() => {
