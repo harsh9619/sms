@@ -1,6 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchHomework, createHomework, updateHomework, deleteHomework, fetchClasses, fetchSubjects, fetchStudents } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchHomeworkRequest,
+  createHomeworkRequest,
+  updateHomeworkRequest,
+  deleteHomeworkRequest,
+  fetchClassesRequest,
+  fetchStudentsRequest,
+} from "../../saga";
+import classService from "../../Services/class.service";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -9,14 +20,42 @@ import { useSchool } from "../../context/SchoolContext";
 import { BookOpen, Calendar, Clock, Plus, Trash2, Edit, X, User, CheckCircle2 } from "lucide-react";
 import type { HomeworkRecord, ClassInfo } from "../../types";
 
-export function HomeworkPage() {
+const mapStateToProps = (state: AppState) => ({
+  reduxClasses: state.classes.classes,
+  reduxStudents: state.students.students,
+  reduxHomework: state.homework.homework,
+  loading: state.homework.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  fetchHomeworkRequest: (params?: any) => dispatch(fetchHomeworkRequest(params)),
+  createHomeworkRequest: (hw: any) => dispatch(createHomeworkRequest(hw)),
+  updateHomeworkRequest: (payload: { id: string; hw: any }) => dispatch(updateHomeworkRequest(payload)),
+  deleteHomeworkRequest: (id: string) => dispatch(deleteHomeworkRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function HomeworkPageContent({
+  reduxClasses,
+  reduxStudents,
+  reduxHomework,
+  loading,
+  fetchClassesRequest,
+  fetchStudentsRequest,
+  fetchHomeworkRequest,
+  createHomeworkRequest,
+  updateHomeworkRequest,
+  deleteHomeworkRequest,
+}: PropsFromRedux) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
-  const [homeworkList, setHomeworkList] = useState<HomeworkRecord[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [studentClassId, setStudentClassId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingHomework, setEditingHomework] = useState<HomeworkRecord | null>(null);
   const [formData, setFormData] = useState({
@@ -28,63 +67,49 @@ export function HomeworkPage() {
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Load baseline data (classes)
   useEffect(() => {
-    fetchClasses()
-      .then((d) => setClasses(d))
-      .catch((err) => console.error(err));
-  }, [activeSchool]);
+    fetchClassesRequest();
+    fetchStudentsRequest();
+  }, [fetchClassesRequest, fetchStudentsRequest, activeSchool]);
 
-  // Fetch student class details if student
+  useEffect(() => {
+    setClasses(reduxClasses);
+  }, [reduxClasses]);
+
   useEffect(() => {
     if (user?.role === "student") {
-      fetchStudents()
-        .then((students) => {
-          const profile = students.find((s: any) => s.email === user.email);
-          if (profile && profile.classId) {
-            setStudentClassId(profile.classId);
-          }
-        })
-        .catch((err) => console.error(err));
+      const profile = reduxStudents.find((s: any) => s.email === user.email);
+      if (profile && (profile as any).classId) {
+        setStudentClassId((profile as any).classId);
+      }
     }
-  }, [user, activeSchool]);
+  }, [user, reduxStudents]);
 
-  // Load homeworks based on role
-  const loadHomework = React.useCallback(() => {
-    setLoading(true);
+  useEffect(() => {
     let params: any = {};
     if (user?.role === "student" && studentClassId) {
       params.classId = studentClassId;
     } else if (user?.role === "teacher") {
       params.teacherId = user.id;
-    } else if (user?.role === "admin") {
-      // Admins see all homeworks
-    } else {
-      setLoading(false);
-      return;
     }
+    fetchHomeworkRequest(params);
+  }, [user, studentClassId, activeSchool, fetchHomeworkRequest]);
 
-    fetchHomework(params)
-      .then((data) => {
-        setHomeworkList(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, [user, studentClassId]);
+  const homeworkList = useMemo(() => {
+    if (user?.role === "student" && studentClassId) {
+      return reduxHomework.filter((h: any) => h.classId === studentClassId);
+    }
+    if (user?.role === "teacher") {
+      return reduxHomework.filter((h: any) => h.teacherId === user.id);
+    }
+    return reduxHomework;
+  }, [reduxHomework, user, studentClassId]);
 
-  useEffect(() => {
-    loadHomework();
-  }, [loadHomework, activeSchool]);
-
-  // Load subjects dynamically for modal forms
   useEffect(() => {
     if (formData.classId) {
-      fetchSubjects({ classId: formData.classId })
-        .then((subs) => setSubjects(subs))
-        .catch((err) => console.error(err));
+      classService.getSubjects({ classId: formData.classId })
+        .then((subs: any) => setSubjects(subs))
+        .catch((err: any) => console.error(err));
     } else {
       setSubjects([]);
     }
@@ -118,11 +143,7 @@ export function HomeworkPage() {
 
   const handleDelete = (id: string) => {
     if (!confirm("Are you sure you want to delete this homework?")) return;
-    deleteHomework(id)
-      .then(() => {
-        setHomeworkList((prev) => prev.filter((h) => h.id !== id));
-      })
-      .catch(() => alert("Failed to delete homework"));
+    deleteHomeworkRequest(id);
   };
 
   const handleSave = () => {
@@ -138,19 +159,11 @@ export function HomeworkPage() {
     };
 
     if (editingHomework) {
-      updateHomework(editingHomework.id, payload)
-        .then(() => {
-          setShowModal(false);
-          loadHomework();
-        })
-        .catch(() => setError("Failed to update homework assignment."));
+      updateHomeworkRequest({ id: editingHomework.id, hw: payload });
+      setShowModal(false);
     } else {
-      createHomework(payload)
-        .then(() => {
-          setShowModal(false);
-          loadHomework();
-        })
-        .catch(() => setError("Failed to create homework assignment."));
+      createHomeworkRequest(payload);
+      setShowModal(false);
     }
   };
 
@@ -200,7 +213,7 @@ export function HomeworkPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {homeworkList.map((hw) => (
+          {homeworkList.map((hw: any) => (
             <Card key={hw.id} className="hover-lift flex flex-col justify-between group overflow-hidden border border-border/80">
               <CardHeader className="pb-3 text-left">
                 <div className="flex justify-between items-start gap-2 mb-2">
@@ -338,3 +351,5 @@ export function HomeworkPage() {
     </div>
   );
 }
+
+export const HomeworkPage = mapper(HomeworkPageContent);

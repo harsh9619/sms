@@ -1,39 +1,45 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
-import { fetchSalaries } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import { fetchSalariesRequest } from "../../saga";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { DollarSign, CheckCircle2, Clock, AlertCircle, Eye, X, Calendar, Receipt } from "lucide-react";
 import type { SalaryRecord } from "../../types";
 
-export function MySalaryPage() {
+const mapStateToProps = (state: AppState) => ({
+  allSalaries: state.salaries.salaries,
+  loading: state.salaries.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchSalariesRequest: () => dispatch(fetchSalariesRequest()),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function MySalaryPageContent({
+  allSalaries,
+  loading,
+  fetchSalariesRequest,
+}: PropsFromRedux) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
-  const [salaries, setSalaries] = useState<SalaryRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedPayslip, setSelectedPayslip] = useState<any | null>(null);
 
-  const loadSalaries = React.useCallback(() => {
-    if (!user) return;
-    setLoading(true);
-    fetchSalaries()
-      .then((allSalaries) => {
-        // Filter by current teacher ID
-        const mySalaries = allSalaries.filter((s: any) => s.teacherId === user.id);
-        setSalaries(mySalaries);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, [user, activeSchool]);
-
   useEffect(() => {
-    loadSalaries();
-  }, [loadSalaries]);
+    fetchSalariesRequest();
+  }, [fetchSalariesRequest, activeSchool]);
+
+  const salaries = useMemo(() => {
+    if (!user) return [];
+    return allSalaries.filter((s: any) => s.teacherId === user.id);
+  }, [allSalaries, user]);
 
   const stats = useMemo(() => {
     let earned = 0;
@@ -171,7 +177,7 @@ export function MySalaryPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-4 text-sm">
               {/* Receipt metadata */}
               <div className="flex justify-between items-start border-b border-border/40 pb-4">
@@ -231,3 +237,5 @@ export function MySalaryPage() {
     </div>
   );
 }
+
+export const MySalaryPage = mapper(MySalaryPageContent);

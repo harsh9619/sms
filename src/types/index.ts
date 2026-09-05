@@ -213,4 +213,4 @@ export interface MarkRecord {
   enteredBy?: string;
   createdAt?: string;
 }
-
+export type { School, AcademicYearItem } from "../context/SchoolContext";

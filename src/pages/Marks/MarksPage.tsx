@@ -1,7 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
-import { fetchMarks, createMarks, fetchClasses, fetchSubjects, fetchStudents } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchMarksRequest,
+  createMarksRequest,
+  fetchClassesRequest,
+  fetchStudentsRequest,
+} from "../../saga";
+import classService from "../../Services/class.service";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -18,114 +27,104 @@ const EXAM_TYPES = [
   { value: "practical", label: "Practical" }
 ];
 
-export function MarksPage() {
+const mapStateToProps = (state: AppState) => ({
+  reduxClasses: state.classes.classes,
+  reduxStudents: state.students.students,
+  reduxMarks: state.marks.marks,
+  loading: state.marks.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  fetchMarksRequest: (params?: any) => dispatch(fetchMarksRequest(params)),
+  createMarksRequest: (marksData: any) => dispatch(createMarksRequest(marksData)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+export const MarksPage = mapper(function MarksPageContent({
+  reduxClasses,
+  reduxStudents,
+  reduxMarks,
+  loading,
+  fetchClassesRequest,
+  fetchStudentsRequest,
+  fetchMarksRequest,
+  createMarksRequest,
+}: PropsFromRedux) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [studentProfile, setStudentProfile] = useState<any>(null);
-  
+
   // Selection States for Teacher Grading
   const [selectedClassId, setSelectedClassId] = useState("");
   const [selectedSubjectId, setSelectedSubjectId] = useState("");
   const [selectedExamType, setSelectedExamType] = useState("final");
   const [maxScoreInput, setMaxScoreInput] = useState(100);
-  
+
   // Marks state
   const [studentGrades, setStudentGrades] = useState<Record<string, number>>({});
-  const [marksHistory, setMarksHistory] = useState<MarkRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load baseline classes
   useEffect(() => {
-    fetchClasses()
-      .then((d) => {
-        setClasses(d);
-        if (d.length > 0 && user?.role === "teacher") {
-          setSelectedClassId(d[0].id);
-        }
-      })
-      .catch((err) => console.error(err));
-  }, [user, activeSchool]);
+    fetchClassesRequest();
+    fetchStudentsRequest();
+  }, [fetchClassesRequest, fetchStudentsRequest, activeSchool]);
 
-  // Load student profile if role is student
+  useEffect(() => {
+    setClasses(reduxClasses);
+    if (reduxClasses.length > 0 && user?.role === "teacher" && !selectedClassId) {
+      setSelectedClassId(reduxClasses[0].id);
+    }
+  }, [reduxClasses, user, selectedClassId]);
+
+  useEffect(() => {
+    if (selectedClassId) {
+      classService.getSubjects({ classId: selectedClassId })
+        .then((subs: any) => {
+          setSubjects(subs);
+          if (subs.length > 0) setSelectedSubjectId(subs[0].id);
+        })
+        .catch((err: any) => console.error(err));
+    }
+  }, [selectedClassId]);
+
+  useEffect(() => {
+    if (selectedClassId) {
+      setStudents(reduxStudents.filter((s: any) => s.classId === selectedClassId || `${s.class}${s.section}` === selectedClassId));
+    }
+  }, [selectedClassId, reduxStudents]);
+
   useEffect(() => {
     if (user?.role === "student") {
-      fetchStudents()
-        .then((studentsList) => {
-          const profile = studentsList.find((s: any) => s.email === user.email);
-          if (profile) {
-            setStudentProfile(profile);
-          }
-        })
-        .catch((err) => console.error(err));
+      const profile = reduxStudents.find((s: any) => s.email === user.email);
+      if (profile) setStudentProfile(profile);
     }
-  }, [user, activeSchool]);
+  }, [user, reduxStudents]);
 
-  // Fetch subjects when teacher selects a class
   useEffect(() => {
-    if (selectedClassId && user?.role === "teacher") {
-      fetchSubjects({ classId: selectedClassId })
-        .then((subs) => {
-          setSubjects(subs);
-          if (subs.length > 0) {
-            setSelectedSubjectId(subs[0].id);
-          } else {
-            setSelectedSubjectId("");
-          }
-        })
-        .catch((err) => console.error(err));
-
-      // Fetch students of this class
-      fetchStudents()
-        .then((allStudents) => {
-          const filtered = allStudents.filter((s: any) => s.classId === selectedClassId);
-          setStudents(filtered);
-        })
-        .catch((err) => console.error(err));
+    if (user?.role === "teacher" && selectedClassId && selectedSubjectId) {
+      fetchMarksRequest({ classId: selectedClassId, subjectId: selectedSubjectId, examType: selectedExamType });
+    } else if (user?.role === "student" && studentProfile) {
+      fetchMarksRequest({ studentId: studentProfile.id });
     }
-  }, [selectedClassId, user, activeSchool]);
+  }, [user, selectedClassId, selectedSubjectId, selectedExamType, studentProfile, activeSchool, fetchMarksRequest]);
 
-  // Load existing grades when teacher selections change
-  useEffect(() => {
-    if (selectedClassId && selectedSubjectId && selectedExamType && user?.role === "teacher") {
-      setLoading(true);
-      fetchMarks({ classId: selectedClassId, subjectId: selectedSubjectId })
-        .then((existingMarks: MarkRecord[]) => {
-          const examMarks = existingMarks.filter((m) => m.examType === selectedExamType);
-          const gradeMap: Record<string, number> = {};
-          examMarks.forEach((m) => {
-            gradeMap[m.studentId] = m.score;
-            if (m.maxScore) setMaxScoreInput(m.maxScore);
-          });
-          setStudentGrades(gradeMap);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setLoading(false);
-        });
-    }
-  }, [selectedClassId, selectedSubjectId, selectedExamType, user, activeSchool]);
-
-  // Load student marks report card if student
-  useEffect(() => {
+  const marksHistory = useMemo(() => {
     if (user?.role === "student" && studentProfile) {
-      setLoading(true);
-      fetchMarks({ studentId: studentProfile.id })
-        .then((data) => {
-          setMarksHistory(data);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setLoading(false);
-        });
+      return reduxMarks.filter((m: any) => m.studentId === studentProfile.id);
     }
-  }, [user, studentProfile, activeSchool]);
+    if (user?.role === "teacher" && selectedClassId && selectedSubjectId) {
+      return reduxMarks.filter((m: any) => m.classId === selectedClassId && m.subjectId === selectedSubjectId && m.examType === selectedExamType);
+    }
+    return reduxMarks;
+  }, [reduxMarks, user, studentProfile, selectedClassId, selectedSubjectId, selectedExamType]);
 
   const handleGradeChange = (studentId: string, score: string) => {
     const num = parseFloat(score);
@@ -142,7 +141,7 @@ export function MarksPage() {
     try {
       // Loop through grades and save
       for (const [studentId, score] of Object.entries(studentGrades)) {
-        await createMarks({
+        createMarksRequest({
           studentId,
           subjectId: selectedSubjectId,
           examType: selectedExamType,
@@ -170,7 +169,7 @@ export function MarksPage() {
       totalMax += m.maxScore;
     });
     const percentage = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
-    
+
     let grade = "F";
     if (percentage >= 90) grade = "A+";
     else if (percentage >= 80) grade = "A";
@@ -459,4 +458,4 @@ export function MarksPage() {
       )}
     </div>
   );
-}
+});

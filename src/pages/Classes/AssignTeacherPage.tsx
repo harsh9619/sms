@@ -1,16 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../components/ui/Avatar";
 import { useSchool } from "../../context/SchoolContext";
-// using API-driven classes and teachers
-import { fetchClasses, fetchTeachers } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import { fetchClassesRequest, fetchTeachersRequest } from "../../saga";
 import { BookOpen, Users, Check, ChevronRight, ArrowLeft, School, Search, GraduationCap } from "lucide-react";
 import { Input } from "../../components/ui/Input";
 
-export function AssignTeacherPage() {
+const mapStateToProps = (state: AppState) => ({
+  classes: state.classes.classes,
+  teachers: state.teachers.teachers,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
+  fetchTeachersRequest: () => dispatch(fetchTeachersRequest()),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function AssignTeacherPageContent({
+  classes,
+  teachers,
+  fetchClassesRequest,
+  fetchTeachersRequest,
+}: PropsFromRedux) {
   const navigate = useNavigate();
   const { activeSchool } = useSchool();
   const [selectedClass, setSelectedClass] = useState<string | null>(null);
@@ -18,30 +38,25 @@ export function AssignTeacherPage() {
   const [searchClass, setSearchClass] = useState("");
   const [searchTeacher, setSearchTeacher] = useState("");
 
-  const [classes, setClasses] = useState<any[]>([]);
-  const [teachers, setTeachers] = useState<any[]>([]);
+  useEffect(() => {
+    fetchClassesRequest();
+    fetchTeachersRequest();
+  }, [fetchClassesRequest, fetchTeachersRequest, activeSchool]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchClasses().then((d) => { if (mounted) setClasses(d); }).catch(() => {});
-    fetchTeachers().then((d) => { if (mounted) setTeachers(d); }).catch(() => {});
-    return () => { mounted = false; };
-  }, [activeSchool]);
-
-  const filteredClasses = classes.filter(c => 
+  const filteredClasses = classes.filter(c =>
     `${c.name} ${c.section}`.toLowerCase().includes(searchClass.toLowerCase())
   );
 
-  const filteredTeachers = teachers.filter(t => 
-    t.name.toLowerCase().includes(searchTeacher.toLowerCase()) || 
+  const filteredTeachers = teachers.filter(t =>
+    t.name.toLowerCase().includes(searchTeacher.toLowerCase()) ||
     t.subject.toLowerCase().includes(searchTeacher.toLowerCase())
   );
 
   const handleAssign = () => {
     if (selectedClass && selectedTeacher) {
-  const cls = classes.find(c => c.id === selectedClass);
-  const teacher = teachers.find(t => t.id === selectedTeacher);
-      
+      const cls = classes.find(c => c.id === selectedClass);
+      const teacher = teachers.find(t => t.id === selectedTeacher);
+
       // In a real app, we would call an API here
       alert(`Successfully assigned ${teacher?.name} to Class ${cls?.name}-${cls?.section}`);
       navigate("/classes");
@@ -66,8 +81,8 @@ export function AssignTeacherPage() {
             <p className="text-sm text-muted-foreground mt-1">Assign a teacher to lead a specific class</p>
           </div>
         </div>
-        <Button 
-          disabled={!selectedClass || !selectedTeacher} 
+        <Button
+          disabled={!selectedClass || !selectedTeacher}
           onClick={handleAssign}
           className="shadow-lg shadow-primary/20 px-8"
         >
@@ -89,13 +104,13 @@ export function AssignTeacherPage() {
               </Badge>
             )}
           </div>
-          
+
           <Card className="overflow-hidden border-2 border-transparent transition-all duration-300 focus-within:border-primary/20">
             <CardHeader className="pb-3 border-b border-border/50">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search class..." 
+                <Input
+                  placeholder="Search class..."
                   className="pl-10 border-none bg-muted/50 focus:bg-background"
                   value={searchClass}
                   onChange={(e) => setSearchClass(e.target.value)}
@@ -105,7 +120,7 @@ export function AssignTeacherPage() {
             <CardContent className="p-0 max-h-[500px] overflow-y-auto">
               <div className="divide-y divide-border/50">
                 {filteredClasses.map((cls) => (
-                  <div 
+                  <div
                     key={cls.id}
                     onClick={() => setSelectedClass(cls.id)}
                     className={`p-4 flex items-center justify-between cursor-pointer transition-all duration-200 hover:bg-muted/30 ${selectedClass === cls.id ? "bg-primary/5 border-l-4 border-primary" : "border-l-4 border-transparent"}`}
@@ -145,8 +160,8 @@ export function AssignTeacherPage() {
             <CardHeader className="pb-3 border-b border-border/50">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search teacher..." 
+                <Input
+                  placeholder="Search teacher..."
                   className="pl-10 border-none bg-muted/50 focus:bg-background"
                   value={searchTeacher}
                   onChange={(e) => setSearchTeacher(e.target.value)}
@@ -156,7 +171,7 @@ export function AssignTeacherPage() {
             <CardContent className="p-0 max-h-[500px] overflow-y-auto">
               <div className="divide-y divide-border/50">
                 {filteredTeachers.map((teacher) => (
-                  <div 
+                  <div
                     key={teacher.id}
                     onClick={() => setSelectedTeacher(teacher.id)}
                     className={`p-4 flex items-center justify-between cursor-pointer transition-all duration-200 hover:bg-muted/30 ${selectedTeacher === teacher.id ? "bg-primary/5 border-l-4 border-primary" : "border-l-4 border-transparent"}`}
@@ -189,11 +204,11 @@ export function AssignTeacherPage() {
               <div className="flex items-center gap-8">
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Class</p>
-                    <div className="h-16 w-16 rounded-2xl bg-background border border-border flex items-center justify-center text-2xl font-bold">
+                  <div className="h-16 w-16 rounded-2xl bg-background border border-border flex items-center justify-center text-2xl font-bold">
                     {classes.find(c => c.id === selectedClass)?.name}-{classes.find(c => c.id === selectedClass)?.section}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col items-center justify-center pt-6">
                   <ChevronRight className="h-8 w-8 text-primary/30" />
                 </div>
@@ -211,7 +226,7 @@ export function AssignTeacherPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex-1 max-w-md text-sm text-muted-foreground italic text-center md:text-right">
                 "Assigning {teachers.find(t => t.id === selectedTeacher)?.name} as the class teacher will give them full access to manage attendance and student records for this class."
               </div>
@@ -233,3 +248,5 @@ export function AssignTeacherPage() {
     </div>
   );
 }
+
+export const AssignTeacherPage = mapper(AssignTeacherPageContent);

@@ -1,7 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
-import { fetchNotices, createNotice, updateNotice, deleteNotice } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchNoticesRequest,
+  createNoticeRequest,
+  updateNoticeRequest,
+  deleteNoticeRequest,
+} from "../../saga";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -9,11 +17,31 @@ import { Badge } from "../../components/ui/Badge";
 import { Megaphone, Pin, Plus, Trash2, Edit, X, Calendar, User, Eye } from "lucide-react";
 import type { NoticeRecord } from "../../types";
 
-export function NoticesPage() {
+const mapStateToProps = (state: AppState) => ({
+  allNotices: state.notices.notices,
+  loading: state.notices.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchNoticesRequest: (audience?: string) => dispatch(fetchNoticesRequest(audience)),
+  createNoticeRequest: (notice: any) => dispatch(createNoticeRequest(notice)),
+  updateNoticeRequest: (payload: { id: string; notice: any }) => dispatch(updateNoticeRequest(payload)),
+  deleteNoticeRequest: (id: string) => dispatch(deleteNoticeRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function NoticesPageContent({
+  allNotices,
+  loading,
+  fetchNoticesRequest,
+  createNoticeRequest,
+  updateNoticeRequest,
+  deleteNoticeRequest,
+}: PropsFromRedux) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
-  const [notices, setNotices] = useState<NoticeRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingNotice, setEditingNotice] = useState<NoticeRecord | null>(null);
   const [formData, setFormData] = useState({
@@ -24,29 +52,25 @@ export function NoticesPage() {
   });
   const [error, setError] = useState<string | null>(null);
 
-  const loadNotices = React.useCallback(() => {
-    setLoading(true);
-    // Determine audience target
+  useEffect(() => {
     let audience: string | undefined = undefined;
     if (user?.role === "student") {
       audience = "student";
     } else if (user?.role === "teacher") {
       audience = "teacher";
     }
+    fetchNoticesRequest(audience);
+  }, [user, activeSchool, fetchNoticesRequest]);
 
-    fetchNotices(audience)
-      .then((data) => {
-        setNotices(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setLoading(false);
-      });
-  }, [user, activeSchool]);
-
-  useEffect(() => {
-    loadNotices();
-  }, [loadNotices]);
+  const notices = useMemo(() => {
+    if (user?.role === "student") {
+      return allNotices.filter((n: any) => n.audience === "all" || n.audience === "student");
+    }
+    if (user?.role === "teacher") {
+      return allNotices.filter((n: any) => n.audience === "all" || n.audience === "teacher");
+    }
+    return allNotices;
+  }, [allNotices, user]);
 
   const openAddModal = () => {
     setEditingNotice(null);
@@ -74,11 +98,7 @@ export function NoticesPage() {
 
   const handleDelete = (id: string) => {
     if (!confirm("Are you sure you want to delete this notice?")) return;
-    deleteNotice(id)
-      .then(() => {
-        setNotices((prev) => prev.filter((n) => n.id !== id));
-      })
-      .catch(() => alert("Failed to delete notice"));
+    deleteNoticeRequest(id);
   };
 
   const handleSave = () => {
@@ -94,19 +114,11 @@ export function NoticesPage() {
     };
 
     if (editingNotice) {
-      updateNotice(editingNotice.id, payload)
-        .then(() => {
-          setShowModal(false);
-          loadNotices();
-        })
-        .catch(() => setError("Failed to update notice."));
+      updateNoticeRequest({ id: editingNotice.id, notice: payload });
+      setShowModal(false);
     } else {
-      createNotice(payload)
-        .then(() => {
-          setShowModal(false);
-          loadNotices();
-        })
-        .catch(() => setError("Failed to publish notice."));
+      createNoticeRequest(payload);
+      setShowModal(false);
     }
   };
 
@@ -145,11 +157,10 @@ export function NoticesPage() {
           {notices.map((notice) => (
             <Card
               key={notice.id}
-              className={`hover-lift relative text-left border flex flex-col justify-between overflow-hidden transition-all duration-300 ${
-                notice.isPinned
-                  ? "border-primary/40 bg-gradient-to-br from-primary/5 via-card to-card shadow-md shadow-primary/5"
-                  : "border-border/80"
-              }`}
+              className={`hover-lift relative text-left border flex flex-col justify-between overflow-hidden transition-all duration-300 ${notice.isPinned
+                ? "border-primary/40 bg-gradient-to-br from-primary/5 via-card to-card shadow-md shadow-primary/5"
+                : "border-border/80"
+                }`}
             >
               {notice.isPinned && (
                 <div className="absolute top-0 right-0 p-1 bg-primary text-white rounded-bl-lg flex items-center justify-center" title="Pinned Announcement">
@@ -275,3 +286,5 @@ export function NoticesPage() {
     </div>
   );
 }
+
+export const NoticesPage = mapper(NoticesPageContent);

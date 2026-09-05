@@ -1,10 +1,18 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../components/ui/Avatar";
-import { fetchStudents } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchStudentsRequest,
+  createStudentRequest,
+  updateStudentRequest,
+  deleteStudentRequest,
+} from "../../saga";
 import type { Student } from "../../types";
 import { useSchool } from "../../context/SchoolContext";
 import {
@@ -1027,9 +1035,30 @@ function BulkUploadModal({ onClose, onImport }: BulkUploadModalProps) {
 
 // ─── StudentsPage ─────────────────────────────────────────────────────────────
 
-export function StudentsPage() {
+const mapStateToProps = (state: AppState) => ({
+  reduxStudents: state.students.students,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  createStudentRequest: (student: any) => dispatch(createStudentRequest(student)),
+  updateStudentRequest: (payload: { id: string; student: any }) => dispatch(updateStudentRequest(payload)),
+  deleteStudentRequest: (id: string) => dispatch(deleteStudentRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function StudentsPageContent({
+  reduxStudents,
+  fetchStudentsRequest,
+  createStudentRequest,
+  updateStudentRequest,
+  deleteStudentRequest,
+}: PropsFromRedux) {
   const { activeSchool } = useSchool();
-  const [students, setStudents] = useState<Student[]>([]);
+  const [extraStudents, setExtraStudents] = useState<Student[]>([]);
+  const students = useMemo(() => [...reduxStudents, ...extraStudents], [reduxStudents, extraStudents]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterClass, setFilterClass] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -1044,7 +1073,7 @@ export function StudentsPage() {
   }>({ visible: false, success: false, message: "" });
 
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => {
+    return students.filter((s: any) => {
       const matchesSearch =
         s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1054,21 +1083,17 @@ export function StudentsPage() {
     });
   }, [students, searchQuery, filterClass]);
 
-  const uniqueClasses = [...new Set(students.map((s) => s.class))].sort();
+  const uniqueClasses = [...new Set(students.map((s: any) => s.class))].sort();
 
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchStudents()
-      .then((d) => { if (mounted) setStudents(d); })
-      .catch(() => { });
-    return () => { mounted = false; };
-  }, [activeSchool]);
+  useEffect(() => {
+    fetchStudentsRequest();
+  }, [fetchStudentsRequest, activeSchool]);
 
   const handleBulkImport = (newStudents: Student[]) => {
-    setStudents((prev) => [...prev, ...newStudents]);
+    setExtraStudents((prev) => [...prev, ...newStudents]);
     setImportStatus({
       visible: true,
       success: true,
@@ -1078,7 +1103,7 @@ export function StudentsPage() {
   };
 
   const handleExportExcel = () => {
-    const data = filteredStudents.map((s) => ({
+    const data = filteredStudents.map((s: any) => ({
       "Roll No": s.rollNumber,
       Name: s.name,
       Email: s.email,
@@ -1100,27 +1125,9 @@ export function StudentsPage() {
 
   const handleSave = () => {
     if (editingStudent) {
-      setStudents((prev) =>
-        prev.map((s) => (s.id === editingStudent.id ? { ...s, ...formData } as Student : s))
-      );
+      updateStudentRequest({ id: editingStudent.id, student: formData });
     } else {
-      const newStudent: Student = {
-        id: `s${Date.now()}`,
-        name: formData.name || "",
-        email: formData.email || "",
-        phone: formData.phone || "",
-        class: formData.class || "",
-        section: formData.section || "",
-        rollNumber: formData.rollNumber || "",
-        parentName: formData.parentName || "",
-        parentPhone: formData.parentPhone || "",
-        address: formData.address || "",
-        dateOfBirth: formData.dateOfBirth || "",
-        gender: (formData.gender as "male" | "female" | "other") || "male",
-        admissionDate: new Date().toISOString().split("T")[0],
-        bloodGroup: formData.bloodGroup,
-      };
-      setStudents((prev) => [...prev, newStudent]);
+      createStudentRequest(formData);
     }
     setShowModal(false);
     setEditingStudent(null);
@@ -1129,7 +1136,7 @@ export function StudentsPage() {
 
   const handleDelete = (id: string) => {
     if (confirm("Are you sure you want to delete this student?")) {
-      setStudents((prev) => prev.filter((s) => s.id !== id));
+      deleteStudentRequest(id);
     }
   };
 
@@ -1455,4 +1462,6 @@ export function StudentsPage() {
     </div>
   );
 }
+
+export const StudentsPage = mapper(StudentsPageContent);
 

@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../components/ui/Avatar";
-import { fetchTeachers } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import { fetchTeachersRequest } from "../../saga";
 import type { Teacher } from "../../types";
 import { useSchool } from "../../context/SchoolContext";
 import {
@@ -32,9 +35,24 @@ import {
 } from "../../lib/bulkImportUtils";
 import * as XLSX from "xlsx";
 
-export function TeachersPage() {
+const mapStateToProps = (state: AppState) => ({
+  reduxTeachers: state.teachers.teachers,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchTeachersRequest: () => dispatch(fetchTeachersRequest()),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function TeachersPageContent({
+  reduxTeachers,
+  fetchTeachersRequest,
+}: PropsFromRedux) {
   const { activeSchool } = useSchool();
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [extraTeachers, setExtraTeachers] = useState<Teacher[]>([]);
+  const teachers = useMemo(() => [...reduxTeachers, ...extraTeachers], [reduxTeachers, extraTeachers]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState<Teacher | null>(null);
@@ -47,7 +65,7 @@ export function TeachersPage() {
   }>({ visible: false, success: false, message: "" });
 
   const filteredTeachers = useMemo(() => {
-    return teachers.filter((t) =>
+    return teachers.filter((t: any) =>
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -57,17 +75,13 @@ export function TeachersPage() {
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchTeachers()
-      .then((d) => { if (mounted) setTeachers(d); })
-      .catch(() => { /* keep mock data on failure */ });
-    return () => { mounted = false; };
-  }, [activeSchool]);
+  useEffect(() => {
+    fetchTeachersRequest();
+  }, [fetchTeachersRequest, activeSchool]);
 
   const handleSave = () => {
     if (editingTeacher) {
-      setTeachers((prev) =>
+      setExtraTeachers((prev) =>
         prev.map((t) => (t.id === editingTeacher.id ? { ...t, ...formData } as Teacher : t))
       );
     } else {
@@ -84,7 +98,7 @@ export function TeachersPage() {
         joinDate: new Date().toISOString().split("T")[0],
         salary: formData.salary,
       };
-      setTeachers((prev) => [...prev, newTeacher]);
+      setExtraTeachers((prev) => [...prev, newTeacher]);
     }
     setShowModal(false);
     setEditingTeacher(null);
@@ -93,7 +107,7 @@ export function TeachersPage() {
 
   const handleDelete = (id: string) => {
     if (confirm("Are you sure?")) {
-      setTeachers((prev) => prev.filter((t) => t.id !== id));
+      setExtraTeachers((prev) => prev.filter((t: any) => t.id !== id));
     }
   };
 
@@ -107,7 +121,7 @@ export function TeachersPage() {
       }
 
       if (result.success) {
-        setTeachers((prev) => [...prev, ...result.data]);
+        setExtraTeachers((prev) => [...prev, ...result.data]);
         setImportStatus({
           visible: true,
           success: true,
@@ -332,14 +346,13 @@ export function TeachersPage() {
       )}
 
       {/* Bulk Import Modal */}
-     
+
 
       {/* Import Status Toast */}
       {importStatus.visible && (
         <div
-          className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg flex gap-3 items-start animate-slide-up ${
-            importStatus.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
-          }`}
+          className={`fixed bottom-4 right-4 max-w-md p-4 rounded-lg shadow-lg flex gap-3 items-start animate-slide-up ${importStatus.success ? "bg-green-50 border border-green-200" : "bg-red-50 border border-red-200"
+            }`}
         >
           {importStatus.success ? (
             <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
@@ -362,3 +375,5 @@ export function TeachersPage() {
     </div>
   );
 }
+
+export const TeachersPage = mapper(TeachersPageContent);

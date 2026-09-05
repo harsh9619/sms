@@ -1,9 +1,12 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
-import { fetchAttendance, fetchStudents } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import { fetchAttendanceRequest, fetchStudentsRequest } from "../../saga";
 import type { AttendanceRecord } from "../../types";
 import { useSchool } from "../../context/SchoolContext";
 import Tesseract from "tesseract.js";
@@ -36,9 +39,27 @@ import {
   Maximize,
 } from "lucide-react";
 
-export function AttendancePage() {
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+const mapStateToProps = (state: AppState) => ({
+  reduxAttendance: state.attendance.records,
+  students: state.students.students,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchAttendanceRequest: () => dispatch(fetchAttendanceRequest()),
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function AttendancePageContent({
+  reduxAttendance,
+  students,
+  fetchAttendanceRequest,
+  fetchStudentsRequest,
+}: PropsFromRedux) {
+  const [extraRecords, setExtraRecords] = useState<AttendanceRecord[]>([]);
+  const attendance = useMemo(() => [...reduxAttendance, ...extraRecords], [reduxAttendance, extraRecords]);
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
   const [filterClass, setFilterClass] = useState("");
   const [activeTab, setActiveTab] = useState<"records" | "manual">("records");
@@ -49,19 +70,19 @@ export function AttendancePage() {
     message: string;
   }>({ visible: false, success: false, message: "" });
 
-  const filteredAttendance = attendance.filter((a) => {
+  const filteredAttendance = attendance.filter((a: any) => {
     const matchDate = a.date === filterDate;
     const matchClass = !filterClass || a.class === filterClass;
     return matchDate && matchClass;
   });
 
-  const presentCount = filteredAttendance.filter((a) => a.status === "present").length;
-  const absentCount = filteredAttendance.filter((a) => a.status === "absent").length;
-  const lateCount = filteredAttendance.filter((a) => a.status === "late").length;
+  const presentCount = filteredAttendance.filter((a: any) => a.status === "present").length;
+  const absentCount = filteredAttendance.filter((a: any) => a.status === "absent").length;
+  const lateCount = filteredAttendance.filter((a: any) => a.status === "late").length;
 
   // Export attendance records to Excel
   const exportToExcel = useCallback(() => {
-    const data = filteredAttendance.map((a) => ({
+    const data = filteredAttendance.map((a: any) => ({
       "Roll Number": a.rollNumber,
       "Student Name": a.studentName,
       "Class": `${a.class}-${a.section}`,
@@ -78,7 +99,7 @@ export function AttendancePage() {
   }, [filteredAttendance, filterDate]);
 
   const handleBulkImport = (newRecords: AttendanceRecord[]) => {
-    setAttendance((prev) => [...prev, ...newRecords]);
+    setExtraRecords((prev) => [...prev, ...newRecords]);
     setImportStatus({
       visible: true,
       success: true,
@@ -91,20 +112,14 @@ export function AttendancePage() {
   const [manualAttendance, setManualAttendance] = useState<Record<string, "present" | "absent" | "late">>({});
   const { activeSchool } = useSchool();
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchAttendance()
-      .then((d) => { if (mounted) setAttendance(d); })
-      .catch(() => { /* keep mock attendance */ });
-    fetchStudents()
-      .then((d) => { if (mounted) setStudents(d); })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, [activeSchool]);
+  useEffect(() => {
+    fetchAttendanceRequest();
+    fetchStudentsRequest();
+  }, [fetchAttendanceRequest, fetchStudentsRequest, activeSchool]);
 
   const handleManualSave = () => {
     const newRecords: AttendanceRecord[] = Object.entries(manualAttendance).map(([studentId, status]) => {
-      const student = students.find((s) => s.id === studentId);
+      const student = students.find((s: any) => s.id === studentId);
       return {
         id: `manual-${Date.now()}-${studentId}`,
         studentId,
@@ -119,7 +134,7 @@ export function AttendancePage() {
       };
     });
 
-    setAttendance((prev) => [...prev, ...newRecords]);
+    setExtraRecords((prev) => [...prev, ...newRecords]);
     setManualAttendance({});
     setActiveTab("records");
   };
@@ -195,11 +210,10 @@ export function AttendancePage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-              activeTab === tab.id
-                ? "bg-card shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+              ? "bg-card shadow-sm text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
           >
             <tab.icon className="h-4 w-4" />
             {tab.label}
@@ -248,7 +262,7 @@ export function AttendancePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAttendance.map((record) => (
+                  {filteredAttendance.map((record: any) => (
                     <tr key={record.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium">{record.studentName}</td>
                       <td className="px-6 py-4"><Badge variant="outline">{record.rollNumber}</Badge></td>
@@ -259,7 +273,7 @@ export function AttendancePage() {
                           <Badge
                             variant={
                               record.status === "present" ? "success" :
-                              record.status === "absent" ? "destructive" : "warning"
+                                record.status === "absent" ? "destructive" : "warning"
                             }
                           >
                             {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
@@ -317,8 +331,8 @@ export function AttendancePage() {
                             ? status === "present"
                               ? "bg-success hover:bg-success/90"
                               : status === "absent"
-                              ? "bg-destructive hover:bg-destructive/90"
-                              : "bg-warning hover:bg-warning/90"
+                                ? "bg-destructive hover:bg-destructive/90"
+                                : "bg-warning hover:bg-warning/90"
                             : ""
                         }
                         onClick={() =>
@@ -376,6 +390,8 @@ export function AttendancePage() {
   );
 }
 
+export const AttendancePage = mapper(AttendancePageContent);
+
 // ─── BulkAttendanceModal ───────────────────────────────────────────────────────
 
 interface BulkAttendanceRow {
@@ -403,26 +419,26 @@ const ATTENDANCE_COLUMN_MAP: Record<string, keyof BulkAttendanceRow> = {
   "s.no": "rollNumber",
   "s.no.": "rollNumber",
   "sno": "rollNumber",
-  
+
   "name": "studentName",
   "student name": "studentName",
   "studentname": "studentName",
   "full name": "studentName",
   "नाम": "studentName",
   "छात्र का नाम": "studentName",
-  
+
   "status": "status",
   "attendance": "status",
   "उपस्थिति": "status",
   "स्थिति": "status",
-  
+
   "date": "date",
   "दिनांक": "date",
   "तारीख": "date",
-  
+
   "class": "class",
   "कक्षा": "class",
-  
+
   "section": "section",
   "वर्ग": "section"
 };
@@ -659,7 +675,7 @@ function BulkAttendanceModal({
   const parseImage = async (file: File) => {
     setImageError(null);
     setFileName(file.name);
-    
+
     const objectUrl = URL.createObjectURL(file);
     setImagePreview(objectUrl);
 
@@ -793,7 +809,7 @@ function BulkAttendanceModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
       <div className="bg-card rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden m-4 flex flex-col animate-scale-in" onClick={(e) => e.stopPropagation()}>
-        
+
         {/* Header */}
         <div className="p-6 border-b border-border flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -825,7 +841,7 @@ function BulkAttendanceModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6">
-          
+
           {/* STEP 1: Upload */}
           {step === "upload" && (
             <div className="space-y-5">
@@ -876,7 +892,7 @@ function BulkAttendanceModal({
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-4 p-4 rounded-xl bg-blue-50 border border-blue-100">
                     <Table2 className="h-8 w-8 text-blue-500 flex-shrink-0" />
                     <div className="flex-1">
@@ -887,7 +903,7 @@ function BulkAttendanceModal({
                       <Download className="h-4 w-4 mr-2" /> Template
                     </Button>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Accepted Columns</p>
                     <div className="flex flex-wrap gap-2">
@@ -922,7 +938,7 @@ function BulkAttendanceModal({
                     className={`border-2 border-dashed rounded-2xl transition-all ${processing ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:border-purple-400 hover:bg-purple-50/50"} ${isDragging ? "border-purple-400 bg-purple-50 scale-[1.01]" : "border-border"}`}
                   >
                     <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) parseImage(f); }} />
-                    
+
                     {processing ? (
                       <div className="p-10 flex flex-col items-center gap-4">
                         {imagePreview && (
@@ -1046,15 +1062,14 @@ function BulkAttendanceModal({
                                 <button
                                   key={st}
                                   onClick={() => handleStatusChange(row.id, st)}
-                                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all uppercase ${
-                                    row.status === st
-                                      ? st === "present"
-                                        ? "bg-green-600 text-white shadow-sm"
-                                        : st === "absent"
+                                  className={`px-3 py-1 rounded-md text-xs font-bold transition-all uppercase ${row.status === st
+                                    ? st === "present"
+                                      ? "bg-green-600 text-white shadow-sm"
+                                      : st === "absent"
                                         ? "bg-red-600 text-white shadow-sm"
                                         : "bg-yellow-500 text-white shadow-sm"
-                                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                  }`}
+                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    }`}
                                 >
                                   {st === "present" ? "P" : st === "absent" ? "A" : "L"}
                                 </button>
@@ -1122,19 +1137,19 @@ interface ImageCropperModalProps {
   croppedAreaPixels: { width: number; height: number } | null;
 }
 
-function ImageCropperModal({ 
-  uploadedImage, 
-  showCropper, 
-  setShowCropper, 
-  crop, 
-  setCrop, 
-  zoom, 
-  setZoom, 
-  rotation, 
-  setRotation, 
-  aspect, 
-  setAspect, 
-  onCropComplete, 
+function ImageCropperModal({
+  uploadedImage,
+  showCropper,
+  setShowCropper,
+  crop,
+  setCrop,
+  zoom,
+  setZoom,
+  rotation,
+  setRotation,
+  aspect,
+  setAspect,
+  onCropComplete,
   handleCropSave,
   croppedAreaPixels
 }: ImageCropperModalProps) {
@@ -1152,7 +1167,7 @@ function ImageCropperModal({
             <X className="h-6 w-6" />
           </Button>
         </div>
-        
+
         <div className="flex-1 relative bg-[#0f0f0f]">
           <Cropper
             image={uploadedImage}
@@ -1197,8 +1212,8 @@ function ImageCropperModal({
                 {[
                   { label: "Free Form", value: undefined },
                   { label: "Square", value: 1 },
-                  { label: "Document (3:4)", value: 3/4 },
-                  { label: "Wide (16:9)", value: 16/9 },
+                  { label: "Document (3:4)", value: 3 / 4 },
+                  { label: "Wide (16:9)", value: 16 / 9 },
                 ].map((ratio) => (
                   <Button key={ratio.label} variant={aspect === ratio.value ? "default" : "outline"} size="sm" onClick={() => setAspect(ratio.value)} className="rounded-full px-4 font-medium transition-all">
                     {ratio.label}
@@ -1222,7 +1237,7 @@ function ImageCropperModal({
                 </div>
               </div>
             )}
-            
+
             <div className="flex flex-col gap-3 mt-auto">
               <Button variant="outline" size="lg" className="rounded-2xl h-12 font-bold" onClick={() => setShowCropper(false)}>Cancel</Button>
               <Button size="lg" className="rounded-2xl h-12 font-bold shadow-xl shadow-primary/20" onClick={handleCropSave}>

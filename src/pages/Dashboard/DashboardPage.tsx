@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
@@ -19,7 +19,16 @@ import {
   Mail,
   Award
 } from "lucide-react";
-import { fetchStudents, fetchTeachers, fetchAttendance, fetchClasses, fetchMarks } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchStudentsRequest,
+  fetchTeachersRequest,
+  fetchClassesRequest,
+  fetchAttendanceRequest,
+  fetchMarksRequest,
+} from "../../saga";
 import {
   AreaChart,
   Area,
@@ -56,29 +65,59 @@ const classPerformance = [
 
 const CHART_COLORS = ["hsl(142, 71%, 45%)", "hsl(0, 84%, 60%)", "hsl(38, 92%, 50%)"];
 
-export function DashboardPage() {
+const mapStateToProps = (state: AppState) => ({
+  students: state.students.students,
+  teachers: state.teachers.teachers,
+  classes: state.classes.classes,
+  attendance: state.attendance.records,
+  marks: state.marks.marks,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  fetchTeachersRequest: () => dispatch(fetchTeachersRequest()),
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
+  fetchAttendanceRequest: () => dispatch(fetchAttendanceRequest()),
+  fetchMarksRequest: () => dispatch(fetchMarksRequest()),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function DashboardPageContent({
+  students,
+  teachers,
+  classes,
+  attendance,
+  marks,
+  fetchStudentsRequest,
+  fetchTeachersRequest,
+  fetchClassesRequest,
+  fetchAttendanceRequest,
+  fetchMarksRequest,
+}: PropsFromRedux) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
-  const [students, setStudents] = React.useState<any[]>([]);
-  const [teachers, setTeachers] = React.useState<any[]>([]);
-  const [classes, setClasses] = React.useState<any[]>([]);
-  const [attendance, setAttendance] = React.useState<any[]>([]);
-  const [marks, setMarks] = React.useState<any[]>([]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchStudents().then((d) => { if (mounted) setStudents(d); }).catch(() => {});
-    fetchTeachers().then((d) => { if (mounted) setTeachers(d); }).catch(() => {});
-    fetchClasses().then((d) => { if (mounted) setClasses(d); }).catch(() => {});
-    fetchAttendance().then((d) => { if (mounted) setAttendance(d); }).catch(() => {});
-    fetchMarks().then((d) => { if (mounted) setMarks(d); }).catch(() => {});
-    return () => { mounted = false; };
-  }, [activeSchool]);
+  useEffect(() => {
+    fetchStudentsRequest();
+    fetchTeachersRequest();
+    fetchClassesRequest();
+    fetchAttendanceRequest();
+    fetchMarksRequest();
+  }, [
+    fetchStudentsRequest,
+    fetchTeachersRequest,
+    fetchClassesRequest,
+    fetchAttendanceRequest,
+    fetchMarksRequest,
+    activeSchool,
+  ]);
 
-  const todayAttendance = attendance.filter((a) => a.date === new Date().toISOString().split("T")[0]);
-  const presentCount = todayAttendance.filter((a) => a.status === "present").length;
-  const absentCount = todayAttendance.filter((a) => a.status === "absent").length;
-  const lateCount = todayAttendance.filter((a) => a.status === "late").length;
+  const todayAttendance = attendance.filter((a: any) => a.date === new Date().toISOString().split("T")[0]);
+  const presentCount = todayAttendance.filter((a: any) => a.status === "present").length;
+  const absentCount = todayAttendance.filter((a: any) => a.status === "absent").length;
+  const lateCount = todayAttendance.filter((a: any) => a.status === "late").length;
   const totalToday = todayAttendance.length;
   const attendanceRate = totalToday > 0 ? Math.round((presentCount / totalToday) * 100) : 0;
 
@@ -143,7 +182,7 @@ export function DashboardPage() {
   const activeMotto = activeSchool ? (bannerMottos[activeSchool.theme || "default"] || "Welcome to your school administration portal") : "Welcome to your school administration portal";
 
   // Dynamically compute weekly attendance from database attendance records
-  const dynamicWeeklyAttendance = React.useMemo(() => {
+  const dynamicWeeklyAttendance = useMemo(() => {
     if (!attendance || attendance.length === 0) {
       return weeklyAttendance; // Fallback to mock
     }
@@ -156,11 +195,11 @@ export function DashboardPage() {
       count: 0
     }));
 
-    attendance.forEach((record) => {
+    attendance.forEach((record: any) => {
       const date = new Date(record.date);
       const dayIndex = date.getDay();
       const status = record.status.toLowerCase();
-      
+
       dailyStats[dayIndex].count++;
       if (status === "present") dailyStats[dayIndex].present++;
       else if (status === "absent") dailyStats[dayIndex].absent++;
@@ -178,14 +217,14 @@ export function DashboardPage() {
   }, [attendance]);
 
   // Dynamically compute class performance from database marks records
-  const dynamicClassPerformance = React.useMemo(() => {
+  const dynamicClassPerformance = useMemo(() => {
     if (!marks || marks.length === 0) {
       return classPerformance; // Fallback
     }
     const classScores: Record<string, { total: number; count: number }> = {};
-    marks.forEach((m) => {
+    marks.forEach((m: any) => {
       // Look up student class details
-      const student = students.find((s) => s.id === m.studentId);
+      const student = students.find((s: any) => s.id === m.studentId);
       const className = student ? `${student.class}${student.section}` : "Other";
       if (!classScores[className]) {
         classScores[className] = { total: 0, count: 0 };
@@ -547,3 +586,5 @@ export function DashboardPage() {
     </div>
   );
 }
+
+export const DashboardPage = mapper(DashboardPageContent);

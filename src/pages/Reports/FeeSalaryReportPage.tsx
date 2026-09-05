@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -6,16 +6,19 @@ import { Badge } from "../../components/ui/Badge";
 import { useSchool } from "../../context/SchoolContext";
 // Student data is fetched from API when needed. Local fee/salary mocks are used for reporting.
 import type { FeeRecord, SalaryRecord, Student, Teacher } from "../../types";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
 import {
-  fetchFees,
-  fetchSalaries,
-  createFee,
-  updateFee,
-  deleteFee,
-  createSalary,
-  updateSalary,
-  deleteSalary,
-} from "../../lib/api";
+  fetchFeesRequest,
+  fetchSalariesRequest,
+  createFeeRequest,
+  updateFeeRequest,
+  deleteFeeRequest,
+  createSalaryRequest,
+  updateSalaryRequest,
+  deleteSalaryRequest,
+} from "../../saga";
 import {
   Search,
   Download,
@@ -118,13 +121,55 @@ const SAMPLE_SALARIES: SalaryRecord[] = [
   },
 ];
 
-type TabType = "fees" | "salaries";
+const mapStateToProps = (state: AppState) => ({
+  reduxFees: state.fees.fees,
+  reduxSalaries: state.salaries.salaries,
+});
 
-export function FeeSalaryReportPage() {
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchFeesRequest: () => dispatch(fetchFeesRequest()),
+  fetchSalariesRequest: () => dispatch(fetchSalariesRequest()),
+  createFeeRequest: (fee: any) => dispatch(createFeeRequest(fee)),
+  updateFeeRequest: (payload: { id: string; fee: any }) => dispatch(updateFeeRequest(payload)),
+  deleteFeeRequest: (id: string) => dispatch(deleteFeeRequest(id)),
+  createSalaryRequest: (salary: any) => dispatch(createSalaryRequest(salary)),
+  updateSalaryRequest: (payload: { id: string; salary: any }) => dispatch(updateSalaryRequest(payload)),
+  deleteSalaryRequest: (id: string) => dispatch(deleteSalaryRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function FeeSalaryReportPageContent({
+  reduxFees,
+  reduxSalaries,
+  fetchFeesRequest,
+  fetchSalariesRequest,
+  createFeeRequest,
+  updateFeeRequest,
+  deleteFeeRequest,
+  createSalaryRequest,
+  updateSalaryRequest,
+  deleteSalaryRequest,
+}: PropsFromRedux) {
   const { activeSchool } = useSchool();
-  const [activeTab, setActiveTab] = useState<TabType>("fees");
-  const [fees, setFees] = useState<FeeRecord[]>(SAMPLE_FEES);
-  const [salaries, setSalaries] = useState<SalaryRecord[]>(SAMPLE_SALARIES);
+  const [fees, setFees] = useState<FeeRecord[]>([]);
+  const [salaries, setSalaries] = useState<SalaryRecord[]>([]);
+
+  useEffect(() => {
+    fetchFeesRequest();
+    fetchSalariesRequest();
+  }, [fetchFeesRequest, fetchSalariesRequest, activeSchool]);
+
+  useEffect(() => {
+    setFees(reduxFees);
+  }, [reduxFees]);
+
+  useEffect(() => {
+    setSalaries(reduxSalaries);
+  }, [reduxSalaries]);
+
+  const [activeTab, setActiveTab] = useState<"fees" | "salaries">("fees");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "paid" | "pending" | "overdue" | "processing">("all");
   const [showModal, setShowModal] = useState(false);
@@ -171,16 +216,7 @@ export function FeeSalaryReportPage() {
     };
   }, [fees]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchFees()
-      .then((d) => { if (mounted) setFees(d); })
-      .catch(() => { /* keep SAMPLE_FEES */ });
-    fetchSalaries()
-      .then((d) => { if (mounted) setSalaries(d); })
-      .catch(() => { /* keep SAMPLE_SALARIES */ });
-    return () => { mounted = false; };
-  }, [activeSchool]);
+
 
   // Salary statistics
   const salaryStats = useMemo(() => {
@@ -198,33 +234,18 @@ export function FeeSalaryReportPage() {
 
   const handleDeleteFee = (id: string) => {
     if (!confirm("Are you sure you want to delete this fee record?")) return;
-    (async () => {
-      try {
-        await deleteFee(id);
-        setFees((prev) => prev.filter((f) => f.id !== id));
-      } catch (err) {
-        // fallback: optimistic remove already reverted by not applying change
-        alert("Failed to delete fee record");
-      }
-    })();
+    deleteFeeRequest(id);
   };
 
   const handleDeleteSalary = (id: string) => {
     if (!confirm("Are you sure you want to delete this salary record?")) return;
-    (async () => {
-      try {
-        await deleteSalary(id);
-        setSalaries((prev) => prev.filter((s) => s.id !== id));
-      } catch (err) {
-        alert("Failed to delete salary record");
-      }
-    })();
+    deleteSalaryRequest(id);
   };
 
   const openAddForm = () => {
     setEditingRecord(null);
     if (activeTab === "fees") {
-      setFormData({ studentName: "", rollNumber: "", feeType: "tuition", amount: 0, dueDate: new Date().toISOString().slice(0,10), status: "pending" });
+      setFormData({ studentName: "", rollNumber: "", feeType: "tuition", amount: 0, dueDate: new Date().toISOString().slice(0, 10), status: "pending" });
     } else {
       const now = new Date();
       setFormData({ teacherName: "", subject: "", baseSalary: 0, allowances: 0, deductions: 0, month: now.toLocaleString('default', { month: 'long' }), year: now.getFullYear(), status: "pending" });
@@ -238,8 +259,7 @@ export function FeeSalaryReportPage() {
     setShowModal(true);
   };
 
-  const handleSave = async () => {
-    // basic validation
+  const handleSave = () => {
     setFormError(null);
     if (activeTab === "fees") {
       if (!formData.studentName || !formData.rollNumber || !formData.amount) {
@@ -252,50 +272,28 @@ export function FeeSalaryReportPage() {
         return;
       }
     }
-    setIsSaving(true);
-    try {
-      // normalize numeric fields before sending
-      if (activeTab === "fees") {
-        formData.amount = Number(formData.amount || 0);
+
+    if (activeTab === "fees") {
+      formData.amount = Number(formData.amount || 0);
+      if (editingRecord) {
+        updateFeeRequest({ id: editingRecord.id, fee: formData });
       } else {
-        formData.baseSalary = Number(formData.baseSalary || 0);
-        formData.allowances = Number(formData.allowances || 0);
-        formData.deductions = Number(formData.deductions || 0);
-        formData.year = Number(formData.year || new Date().getFullYear());
+        createFeeRequest(formData);
       }
-      if (activeTab === "fees") {
-        if (editingRecord) {
-          const updated = await updateFee(editingRecord.id, formData);
-          setFees((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
-          setOperationMessage("Fee updated");
-        } else {
-          const created = await createFee(formData);
-          setFees((prev) => [created, ...prev]);
-          setOperationMessage("Fee created");
-        }
+    } else {
+      formData.baseSalary = Number(formData.baseSalary || 0);
+      formData.allowances = Number(formData.allowances || 0);
+      formData.deductions = Number(formData.deductions || 0);
+      formData.year = Number(formData.year || new Date().getFullYear());
+      if (editingRecord) {
+        updateSalaryRequest({ id: editingRecord.id, salary: formData });
       } else {
-        if (editingRecord) {
-          const updated = await updateSalary(editingRecord.id, formData);
-          setSalaries((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-          setOperationMessage("Salary updated");
-        } else {
-          const created = await createSalary(formData);
-          setSalaries((prev) => [created, ...prev]);
-          setOperationMessage("Salary created");
-        }
+        createSalaryRequest(formData);
       }
-      setShowModal(false);
-      setEditingRecord(null);
-      setFormData({});
-      // show a brief operation message
-      setFormSuccess("Saved");
-      setTimeout(() => setFormSuccess(null), 2500);
-      setTimeout(() => setOperationMessage(null), 3000);
-    } catch (err) {
-      setFormError("Save failed. Please try again.");
-    } finally {
-      setIsSaving(false);
     }
+    setShowModal(false);
+    setEditingRecord(null);
+    setFormData({});
   };
 
   const getStatusBadgeVariant = (status: string): any => {
@@ -341,15 +339,14 @@ export function FeeSalaryReportPage() {
           <button
             key={tab}
             onClick={() => {
-              setActiveTab(tab as TabType);
+              setActiveTab(tab as any);
               setFilterStatus("all");
               setSearchQuery("");
             }}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === tab
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeTab === tab
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
@@ -679,3 +676,5 @@ export function FeeSalaryReportPage() {
     </div>
   );
 }
+
+export const FeeSalaryReportPage = mapper(FeeSalaryReportPageContent);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../../context/ThemeContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -6,7 +6,16 @@ import { Input } from "../../components/ui/Input";
 import { THEMES, User } from "../../types";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../components/ui/Avatar";
-import { fetchSchools, fetchAllUsers, createUser, updateUser, deleteUser } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchSchoolsRequest,
+  fetchAllUsersRequest,
+  createUserRequest,
+  updateUserRequest,
+  deleteUserRequest,
+} from "../../saga";
 import { School } from "../../context/SchoolContext";
 import {
   Settings as SettingsIcon,
@@ -26,41 +35,50 @@ import {
   X
 } from "lucide-react";
 
-export function SettingsPage() {
+const mapStateToProps = (state: AppState) => ({
+  schools: state.school.schools,
+  users: state.users.users,
+  loading: state.users.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchSchoolsRequest: () => dispatch(fetchSchoolsRequest()),
+  fetchAllUsersRequest: () => dispatch(fetchAllUsersRequest()),
+  createUserRequest: (user: any) => dispatch(createUserRequest(user)),
+  updateUserRequest: (payload: { id: string; user: any }) => dispatch(updateUserRequest(payload)),
+  deleteUserRequest: (id: string) => dispatch(deleteUserRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function SettingsPageContent({
+  schools,
+  users,
+  loading,
+  fetchSchoolsRequest,
+  fetchAllUsersRequest,
+  createUserRequest,
+  updateUserRequest,
+  deleteUserRequest,
+}: PropsFromRedux) {
   const { theme, mode, setTheme, setMode } = useTheme();
-  const [schools, setSchools] = React.useState<School[]>([]);
-  const [users, setUsers] = React.useState<User[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [showUserModal, setShowUserModal] = React.useState(false);
-  const [editingUser, setEditingUser] = React.useState<User | null>(null);
-  const [userForm, setUserForm] = React.useState({
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userForm, setUserForm] = useState({
     name: "",
     email: "",
     phone: "",
     role: "teacher",
     schoolId: "",
   });
-  const [formError, setFormError] = React.useState<string | null>(null);
-  const [savingUser, setSavingUser] = React.useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [savingUser, setSavingUser] = useState(false);
 
-  React.useEffect(() => {
-    let mounted = true;
-    Promise.all([fetchSchools(), fetchAllUsers()])
-      .then(([schoolsData, usersData]) => {
-        if (mounted) {
-          setSchools(schoolsData);
-          setUsers(usersData);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.error("Settings: failed to fetch schools directory", err);
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    fetchSchoolsRequest();
+    fetchAllUsersRequest();
+  }, [fetchSchoolsRequest, fetchAllUsersRequest]);
 
   const getSchoolUsersByRole = (schoolId: string, role: string) => {
     return users.filter(
@@ -104,52 +122,33 @@ export function SettingsPage() {
     setFormError(null);
   };
 
-  const handleSaveUser = async () => {
+  const handleSaveUser = () => {
     if (!userForm.name.trim() || !userForm.email.trim() || !userForm.role || !userForm.schoolId) {
       setFormError("Name, email, role, and school are required.");
       return;
     }
 
-    setSavingUser(true);
-    try {
-      const payload = {
-        name: userForm.name.trim(),
-        email: userForm.email.trim(),
-        phone: userForm.phone.trim() || null,
-        role: userForm.role,
-        schoolId: userForm.schoolId,
-      };
+    const payload = {
+      name: userForm.name.trim(),
+      email: userForm.email.trim(),
+      phone: userForm.phone.trim() || null,
+      role: userForm.role,
+      schoolId: userForm.schoolId,
+    };
 
-      const savedUser = editingUser
-        ? await updateUser(editingUser.id, payload)
-        : await createUser(payload);
-
-      setUsers((prev) => {
-        if (editingUser) {
-          return prev.map((u) => (u.id === savedUser.id ? savedUser : u));
-        }
-        return [savedUser, ...prev];
-      });
-      closeUserModal();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSavingUser(false);
+    if (editingUser) {
+      updateUserRequest({ id: editingUser.id, user: payload });
+    } else {
+      createUserRequest(payload);
     }
+    closeUserModal();
   };
 
-  const handleDeleteUser = async (user: User) => {
+  const handleDeleteUser = (user: User) => {
     if (!window.confirm(`Delete user ${user.name}? This action cannot be undone.`)) {
       return;
     }
-
-    try {
-      await deleteUser(user.id);
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
-    } catch (err) {
-      console.error("Delete user failed", err);
-      window.alert("Failed to delete user. Please try again.");
-    }
+    deleteUserRequest(user.id);
   };
 
   return (
@@ -431,11 +430,10 @@ export function SettingsPage() {
               <button
                 key={t.name}
                 onClick={() => setTheme(t.name)}
-                className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-                  theme === t.name
-                    ? "border-primary bg-primary/5 shadow-md"
-                    : "border-border hover:border-primary/30"
-                }`}
+                className={`relative flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${theme === t.name
+                  ? "border-primary bg-primary/5 shadow-md"
+                  : "border-border hover:border-primary/30"
+                  }`}
               >
                 {theme === t.name && (
                   <div className="absolute top-2 right-2">
@@ -466,11 +464,10 @@ export function SettingsPage() {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => setMode("light")}
-              className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-                mode === "light"
-                  ? "border-primary bg-primary/5 shadow-md"
-                  : "border-border hover:border-primary/30"
-              }`}
+              className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${mode === "light"
+                ? "border-primary bg-primary/5 shadow-md"
+                : "border-border hover:border-primary/30"
+                }`}
             >
               <div className="h-16 w-24 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center">
                 <Sun className="h-6 w-6 text-amber-500" />
@@ -480,11 +477,10 @@ export function SettingsPage() {
             </button>
             <button
               onClick={() => setMode("dark")}
-              className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-                mode === "dark"
-                  ? "border-primary bg-primary/5 shadow-md"
-                  : "border-border hover:border-primary/30"
-              }`}
+              className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${mode === "dark"
+                ? "border-primary bg-primary/5 shadow-md"
+                : "border-border hover:border-primary/30"
+                }`}
             >
               <div className="h-16 w-24 rounded-lg bg-gray-900 border border-gray-700 shadow-sm flex items-center justify-center">
                 <Moon className="h-6 w-6 text-blue-400" />
@@ -533,3 +529,4 @@ export function SettingsPage() {
   );
 }
 
+export const SettingsPage = mapper(SettingsPageContent);

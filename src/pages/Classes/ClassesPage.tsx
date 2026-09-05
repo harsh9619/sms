@@ -1,16 +1,49 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../components/ui/Avatar";
 import { Input } from "../../components/ui/Input";
-import { fetchClasses, fetchTeachers, createClass, updateClass, deleteClass } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchClassesRequest,
+  fetchTeachersRequest,
+  createClassRequest,
+  updateClassRequest,
+  deleteClassRequest,
+} from "../../saga";
 import { BookOpen, Users, User, Plus, UserPlus, Edit, Trash2, X } from "lucide-react";
 import { Button } from "../../components/ui/Button";
 import { useNavigate } from "react-router-dom";
 import { useSchool } from "../../context/SchoolContext";
 import { useAuth } from "../../context/AuthContext";
 
-export function ClassesPage() {
+const mapStateToProps = (state: AppState) => ({
+  classes: state.classes.classes,
+  teachers: state.teachers.teachers,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
+  fetchTeachersRequest: () => dispatch(fetchTeachersRequest()),
+  createClassRequest: (cls: any) => dispatch(createClassRequest(cls)),
+  updateClassRequest: (payload: { id: string; cls: any }) => dispatch(updateClassRequest(payload)),
+  deleteClassRequest: (id: string) => dispatch(deleteClassRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function ClassesPageContent({
+  classes,
+  teachers,
+  fetchClassesRequest,
+  fetchTeachersRequest,
+  createClassRequest,
+  updateClassRequest,
+  deleteClassRequest,
+}: PropsFromRedux) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { activeSchool } = useSchool();
@@ -26,26 +59,20 @@ export function ClassesPage() {
     "from-rose-500 to-pink-600",
   ];
 
-  const [classes, setClasses] = React.useState<any[]>([]);
-  const [teachers, setTeachers] = React.useState<any[]>([]);
-  const [showModal, setShowModal] = React.useState(false);
-  const [editingClass, setEditingClass] = React.useState<any | null>(null);
-  const [formData, setFormData] = React.useState({
+  const [showModal, setShowModal] = useState(false);
+  const [editingClass, setEditingClass] = useState<any | null>(null);
+  const [formData, setFormData] = useState({
     name: "",
     section: "",
     teacherId: "",
     subjects: "",
   });
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadClasses = React.useCallback(() => {
-    fetchClasses().then((d) => setClasses(d)).catch(() => {});
-  }, []);
-
-  React.useEffect(() => {
-    loadClasses();
-    fetchTeachers().then((t) => setTeachers(t)).catch(() => {});
-  }, [activeSchool, loadClasses]);
+  useEffect(() => {
+    fetchClassesRequest();
+    fetchTeachersRequest();
+  }, [fetchClassesRequest, fetchTeachersRequest, activeSchool]);
 
   const openAddModal = () => {
     setEditingClass(null);
@@ -73,11 +100,7 @@ export function ClassesPage() {
 
   const handleDelete = (id: string) => {
     if (!confirm("Are you sure you want to delete this class? This will also remove all subjects, timetables, and homework schedules associated with it.")) return;
-    deleteClass(id)
-      .then(() => {
-        setClasses((prev) => prev.filter((c) => c.id !== id));
-      })
-      .catch(() => alert("Failed to delete class."));
+    deleteClassRequest(id);
   };
 
   const handleSave = () => {
@@ -98,19 +121,11 @@ export function ClassesPage() {
     };
 
     if (editingClass) {
-      updateClass(editingClass.id, payload)
-        .then(() => {
-          setShowModal(false);
-          loadClasses();
-        })
-        .catch((err: any) => setError(err.message || "Failed to update class."));
+      updateClassRequest({ id: editingClass.id, cls: payload });
+      setShowModal(false);
     } else {
-      createClass(payload)
-        .then(() => {
-          setShowModal(false);
-          loadClasses();
-        })
-        .catch((err: any) => setError(err.message || "Failed to create class."));
+      createClassRequest(payload);
+      setShowModal(false);
     }
   };
 
@@ -275,3 +290,5 @@ export function ClassesPage() {
     </div>
   );
 }
+
+export const ClassesPage = mapper(ClassesPageContent);

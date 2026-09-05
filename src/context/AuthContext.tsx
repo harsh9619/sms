@@ -1,14 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { User, UserRole } from "../types";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { useAppDispatch, useAppSelector } from "../saga/hooks";
 import {
   loginRequest,
   fetchCurrentUserRequest,
-  fetchAllUsersRequest,
+  fetchAuthAllUsersRequest,
   setSimulatedRole as setSimulatedRoleAction,
   logout as logoutAction,
-} from "../store/slices/authSlice";
-import { fetchUsersRequest } from "../store/slices/usersSlice";
+  fetchUsersRequest,
+} from "../saga";
+
+
 
 interface AuthContextType {
   user: User | null;
@@ -45,9 +47,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fetch all users via Redux Saga if user is admin
   useEffect(() => {
     if (user && user.role === "admin") {
-      dispatch(fetchAllUsersRequest());
+      dispatch(fetchAuthAllUsersRequest());
     }
   }, [user, dispatch]);
+
 
   // Prefetch users via Redux Saga to enable server-side auth simulation
   useEffect(() => {

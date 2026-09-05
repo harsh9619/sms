@@ -1,60 +1,67 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
-import { fetchFees, fetchStudents, updateFee } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import { fetchFeesRequest, fetchStudentsRequest, updateFeeRequest } from "../../saga";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { DollarSign, CheckCircle2, Clock, AlertCircle, Receipt, CreditCard, X } from "lucide-react";
 import type { FeeRecord } from "../../types";
 
-export function MyFeesPage() {
+const mapStateToProps = (state: AppState) => ({
+  allFees: state.fees.fees,
+  students: state.students.students,
+  loading: state.fees.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchFeesRequest: () => dispatch(fetchFeesRequest()),
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  updateFeeRequest: (payload: { id: string; fee: any }) => dispatch(updateFeeRequest(payload)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function MyFeesPageContent({
+  allFees,
+  students,
+  loading,
+  fetchFeesRequest,
+  fetchStudentsRequest,
+  updateFeeRequest,
+}: PropsFromRedux) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
-  const [fees, setFees] = useState<FeeRecord[]>([]);
-  const [studentProfile, setStudentProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [payingFee, setPayingFee] = useState<FeeRecord | null>(null);
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("credit_card");
 
-  // Fetch student profile first
   useEffect(() => {
+    fetchFeesRequest();
+    fetchStudentsRequest();
+  }, [fetchFeesRequest, fetchStudentsRequest, activeSchool]);
+
+  const studentProfile = useMemo(() => {
     if (user?.role === "student") {
-      fetchStudents()
-        .then((studentsList) => {
-          const profile = studentsList.find((s: any) => s.email === user.email);
-          if (profile) setStudentProfile(profile);
-        })
-        .catch((err) => console.error(err));
+      return students.find((s: any) => s.email === user.email) || null;
     }
-  }, [user, activeSchool]);
+    return null;
+  }, [students, user]);
 
-  const loadFees = React.useCallback(() => {
-    if (!studentProfile) return;
-    setLoading(true);
-    fetchFees()
-      .then((allFees) => {
-        // Filter by current student
-        const myFees = allFees.filter((f: any) => f.studentId === studentProfile.id);
-        setFees(myFees);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, [studentProfile, activeSchool]);
-
-  useEffect(() => {
-    loadFees();
-  }, [loadFees]);
+  const fees = useMemo(() => {
+    if (!studentProfile) return [];
+    return allFees.filter((f: any) => f.studentId === studentProfile.id);
+  }, [allFees, studentProfile]);
 
   const stats = useMemo(() => {
     let total = 0;
     let paid = 0;
     let pending = 0;
-    fees.forEach((f) => {
+    fees.forEach((f: any) => {
       total += f.amount;
       if (f.status === "paid") {
         paid += f.amount;
@@ -68,7 +75,6 @@ export function MyFeesPage() {
   const handlePay = () => {
     if (!payingFee) return;
     setProcessing(true);
-    // Simulate payment processing
     setTimeout(() => {
       const payload = {
         ...payingFee,
@@ -77,17 +83,9 @@ export function MyFeesPage() {
         remarks: `Paid via Mock Gateway (${paymentMethod})`,
       };
 
-      updateFee(payingFee.id, payload)
-        .then(() => {
-          setProcessing(false);
-          setPayingFee(null);
-          loadFees();
-        })
-        .catch((err) => {
-          console.error(err);
-          alert("Payment update failed.");
-          setProcessing(false);
-        });
+      updateFeeRequest({ id: payingFee.id, fee: payload });
+      setProcessing(false);
+      setPayingFee(null);
     }, 1500);
   };
 
@@ -262,3 +260,5 @@ export function MyFeesPage() {
     </div>
   );
 }
+
+export const MyFeesPage = mapper(MyFeesPageContent);

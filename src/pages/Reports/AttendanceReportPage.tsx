@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { useSchool } from "../../context/SchoolContext";
-import { fetchAttendance, fetchStudents } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import { fetchAttendanceRequest, fetchStudentsRequest } from "../../saga";
 import type { AttendanceRecord } from "../../types";
 import {
   Search,
@@ -22,17 +25,32 @@ import {
   generateAttendanceSummaryReport,
 } from "../../lib/reportUtils";
 
-export function AttendanceReportPage() {
-  const { activeSchool } = useSchool();
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
+const mapStateToProps = (state: AppState) => ({
+  attendance: state.attendance.records,
+  students: state.students.students,
+});
 
-  React.useEffect(() => {
-    let mounted = true;
-    fetchAttendance().then((d) => { if (mounted) setAttendance(d); }).catch(() => {});
-    fetchStudents().then((d) => { if (mounted) setStudents(d); }).catch(() => {});
-    return () => { mounted = false; };
-  }, [activeSchool]);
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchAttendanceRequest: () => dispatch(fetchAttendanceRequest()),
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function AttendanceReportPageContent({
+  attendance,
+  students,
+  fetchAttendanceRequest,
+  fetchStudentsRequest,
+}: PropsFromRedux) {
+  const { activeSchool } = useSchool();
+
+  useEffect(() => {
+    fetchAttendanceRequest();
+    fetchStudentsRequest();
+  }, [fetchAttendanceRequest, fetchStudentsRequest, activeSchool]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split("T")[0]);
   const [filterClass, setFilterClass] = useState("");
@@ -189,11 +207,10 @@ export function AttendanceReportPage() {
           <button
             key={mode}
             onClick={() => setViewMode(mode as any)}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              viewMode === mode
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${viewMode === mode
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
           >
             {mode === "list" ? "Daily Records" : "Student Summary"}
           </button>
@@ -376,3 +393,5 @@ export function AttendanceReportPage() {
     </div>
   );
 }
+
+export const AttendanceReportPage = mapper(AttendanceReportPageContent);

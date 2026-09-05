@@ -1,63 +1,74 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../components/ui/Avatar";
-import { fetchSchools, fetchUsers, createUser, updateUser, deleteUser } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchSchoolsRequest,
+  fetchUsersRequest,
+  createUserRequest,
+  updateUserRequest,
+  deleteUserRequest,
+} from "../../saga";
 import { School, useSchool } from "../../context/SchoolContext";
 import { User } from "../../types";
 import { Plus, Edit, Trash2, Users, X } from "lucide-react";
 
-export function UsersPage() {
-  const [users, setUsers] = React.useState<User[]>([]);
-  const [schools, setSchools] = React.useState<School[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [showModal, setShowModal] = React.useState(false);
-  const [editingUser, setEditingUser] = React.useState<User | null>(null);
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [sortBy, setSortBy] = React.useState<"name" | "email" | "role" | "school">("name");
-  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
-  const [formState, setFormState] = React.useState({
+const mapStateToProps = (state: AppState) => ({
+  schools: state.school.schools,
+  users: state.users.users,
+  loading: state.users.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchSchoolsRequest: () => dispatch(fetchSchoolsRequest()),
+  fetchUsersRequest: () => dispatch(fetchUsersRequest()),
+  createUserRequest: (user: any) => dispatch(createUserRequest(user)),
+  updateUserRequest: (payload: { id: string; user: any }) => dispatch(updateUserRequest(payload)),
+  deleteUserRequest: (id: string) => dispatch(deleteUserRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function UsersPageContent({
+  schools,
+  users,
+  loading,
+  fetchSchoolsRequest,
+  fetchUsersRequest,
+  createUserRequest,
+  updateUserRequest,
+  deleteUserRequest,
+}: PropsFromRedux) {
+  const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "email" | "role" | "school">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [formState, setFormState] = useState({
     name: "",
     email: "",
     phone: "",
     role: "teacher",
     schoolId: "",
   });
-  const [formError, setFormError] = React.useState<string | null>(null);
-  const [saving, setSaving] = React.useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const { activeSchool } = useSchool();
 
-  React.useEffect(() => {
-    let active = true;
-    setLoading(true);
-    Promise.all([fetchSchools(), fetchUsers()])
-      .then(([schoolsData, usersData]) => {
-        if (!active) return;
-        setSchools(schoolsData);
-        setUsers(usersData);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("UsersPage: failed to load users or schools", err);
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [activeSchool]);
+  useEffect(() => {
+    fetchSchoolsRequest();
+    // fetchUsersRequest();
+  }, [fetchSchoolsRequest, fetchUsersRequest, activeSchool]);
 
   const openCreateModal = () => {
     setEditingUser(null);
-    setFormState({
-      name: "",
-      email: "",
-      phone: "",
-      role: "teacher",
-      schoolId: activeSchool?.id || schools[0]?.id || "",
-    });
-    setFormError(null);
+    resetForm();
     setShowModal(true);
   };
 
@@ -74,6 +85,17 @@ export function UsersPage() {
     setShowModal(true);
   };
 
+  const resetForm = (schoolId?: string) => {
+    setFormState({
+      name: "",
+      email: "",
+      phone: "",
+      role: "teacher",
+      schoolId: schoolId || activeSchool?.id || schools[0]?.id || "",
+    });
+    setFormError(null);
+  };
+
   const toggleSort = (column: "name" | "email" | "role" | "school") => {
     if (sortBy === column) {
       setSortDir((current) => (current === "asc" ? "desc" : "asc"));
@@ -83,7 +105,7 @@ export function UsersPage() {
     }
   };
 
-  const filteredUsers = React.useMemo(() => {
+  const filteredUsers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const visibleUsers = activeSchool
       ? users.filter((user) => user.schoolIds?.includes(activeSchool.id))
@@ -95,11 +117,11 @@ export function UsersPage() {
 
     const filtered = query
       ? withSchoolName.filter((user) =>
-          [user.name, user.email, user.role, user.schoolName]
-            .join(" ")
-            .toLowerCase()
-            .includes(query)
-        )
+        [user.name, user.email, user.role, user.schoolName]
+          .join(" ")
+          .toLowerCase()
+          .includes(query)
+      )
       : withSchoolName;
 
     return filtered.slice().sort((a, b) => {
@@ -117,52 +139,33 @@ export function UsersPage() {
     setFormError(null);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!formState.name.trim() || !formState.email.trim() || !formState.role || !formState.schoolId) {
       setFormError("Name, email, role, and school are required.");
       return;
     }
 
-    setSaving(true);
-    try {
-      const payload = {
-        name: formState.name.trim(),
-        email: formState.email.trim(),
-        phone: formState.phone.trim() || null,
-        role: formState.role,
-        schoolId: formState.schoolId,
-      };
+    const payload = {
+      name: formState.name.trim(),
+      email: formState.email.trim(),
+      phone: formState.phone.trim() || null,
+      role: formState.role,
+      schoolId: formState.schoolId,
+    };
 
-      const result = editingUser
-        ? await updateUser(editingUser.id, payload)
-        : await createUser(payload);
-
-      setUsers((prev) => {
-        if (editingUser) {
-          return prev.map((u) => (u.id === result.id ? result : u));
-        }
-        return [result, ...prev];
-      });
-      closeModal();
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
+    if (editingUser) {
+      updateUserRequest({ id: editingUser.id, user: payload });
+    } else {
+      createUserRequest(payload);
     }
+    closeModal();
   };
 
-  const handleDelete = async (user: User) => {
+  const handleDelete = (user: User) => {
     if (!window.confirm(`Delete user ${user.name}? This cannot be undone.`)) {
       return;
     }
-
-    try {
-      await deleteUser(user.id);
-      setUsers((prev) => prev.filter((u) => u.id !== user.id));
-    } catch (err) {
-      console.error("UsersPage delete failed", err);
-      window.alert("Could not delete user. Please try again.");
-    }
+    deleteUserRequest(user.id);
   };
 
   return (
@@ -352,3 +355,5 @@ export function UsersPage() {
     </div>
   );
 }
+
+export const UsersPage = mapper(UsersPageContent);

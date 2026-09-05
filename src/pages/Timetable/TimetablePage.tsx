@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { fetchTimetables, createTimetable, updateTimetable, deleteTimetable, fetchClasses, fetchSubjects, fetchStudents } from "../../lib/api";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
+import { AppState } from "../../saga/rootReducer";
+import {
+  fetchTimetablesRequest,
+  createTimetableRequest,
+  updateTimetableRequest,
+  deleteTimetableRequest,
+  fetchClassesRequest,
+  fetchStudentsRequest,
+} from "../../saga";
+import classService from "../../Services/class.service";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Calendar, Clock, Plus, Trash2, Edit, X, MapPin, User, BookOpen } from "lucide-react";
@@ -9,15 +20,43 @@ import { useSchool } from "../../context/SchoolContext";
 
 const DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
-export function TimetablePage() {
+const mapStateToProps = (state: AppState) => ({
+  reduxClasses: state.classes.classes,
+  reduxStudents: state.students.students,
+  reduxTimetable: state.timetables.timetables,
+  loading: state.timetables.loading,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
+  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  fetchTimetablesRequest: (params?: any) => dispatch(fetchTimetablesRequest(params)),
+  createTimetableRequest: (t: any) => dispatch(createTimetableRequest(t)),
+  updateTimetableRequest: (payload: { id: string; t: any }) => dispatch(updateTimetableRequest(payload)),
+  deleteTimetableRequest: (id: string) => dispatch(deleteTimetableRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+type PropsFromRedux = ConnectedProps<typeof mapper>;
+
+function TimetablePageContent({
+  reduxClasses,
+  reduxStudents,
+  reduxTimetable,
+  loading,
+  fetchClassesRequest,
+  fetchStudentsRequest,
+  fetchTimetablesRequest,
+  createTimetableRequest,
+  updateTimetableRequest,
+  deleteTimetableRequest,
+}: PropsFromRedux) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
-  const [timetable, setTimetable] = useState<TimetableSlot[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [studentClassId, setStudentClassId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSlot, setEditingSlot] = useState<TimetableSlot | null>(null);
   const [formData, setFormData] = useState({
@@ -30,35 +69,28 @@ export function TimetablePage() {
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch classes (for admin and teacher selection)
   useEffect(() => {
-    fetchClasses()
-      .then((d) => {
-        setClasses(d);
-        if (d.length > 0 && user?.role === "admin") {
-          setSelectedClassId(d[0].id);
-        }
-      })
-      .catch((err) => console.error(err));
-  }, [user, activeSchool]);
+    fetchClassesRequest();
+    fetchStudentsRequest();
+  }, [fetchClassesRequest, fetchStudentsRequest, activeSchool]);
 
-  // If user is a student, fetch their profile to get their class ID
+  useEffect(() => {
+    setClasses(reduxClasses);
+    if (reduxClasses.length > 0 && user?.role === "admin" && !selectedClassId) {
+      setSelectedClassId(reduxClasses[0].id);
+    }
+  }, [reduxClasses, user, selectedClassId]);
+
   useEffect(() => {
     if (user?.role === "student") {
-      fetchStudents()
-        .then((students) => {
-          const profile = students.find((s: any) => s.email === user.email);
-          if (profile && profile.classId) {
-            setStudentClassId(profile.classId);
-          }
-        })
-        .catch((err) => console.error(err));
+      const profile = reduxStudents.find((s: any) => s.email === user.email);
+      if (profile && (profile as any).classId) {
+        setStudentClassId((profile as any).classId);
+      }
     }
-  }, [user, activeSchool]);
+  }, [user, reduxStudents]);
 
-  // Load timetable slots based on role
-  const loadTimetable = React.useCallback(() => {
-    setLoading(true);
+  useEffect(() => {
     let params: any = {};
     if (user?.role === "student" && studentClassId) {
       params.classId = studentClassId;
@@ -66,37 +98,32 @@ export function TimetablePage() {
       params.teacherId = user.id;
     } else if (user?.role === "admin" && selectedClassId) {
       params.classId = selectedClassId;
-    } else {
-      setLoading(false);
-      return;
     }
+    fetchTimetablesRequest(params);
+  }, [user, selectedClassId, studentClassId, activeSchool, fetchTimetablesRequest]);
 
-    fetchTimetables(params)
-      .then((data) => {
-        setTimetable(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoading(false);
-      });
-  }, [user, selectedClassId, studentClassId]);
+  const timetable = useMemo(() => {
+    if (user?.role === "student" && studentClassId) {
+      return reduxTimetable.filter((t: any) => t.classId === studentClassId);
+    }
+    if (user?.role === "teacher") {
+      return reduxTimetable.filter((t: any) => t.teacherId === user.id);
+    }
+    if (user?.role === "admin" && selectedClassId) {
+      return reduxTimetable.filter((t: any) => t.classId === selectedClassId);
+    }
+    return reduxTimetable;
+  }, [reduxTimetable, user, selectedClassId, studentClassId]);
 
-  useEffect(() => {
-    loadTimetable();
-  }, [loadTimetable]);
-
-  // Fetch subjects when selected class changes in modal
   useEffect(() => {
     const cid = formData.classId || selectedClassId;
     if (cid) {
-      fetchSubjects({ classId: cid })
-        .then((subs) => setSubjects(subs))
-        .catch((err) => console.error(err));
+      classService.getSubjects({ classId: cid })
+        .then((subs: any) => setSubjects(subs))
+        .catch((err: any) => console.error(err));
     }
   }, [formData.classId, selectedClassId]);
 
-  // Open add/edit modal
   const openAddModal = () => {
     setEditingSlot(null);
     setFormData({
@@ -127,11 +154,7 @@ export function TimetablePage() {
 
   const handleDelete = (id: string) => {
     if (!confirm("Are you sure you want to delete this timetable slot?")) return;
-    deleteTimetable(id)
-      .then(() => {
-        setTimetable((prev) => prev.filter((item) => item.id !== id));
-      })
-      .catch(() => alert("Failed to delete timetable slot"));
+    deleteTimetableRequest(id);
   };
 
   const handleSave = () => {
@@ -148,19 +171,11 @@ export function TimetablePage() {
     };
 
     if (editingSlot) {
-      updateTimetable(editingSlot.id, payload)
-        .then(() => {
-          setShowModal(false);
-          loadTimetable();
-        })
-        .catch(() => setError("Failed to update slot. Please check for conflicting times."));
+      updateTimetableRequest({ id: editingSlot.id, t: payload });
+      setShowModal(false);
     } else {
-      createTimetable(payload)
-        .then(() => {
-          setShowModal(false);
-          loadTimetable();
-        })
-        .catch(() => setError("Failed to create slot. Please check for conflicting times."));
+      createTimetableRequest(payload);
+      setShowModal(false);
     }
   };
 
@@ -412,3 +427,5 @@ export function TimetablePage() {
     </div>
   );
 }
+
+export const TimetablePage = mapper(TimetablePageContent);
