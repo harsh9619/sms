@@ -160,7 +160,7 @@ function ClassesPageContent({
               <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card" />
               <div className="relative z-10 p-4 flex justify-between items-start">
                 <h2 className="text-2xl font-bold text-white">
-                  Class {cls.name}-{cls.section}
+                  {cls.name}-{cls.section}
                 </h2>
                 {user?.role === "admin" && (
                   <div className="flex gap-1.5 bg-black/20 backdrop-blur-md p-1 rounded-lg border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

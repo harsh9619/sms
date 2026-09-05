@@ -7,14 +7,14 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import type { ClassInfo } from "../../types";
-import { 
-  BookOpen, 
-  CheckSquare, 
-  Square, 
-  Search, 
-  Save, 
-  CheckCircle2, 
-  Sparkles, 
+import {
+  BookOpen,
+  CheckSquare,
+  Square,
+  Search,
+  Save,
+  CheckCircle2,
+  Sparkles,
   RefreshCw,
   Layers,
   GraduationCap,
@@ -43,7 +43,7 @@ export function ClassSubjectConfigPage() {
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [masterSubjects, setMasterSubjects] = useState<SubjectMaster[]>([]);
   const [assignedSubjectMasterIds, setAssignedSubjectMasterIds] = useState<string[]>([]);
-  
+
   // UI states
   const [loadingClasses, setLoadingClasses] = useState(false);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
@@ -388,7 +388,8 @@ export function ClassSubjectConfigPage() {
                   ) : (
                     classesList.map((c) => (
                       <option key={c.id} value={c.id}>
-                        Class {c.name}-{c.section || "A"} {c.studentCount ? `(${c.studentCount} Students)` : ""}
+                        {c.name}-{c.section || "A"}
+                        {/* {c.studentCount ? `(${c.studentCount} Students)` : ""} */}
                       </option>
                     ))
                   )}
@@ -463,11 +464,10 @@ export function ClassSubjectConfigPage() {
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${
-                      selectedCategory === cat
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${selectedCategory === cat
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
                   >
                     {cat}
                   </button>
@@ -512,11 +512,10 @@ export function ClassSubjectConfigPage() {
                       key={m.id}
                       type="button"
                       onClick={() => toggleSubject(m.id)}
-                      className={`relative flex flex-col text-left p-4 rounded-xl border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${
-                        isAssigned
-                          ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/20"
-                          : "border-border/60 bg-card hover:border-muted-foreground/40"
-                      }`}
+                      className={`relative flex flex-col text-left p-4 rounded-xl border-2 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${isAssigned
+                        ? "border-primary bg-primary/5 shadow-md ring-1 ring-primary/20"
+                        : "border-border/60 bg-card hover:border-muted-foreground/40"
+                        }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-3">
                         <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded bg-muted text-foreground">
@@ -524,11 +523,10 @@ export function ClassSubjectConfigPage() {
                         </span>
 
                         <div
-                          className={`h-5 w-5 rounded-md flex items-center justify-center transition-all ${
-                            isAssigned
-                              ? "bg-primary text-primary-foreground shadow-sm scale-110"
-                              : "border border-border bg-background"
-                          }`}
+                          className={`h-5 w-5 rounded-md flex items-center justify-center transition-all ${isAssigned
+                            ? "bg-primary text-primary-foreground shadow-sm scale-110"
+                            : "border border-border bg-background"
+                            }`}
                         >
                           {isAssigned && <CheckCircle2 className="h-3.5 w-3.5" />}
                         </div>
@@ -622,17 +620,15 @@ export function ClassSubjectConfigPage() {
                           key={cm.id}
                           type="button"
                           onClick={() => toggleGradeName(cm.name)}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-bold transition-all ${
-                            isChecked
-                              ? "border-primary bg-primary/10 text-primary shadow-sm ring-1 ring-primary/30"
-                              : "border-border/60 bg-background text-foreground hover:border-muted-foreground/40"
-                          }`}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-bold transition-all ${isChecked
+                            ? "border-primary bg-primary/10 text-primary shadow-sm ring-1 ring-primary/30"
+                            : "border-border/60 bg-background text-foreground hover:border-muted-foreground/40"
+                            }`}
                         >
                           <span className="truncate">{cm.name}</span>
                           <div
-                            className={`h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                              isChecked ? "bg-primary text-primary-foreground" : "border border-border"
-                            }`}
+                            className={`h-4 w-4 rounded flex items-center justify-center flex-shrink-0 transition-colors ${isChecked ? "bg-primary text-primary-foreground" : "border border-border"
+                              }`}
                           >
                             {isChecked && <Check className="h-3 w-3" />}
                           </div>
@@ -684,11 +680,10 @@ export function ClassSubjectConfigPage() {
                           key={div}
                           type="button"
                           onClick={() => toggleDivision(div)}
-                          className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all font-bold ${
-                            isSelected
-                              ? "border-primary bg-primary/10 text-primary shadow-md scale-105"
-                              : "border-border/60 bg-background text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
-                          }`}
+                          className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all font-bold ${isSelected
+                            ? "border-primary bg-primary/10 text-primary shadow-md scale-105"
+                            : "border-border/60 bg-background text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground"
+                            }`}
                         >
                           <span className="text-xs text-muted-foreground font-normal">Division</span>
                           <span className="text-lg font-black">{div}</span>
