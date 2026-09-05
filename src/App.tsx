@@ -10,6 +10,8 @@ import { StudentsPage } from "./pages/Students/StudentsPage";
 import { TeachersPage } from "./pages/Teachers/TeachersPage";
 import { ClassesPage } from "./pages/Classes/ClassesPage";
 import { AssignTeacherPage } from "./pages/Classes/AssignTeacherPage";
+import { ClassSubjectConfigPage } from "./pages/Classes/ClassSubjectConfigPage";
+import { SubjectTeacherConfigPage } from "./pages/Classes/SubjectTeacherConfigPage";
 import { AttendancePage } from "./pages/Attendance/AttendancePage";
 import { MyAttendancePage } from "./pages/Attendance/MyAttendancePage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
@@ -90,6 +92,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={["admin"]}>
             <AssignTeacherPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/school/:schoolId/class-subject-config"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <ClassSubjectConfigPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/school/:schoolId/subject-teacher-config"
+        element={
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <SubjectTeacherConfigPage />
           </ProtectedRoute>
         }
       />

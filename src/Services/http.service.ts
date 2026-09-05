@@ -7,7 +7,7 @@ class HttpService {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(academicYearId ? { "X-Academic-Year-Id": academicYearId } : {}),
+      ...(academicYearId ? { "X-Academic-Year-Id": academicYearId, "academicyearid": academicYearId } : {}),
       ...optionsHeaders,
     };
     return headers;
