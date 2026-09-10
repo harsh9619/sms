@@ -354,7 +354,7 @@ export function ClassSubjectConfigPage() {
 
   // Subject categories available in master library
   const subjectCategories = useMemo(() => {
-    return ["all", ...Array.from(new Set(masterSubjects.map((m) => m.category).filter(Boolean)))];
+    return ["all", ...Array.from(new Set(masterSubjects.map((m) => m.category).filter((c): c is string => Boolean(c))))];
   }, [masterSubjects]);
 
   // Master subjects filtered for modal

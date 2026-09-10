@@ -715,7 +715,6 @@ function SettingsPageContent({
                             }`}
                           style={{
                             backgroundColor: t.color,
-                            ringColor: schoolForm.theme === t.name ? t.color : undefined,
                           }}>
                           {schoolForm.theme === t.name && (
                             <Check className="h-4 w-4 text-white absolute inset-0 m-auto drop-shadow" />
