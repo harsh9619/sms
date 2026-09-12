@@ -58,14 +58,31 @@ export interface Teacher {
 }
 
 // ==================== Class Types ====================
-export interface ClassInfo {
+export interface DivisionInfo {
   id: string;
   name: string;
-  section: string;
-  teacherId: string;
-  teacherName: string;
-  studentCount: number;
-  subjects: string[];
+}
+
+export interface SubjectInfo {
+  id: string;
+  name: string;
+}
+
+export interface ClassInfo {
+  id: string;
+  schoolClassId?: string;
+  name: string;
+  section?: string;
+  division?: string;
+  divisions: DivisionInfo[];
+  teacherId?: string | null;
+  teacherName?: string | null;
+  studentCount?: number;
+  subjects: SubjectInfo[];
+  schoolId?: string;
+  academicYearId?: string;
+  academicYear?: string;
+  classMasterId?: string;
 }
 
 // ==================== Attendance Types ====================

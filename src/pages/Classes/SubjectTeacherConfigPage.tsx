@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
 import type { ClassInfo } from "../../types";
 import {
   UserCheck,
@@ -84,72 +86,67 @@ export function SubjectTeacherConfigPage() {
         if (Array.isArray(res) && res.length > 0) {
           setTeachers(res);
         } else {
-          setTeachers(FALLBACK_TEACHERS);
+          setTeachers([]);
         }
       })
       .catch(() => {
-        setTeachers(FALLBACK_TEACHERS);
+        setTeachers([]);
       });
   }, []);
 
   // Fetch subjects with teacher details when class selection changes
   useEffect(() => {
     setLoading(true);
-    classSubjectService.getSubjectsWithTeachers(selectedClassId || undefined)
+    classSubjectService.getSubjectsWithTeachers()
       .then((data) => {
-        const listToUse = (data && data.length > 0) ? data : FALLBACK_SUBJECTS;
+        const listToUse = (data && data.length > 0) ? data : [];
         setSubjects(listToUse);
         const map: Record<string, string> = {};
-        listToUse.forEach((s) => {
-          if (s.teacherId) {
-            map[s.id] = s.teacherId;
+        listToUse.forEach((s: any) => {
+          const itemKey = s.classSubjectId || s.id;
+          if (s.teacherId && itemKey) {
+            map[itemKey] = s.teacherId;
           }
         });
         setAssignments(map);
       })
       .catch(() => {
-        setSubjects(FALLBACK_SUBJECTS);
-        const map: Record<string, string> = {};
-        FALLBACK_SUBJECTS.forEach((s) => {
-          if (s.teacherId) map[s.id] = s.teacherId;
-        });
-        setAssignments(map);
+        setSubjects([]);
       })
       .finally(() => setLoading(false));
-  }, [selectedClassId]);
+  }, []);
 
   // Direct API call on teacher dropdown selection
-  const handleTeacherChange = async (subjectId: string, teacherId: string) => {
+  const handleTeacherChange = async (classSubjectId: string, teacherId: string) => {
     const newTeacherId = teacherId || null;
 
     // Optimistic UI update
     setAssignments((prev) => ({
       ...prev,
-      [subjectId]: teacherId,
+      [classSubjectId]: teacherId,
     }));
 
-    setSavingSubjectId(subjectId);
+    setSavingSubjectId(classSubjectId);
     setError(null);
 
     try {
-      await classSubjectService.assignSubjectTeacher(subjectId, newTeacherId);
+      await classSubjectService.assignSubjectTeacher(classSubjectId, newTeacherId);
 
-      // Update subject local state with new teacher name
-      const assignedTeacher = teachers.find(t => t.id === teacherId);
-      setSubjects(prev =>
-        prev.map(s =>
-          s.id === subjectId
+      // Update subject local state with new teacher details
+      const assignedTeacher = teachers.find((t) => String(t.id) === String(teacherId));
+      setSubjects((prev) =>
+        prev.map((s: any) => {
+          const itemKey = s.classSubjectId || s.id;
+          return itemKey === classSubjectId
             ? { ...s, teacherId: teacherId, teacherName: assignedTeacher?.name || undefined }
-            : s
-        )
+            : s;
+        })
       );
 
       setSuccessMsg("Teacher assignment updated!");
       setTimeout(() => setSuccessMsg(null), 2500);
     } catch (err: any) {
-      // Fallback graceful toast if backend endpoint is not active
-      setSuccessMsg("Teacher assignment updated!");
-      setTimeout(() => setSuccessMsg(null), 2500);
+      setError(err.message || "Failed to update teacher assignment");
     } finally {
       setSavingSubjectId(null);
     }
@@ -159,15 +156,15 @@ export function SubjectTeacherConfigPage() {
     setSavingAll(true);
     setError(null);
     try {
-      for (const sub of subjects) {
-        const teacherId = assignments[sub.id] || null;
-        await classSubjectService.assignSubjectTeacher(sub.id, teacherId);
+      for (const sub of subjects as any[]) {
+        const itemKey = sub.classSubjectId || sub.id;
+        const teacherId = assignments[itemKey] || null;
+        await classSubjectService.assignSubjectTeacher(itemKey, teacherId);
       }
       setSuccessMsg("All teacher assignments saved successfully!");
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
-      setSuccessMsg("All teacher assignments saved successfully!");
-      setTimeout(() => setSuccessMsg(null), 3000);
+      setError(err.message || "Failed to save all teacher assignments");
     } finally {
       setSavingAll(false);
     }
@@ -176,11 +173,16 @@ export function SubjectTeacherConfigPage() {
   // Available unique divisions
   const availableDivisions = useMemo(() => {
     const set = new Set<string>();
-    subjects.forEach((s) => {
-      if (s.classSection) set.add(s.classSection.toUpperCase());
+    subjects.forEach((s: any) => {
+      const divName = s.divisionName || s.classDivision || s.classSection;
+      if (divName) set.add(String(divName).toUpperCase());
     });
     classesList.forEach((c) => {
-      if (c.section) set.add(c.section.toUpperCase());
+      if (c.divisions && Array.isArray(c.divisions)) {
+        c.divisions.forEach((d) => set.add(d.name.toUpperCase()));
+      } else if (c.section) {
+        set.add(c.section.toUpperCase());
+      }
     });
     return Array.from(set).sort();
   }, [subjects, classesList]);
@@ -188,36 +190,63 @@ export function SubjectTeacherConfigPage() {
   // Available unique subject names
   const availableSubjects = useMemo(() => {
     const set = new Set<string>();
-    subjects.forEach((s) => {
-      if (s.name) set.add(s.name);
+    subjects.forEach((s: any) => {
+      const subName = s.subjectName || s.name;
+      if (subName) set.add(subName);
     });
     return Array.from(set).sort();
   }, [subjects]);
 
   // Filtering based on Class, Division, Subject, Teacher, and Status
   const filteredSubjects = useMemo(() => {
-    return subjects.filter((s) => {
-      // Class filter
-      const matchesClass =
-        !selectedClassId ||
-        s.classId === selectedClassId ||
-        s.className === selectedClassId ||
-        `Class ${s.className}` === selectedClassId;
+    const selectedClassObj = classesList.find(
+      (c) => String(c.id) === String(selectedClassId) || String(c.schoolClassId) === String(selectedClassId)
+    );
 
-      // Division filter
-      const matchesDivision =
-        selectedDivision === "ALL" ||
-        !selectedDivision ||
-        (s.classSection || "A").toUpperCase() === selectedDivision.toUpperCase();
+    return subjects.filter((s: any) => {
+      const itemKey = s.classSubjectId || s.id;
 
-      // Teacher filter
-      const currentTeacherId = assignments[s.id] || "";
-      let matchesTeacher = true;
-      if (selectedTeacherFilter && selectedTeacherFilter !== "ALL") {
-        matchesTeacher = currentTeacherId === selectedTeacherFilter;
+      // 1. Class filter
+      let matchesClass = true;
+      if (selectedClassId) {
+        matchesClass = false;
+        if (String(s.classId) === String(selectedClassId)) {
+          matchesClass = true;
+        } else if (selectedClassObj) {
+          const classNameLower = String(selectedClassObj.name).trim().toLowerCase();
+          const sClassNameLower = String(s.className || "").trim().toLowerCase();
+          if (
+            sClassNameLower === classNameLower ||
+            `class ${sClassNameLower}` === classNameLower ||
+            sClassNameLower === `class ${classNameLower}`
+          ) {
+            matchesClass = true;
+          } else if (selectedClassObj.schoolClassId && String(s.classId) === String(selectedClassObj.schoolClassId)) {
+            matchesClass = true;
+          } else if (selectedClassObj.classMasterId && s.classMasterId && String(s.classMasterId) === String(selectedClassObj.classMasterId)) {
+            matchesClass = true;
+          }
+        }
       }
 
-      // Status filter (Only Assigned / Only Unassigned / All)
+      // 2. Division filter
+      const divName = (s.divisionName || s.classDivision || s.classSection || "").toString().trim();
+      let matchesDivision = true;
+      if (selectedDivision && selectedDivision !== "ALL") {
+        const selDivUpper = selectedDivision.trim().toUpperCase();
+        matchesDivision =
+          divName.toUpperCase() === selDivUpper ||
+          String(s.divisionId) === String(selectedDivision);
+      }
+
+      // 3. Teacher filter
+      const currentTeacherId = assignments[itemKey] || s.teacherId || "";
+      let matchesTeacher = true;
+      if (selectedTeacherFilter && selectedTeacherFilter !== "ALL") {
+        matchesTeacher = String(currentTeacherId) === String(selectedTeacherFilter);
+      }
+
+      // 4. Status filter (Only Assigned / Only Unassigned / All)
       let matchesStatus = true;
       if (selectedStatusFilter === "ASSIGNED") {
         matchesStatus = Boolean(currentTeacherId);
@@ -225,21 +254,34 @@ export function SubjectTeacherConfigPage() {
         matchesStatus = !currentTeacherId;
       }
 
-      // Subject filter dropdown
-      const matchesSubject =
-        selectedSubjectFilter === "ALL" ||
-        !selectedSubjectFilter ||
-        s.name.toLowerCase() === selectedSubjectFilter.toLowerCase();
+      // 5. Subject filter dropdown
+      const subName = (s.subjectName || s.name || "").toString().trim();
+      let matchesSubject = true;
+      if (selectedSubjectFilter && selectedSubjectFilter !== "ALL") {
+        const selSubLower = selectedSubjectFilter.trim().toLowerCase();
+        matchesSubject =
+          subName.toLowerCase() === selSubLower ||
+          String(s.subjectId) === String(selectedSubjectFilter);
+      }
 
       return matchesClass && matchesDivision && matchesTeacher && matchesStatus && matchesSubject;
     });
-  }, [subjects, selectedClassId, selectedDivision, selectedTeacherFilter, selectedStatusFilter, selectedSubjectFilter, assignments]);
+  }, [
+    subjects,
+    classesList,
+    selectedClassId,
+    selectedDivision,
+    selectedTeacherFilter,
+    selectedStatusFilter,
+    selectedSubjectFilter,
+    assignments,
+  ]);
 
   const assignedCount = Object.values(assignments).filter(Boolean).length;
   const unassignedCount = subjects.length - assignedCount;
 
   return (
-    <div className="p-6 mx-auto space-y-6 animate-fade-in max-w-7xl">
+    <div className="p-6 mx-auto space-y-6 animate-fade-in ">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -252,28 +294,6 @@ export function SubjectTeacherConfigPage() {
           </div>
         </div>
 
-        {/* Global Save Button */}
-        {subjects.length > 0 && (
-          <Button
-            onClick={handleSaveAll}
-            disabled={savingAll}
-            className="w-full sm:w-auto font-semibold gap-2 shadow-lg hover:shadow-primary/25 transition-all"
-          >
-            {savingAll ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" /> Saving All...
-              </>
-            ) : successMsg ? (
-              <>
-                <CheckCircle2 className="h-4 w-4 text-emerald-300" /> {successMsg}
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4" /> Save All Assignments
-              </>
-            )}
-          </Button>
-        )}
       </div>
 
       {/* Filter Toolbar (Class, Division, Subject, Teacher, Status) */}
@@ -322,11 +342,17 @@ export function SubjectTeacherConfigPage() {
                   className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold text-foreground focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer shadow-sm"
                 >
                   <option value="ALL">All Divisions</option>
-                  {availableDivisions.map((div) => (
-                    <option key={div} value={div}>
-                      Div {div}
-                    </option>
-                  ))}
+                  {selectedClassId
+                    ? classesList?.find((c) => String(c.id) === String(selectedClassId) || String(c.schoolClassId) === String(selectedClassId))?.divisions?.map((div) => (
+                      <option key={div.id || div.name} value={div.name}>
+                        {div.name}
+                      </option>
+                    ))
+                    : availableDivisions.map((div) => (
+                      <option key={div} value={div}>
+                        {div}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -341,11 +367,17 @@ export function SubjectTeacherConfigPage() {
                   className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-bold text-foreground focus:ring-2 focus:ring-primary outline-none transition-all cursor-pointer shadow-sm"
                 >
                   <option value="ALL">All Subjects</option>
-                  {availableSubjects.map((subName) => (
-                    <option key={subName} value={subName}>
-                      {subName}
-                    </option>
-                  ))}
+                  {selectedClassId
+                    ? classesList?.find((c) => String(c.id) === String(selectedClassId) || String(c.schoolClassId) === String(selectedClassId))?.subjects?.map((sub) => (
+                      <option key={sub.id || sub.name} value={sub.name}>
+                        {sub.name}
+                      </option>
+                    ))
+                    : availableSubjects.map((subName) => (
+                      <option key={subName} value={subName}>
+                        {subName}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -422,42 +454,44 @@ export function SubjectTeacherConfigPage() {
                     <th className="px-6 py-4">Division</th>
                     <th className="px-6 py-4">Subject</th>
                     <th className="px-6 py-4">Teacher Dropdown (List of Teachers)</th>
-                    <th className="px-6 py-4 text-right">Status</th>
+                    <th className="px-6 py-4 text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60 text-sm">
-                  {filteredSubjects.map((s) => {
-                    const currentTeacherId = assignments[s.id] || "";
-                    const isSaving = savingSubjectId === s.id;
+                  {filteredSubjects.map((s: any) => {
+                    const itemKey = s.classSubjectId || s.id;
+                    const currentTeacherId = assignments[itemKey] || s.teacherId || "";
+                    const isSaving = savingSubjectId === itemKey;
+
+                    const classNameDisplay = s.className
+                      ? (s.className.toLowerCase().includes("class") ? s.className : `Class ${s.className}`)
+                      : "Class";
+                    const divDisplay = s.divisionName || s.classDivision || s.classSection || "A";
+                    const subjectNameDisplay = s.subjectName || s.name;
+                    const subjectCodeDisplay = s.code || `SUB-${s.subjectId || s.id}`;
 
                     return (
-                      <tr key={s.id} className="hover:bg-muted/30 transition-colors">
+                      <tr key={itemKey} className="hover:bg-muted/30 transition-colors">
                         {/* Class */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                              {s.className || "10"}
-                            </div>
                             <span className="font-bold text-foreground">
-                              {s.className ? (s.className.toLowerCase().includes("class") ? s.className : `Class ${s.className}`) : "Class 10"}
+                              {classNameDisplay}
                             </span>
                           </div>
                         </td>
 
                         {/* Division */}
                         <td className="px-6 py-4">
-                          <Badge variant="outline" className="font-bold text-xs bg-secondary/30 border-secondary/50 text-foreground px-3 py-1">
-                            Division {s.classSection || "A"}
-                          </Badge>
+                          <span className="font-bold text-xs  px-3 py-1">
+                            {divDisplay}
+                          </span>
                         </td>
 
                         {/* Subject */}
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-bold text-foreground text-sm">{s.name}</span>
-                            <span className="font-mono text-[11px] font-semibold text-muted-foreground">
-                              Code: {s.code || `SUB-${s.id}`}
-                            </span>
+                            <span className="font-bold text-foreground text-sm">{subjectNameDisplay}</span>
                           </div>
                         </td>
 
@@ -466,29 +500,24 @@ export function SubjectTeacherConfigPage() {
                           <div className="flex items-center gap-3 min-w-[280px]">
                             <select
                               value={currentTeacherId}
-                              onChange={(e) => handleTeacherChange(s.id, e.target.value)}
                               disabled={isSaving}
-                              className={`w-full h-10 rounded-xl border px-3 text-xs font-semibold focus:ring-2 focus:ring-primary outline-none cursor-pointer shadow-sm transition-all ${currentTeacherId
-                                ? "border-emerald-500/50 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 font-bold"
-                                : "border-amber-500/40 bg-amber-500/5 text-amber-600 dark:text-amber-400"
-                                }`}
+                              onChange={(e) => handleTeacherChange(itemKey, e.target.value)}
+                              className="w-full h-10 rounded-xl border px-3 text-xs font-semibold focus:ring-2 focus:ring-primary outline-none cursor-pointer shadow-sm transition-all"
+
                             >
-                              <option value="" className="text-muted-foreground font-normal">-- Select / Assign Teacher --</option>
+                              <option value="" className="text-muted-foreground font-normal">Select Teacher</option>
                               {teachers.map((t) => (
                                 <option key={t.id} value={t.id} className="text-foreground font-medium py-1">
-                                  {t.name} {t.subject ? `(${t.subject})` : ""}
+                                  {t.name}
                                 </option>
                               ))}
                             </select>
-
-                            {isSaving && (
-                              <RefreshCw className="h-4 w-4 animate-spin text-primary shrink-0" />
-                            )}
+                            {isSaving && <RefreshCw className="h-4 w-4 animate-spin text-primary flex-shrink-0" />}
                           </div>
                         </td>
 
                         {/* Status */}
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-center">
                           {isSaving ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
                               <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Saving...

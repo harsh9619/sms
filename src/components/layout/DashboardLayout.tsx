@@ -121,7 +121,7 @@ export function DashboardLayout({ children }: SidebarProps) {
     { path: "/students", icon: GraduationCap, label: "Students", roles: ["admin", "teacher"] },
     { path: "/teachers", icon: Users, label: "Teachers", roles: ["admin"] },
     { path: "/users", icon: Users, label: "Users", roles: ["admin"] },
-    { path: "/classes", icon: BookOpen, label: "Classes", roles: ["admin", "teacher"] },
+    { path: "/classes", icon: BookOpen, label: "Class-Teacher Config", roles: ["admin", "teacher"] },
     { path: "/class-subject-config", icon: Layers, label: "Class-Subject Config", roles: ["admin"] },
     { path: "/subject-teacher-config", icon: UserCheck, label: "Subject-Teacher Config", roles: ["admin"] },
     { path: "/timetable", icon: Calendar, label: "Timetable", roles: ["admin", "teacher", "student"] },

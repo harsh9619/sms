@@ -35,11 +35,13 @@ export const classSubjectService = {
 
   async getSubjectsWithTeachers(classId?: string): Promise<SubjectItem[]> {
     const query = classId ? `?classId=${classId}` : "";
-    return httpService.get<SubjectItem[]>(`/api/subjects/with-teachers${query}`);
+    return httpService.get<SubjectItem[]>(`/api/subjects/class-subject-teacher${query}`);
+
+
   },
 
   async syncClassSubjects(classId: string, masterSubjectIds: (number | string)[]): Promise<SubjectItem[]> {
-    return httpService.post<SubjectItem[]>("/api/subjects/sync-class", {
+    return httpService.post<SubjectItem[]>("/api/subjects/add-class-subject", {
       classId,
       masterSubjectIds,
     });

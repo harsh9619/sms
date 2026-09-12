@@ -1,10 +1,10 @@
 import React from "react";
+import { LoginContainer } from "./containers/login/LoginContainer";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SchoolProvider, useSchool } from "./context/SchoolContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
-import { LoginPage } from "./pages/Login/LoginPage";
 import { DashboardPage } from "./pages/Dashboard/DashboardPage";
 import { StudentsPage } from "./pages/Students/StudentsPage";
 import { TeachersPage } from "./pages/Teachers/TeachersPage";
@@ -53,7 +53,7 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to={defaultRedirect} replace /> : <LoginPage />}
+        element={isAuthenticated ? <Navigate to={defaultRedirect} replace /> : <LoginContainer />}
       />
       <Route
         path="/school/:schoolId/dashboard"

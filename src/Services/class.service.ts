@@ -26,9 +26,22 @@ export const classService = {
     return httpService.get<any[]>("/api/classes/masters");
   },
 
+  getDivMasters: async (): Promise<any[]> => {
+    return httpService.get<any[]>("/api/classes/div_masters");
+  },
+
   getSubjects: async (params?: any): Promise<any[]> => {
     return httpService.get<any[]>("/api/subjects", params);
   },
+
+  getClassTeachers: async (): Promise<any[]> => {
+    return httpService.get<any[]>("/api/classes/class_teachers");
+  },
+
+  updateClassTeacher: async (id: string, teacherId: any): Promise<ClassInfo> => {
+    return httpService.put<ClassInfo>(`/api/classes/class_teachers/${id}`, teacherId);
+  },
+
 };
 
 export default classService;

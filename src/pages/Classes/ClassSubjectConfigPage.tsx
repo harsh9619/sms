@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
+import { connect, ConnectedProps } from "react-redux";
+import { Dispatch } from "redux";
 import type { ClassInfo } from "../../types";
 import {
   BookOpen,
@@ -49,8 +51,6 @@ interface GroupedClassItem {
   assignedSubjects: SubjectItem[];
 }
 
-const AVAILABLE_DIVISIONS = ["A", "B", "C", "D", "E"];
-
 const CATEGORY_COLORS: Record<string, string> = {
   science: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
   language: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
@@ -66,6 +66,8 @@ export function ClassSubjectConfigPage() {
   const [classMasters, setClassMasters] = useState<ClassMasterItem[]>([]);
   const [masterSubjects, setMasterSubjects] = useState<SubjectMaster[]>([]);
   const [allAssignedSubjects, setAllAssignedSubjects] = useState<SubjectItem[]>([]);
+  const [divMasters, setDivMasters] = useState<any[]>([]);
+
 
   // UI Loading & Error States
   const [loading, setLoading] = useState(true);
@@ -100,30 +102,20 @@ export function ClassSubjectConfigPage() {
     setLoading(true);
     setError(null);
     try {
-      const [classes, masters, subjects, assigned] = await Promise.all([
+      const [classes, masters, divs, subjects, assigned] = await Promise.all([
         classService.getClasses(),
-        classService.getClassMasters().catch(() => [
-          { id: "1", name: "LKG", gradeLevel: -2 },
-          { id: "2", name: "UKG", gradeLevel: -1 },
-          { id: "3", name: "1", gradeLevel: 1 },
-          { id: "4", name: "2", gradeLevel: 2 },
-          { id: "5", name: "3", gradeLevel: 3 },
-          { id: "6", name: "4", gradeLevel: 4 },
-          { id: "7", name: "5", gradeLevel: 5 },
-          { id: "8", name: "6", gradeLevel: 6 },
-          { id: "9", name: "7", gradeLevel: 7 },
-          { id: "10", name: "8", gradeLevel: 8 },
-          { id: "11", name: "9", gradeLevel: 9 },
-          { id: "12", name: "10", gradeLevel: 10 },
-          { id: "13", name: "11", gradeLevel: 11 },
-          { id: "14", name: "12", gradeLevel: 12 },
-        ]),
+        classService.getClassMasters(),
+        classService.getDivMasters(),
         classSubjectService.getSubjectMasters().catch(() => []),
         classSubjectService.getSubjects().catch(() => []),
       ]);
 
+      console.log(classes)
+
       setClassesList(classes);
       setClassMasters(masters);
+      console.log(divs.map((d) => d.name));
+      setDivMasters(divs.map((d) => d.name));
       setMasterSubjects(subjects);
       setAllAssignedSubjects(assigned);
     } catch (err: any) {
@@ -146,7 +138,7 @@ export function ClassSubjectConfigPage() {
 
     // Extract assigned subject master IDs from the group's assignedSubjects
     const masterIds = group.assignedSubjects
-      .map((s) => s.subjectMasterId)
+      .map((s) => s.subjectMasterId || s.id)
       .filter((id): id is string => Boolean(id));
 
     setEditingSubjectMasterIds(masterIds);
@@ -291,7 +283,20 @@ export function ClassSubjectConfigPage() {
 
   // Unique active divisions list across all classes
   const activeDivisionsList = useMemo(() => {
-    return Array.from(new Set(classesList.map((c) => (c.section || "A").toUpperCase()))).sort();
+    const divsSet = new Set<string>();
+    classesList.forEach((c) => {
+      if (Array.isArray(c.divisions) && c.divisions.length > 0) {
+        c.divisions.forEach((d: any) => {
+          const name = typeof d === "string" ? d : d?.name;
+          if (name) divsSet.add(String(name).toUpperCase());
+        });
+      } else if (c.division) {
+        divsSet.add(String(c.division).toUpperCase());
+      } else if (c.section) {
+        divsSet.add(String(c.section).toUpperCase());
+      }
+    });
+    return Array.from(divsSet).sort();
   }, [classesList]);
 
   // Group classes by class name so that ONE ROW per class is rendered
@@ -301,12 +306,11 @@ export function ClassSubjectConfigPage() {
 
     classesList.forEach((cls) => {
       const classNameKey = cls.name.trim();
-      const fullTitle = `${cls.name} ${cls.section || "A"}`.toLowerCase();
+      const fullTitle = `${cls.name} ${cls.section || cls.division || ""}`.toLowerCase();
       const matchesSearch =
         tableSearch.trim() === "" ||
         fullTitle.includes(tableSearch.toLowerCase()) ||
-        cls.name.toLowerCase().includes(tableSearch.toLowerCase()) ||
-        (cls.section && cls.section.toLowerCase().includes(tableSearch.toLowerCase()));
+        cls.name.toLowerCase().includes(tableSearch.toLowerCase());
 
       const matchesGrade =
         gradeFilter === "all" || cls.name.toLowerCase() === gradeFilter.toLowerCase();
@@ -322,17 +326,52 @@ export function ClassSubjectConfigPage() {
     const result: GroupedClassItem[] = [];
 
     groupsMap.forEach((classItems, className) => {
-      const classIds = classItems.map((c) => c.id);
-      const divisionNames = Array.from(
-        new Set(classItems.map((c) => (c.section || "A").toUpperCase()))
-      ).sort();
+      const classIds = classItems.map((c) => c.id || c.schoolClassId || "").filter(Boolean);
+
+      const divisionNamesSet = new Set<string>();
+      classItems.forEach((c) => {
+        if (Array.isArray(c.divisions) && c.divisions.length > 0) {
+          c.divisions.forEach((d: any) => {
+            const name = typeof d === "string" ? d : d?.name;
+            if (name) divisionNamesSet.add(String(name).toUpperCase());
+          });
+        } else if (c.division) {
+          divisionNamesSet.add(String(c.division).toUpperCase());
+        } else if (c.section) {
+          divisionNamesSet.add(String(c.section).toUpperCase());
+        }
+      });
+
+      const divisionNames = Array.from(divisionNamesSet).sort();
 
       // Collect unique assigned subjects across all divisions of this class
       const assignedMap = new Map<string, SubjectItem>();
-      classIds.forEach((id) => {
-        const subs = classSubjectMapping.get(String(id)) || [];
-        subs.forEach((s) => {
-          const subKey = s.subjectMasterId ? String(s.subjectMasterId) : s.name;
+
+      classItems.forEach((c) => {
+        // Direct subjects array on the class object (from response)
+        if (Array.isArray(c.subjects)) {
+          c.subjects.forEach((s: any) => {
+            const subId = typeof s === "object" ? String(s.id || s.subjectMasterId || s.name) : String(s);
+            const subName = typeof s === "object" ? s.name : String(s);
+            const subCode = typeof s === "object" ? s.code : undefined;
+            if (!assignedMap.has(subId)) {
+              assignedMap.set(subId, {
+                id: subId,
+                subjectMasterId: typeof s === "object" && s.id ? String(s.id) : undefined,
+                masterSubjectName: subName,
+                name: subName,
+                code: subCode,
+                schoolId: c.schoolId || "",
+              });
+            }
+          });
+        }
+
+        // Also check classSubjectMapping
+        const classIdKey = String(c.id || c.schoolClassId);
+        const subsFromMap = classSubjectMapping.get(classIdKey) || [];
+        subsFromMap.forEach((s) => {
+          const subKey = s.subjectMasterId ? String(s.subjectMasterId) : (s.id || s.name);
           if (!assignedMap.has(subKey)) {
             assignedMap.set(subKey, s);
           }
@@ -931,15 +970,15 @@ export function ClassSubjectConfigPage() {
                 <div className="space-y-2.5 pt-2 border-t border-border/40">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      2. Select Divisions / Sections (Up to 5)
+                      2. Select Divisions / Sections
                     </label>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setSelectedDivisions([...AVAILABLE_DIVISIONS])}
+                        onClick={() => setSelectedDivisions([...divMasters])}
                         className="text-xs text-primary font-bold hover:underline"
                       >
-                        Select All 5
+                        Select All
                       </button>
                       <span className="text-muted-foreground text-xs">•</span>
                       <button
@@ -954,7 +993,7 @@ export function ClassSubjectConfigPage() {
 
                   {/* Division Pills (A, B, C, D, E) */}
                   <div className="grid grid-cols-5 gap-2.5">
-                    {AVAILABLE_DIVISIONS.map((div) => {
+                    {divMasters.map((div) => {
                       const isSelected = selectedDivisions.includes(div);
                       return (
                         <button

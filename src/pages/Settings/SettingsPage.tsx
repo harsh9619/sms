@@ -267,8 +267,8 @@ function SettingsPageContent({
           return (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 -mb-px transition-all ${activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}>
               <Icon className="h-4 w-4" />{tab.label}
             </button>
@@ -739,16 +739,16 @@ function SettingsPageContent({
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setField("appearanceMode", "light")}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${schoolForm.appearanceMode === "light"
-                          ? "border-amber-400 bg-amber-50/60 text-amber-700 dark:text-amber-400"
-                          : "border-border text-muted-foreground hover:border-amber-300/50"
+                        ? "border-amber-400 bg-amber-50/60 text-amber-700 dark:text-amber-400"
+                        : "border-border text-muted-foreground hover:border-amber-300/50"
                         }`}>
                       <Sun className="h-4 w-4 text-amber-500" /> Light
                       {schoolForm.appearanceMode === "light" && <Check className="h-3.5 w-3.5" />}
                     </button>
                     <button type="button" onClick={() => setField("appearanceMode", "dark")}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold transition-all ${schoolForm.appearanceMode === "dark"
-                          ? "border-blue-500 bg-slate-900/10 text-blue-400"
-                          : "border-border text-muted-foreground hover:border-blue-400/40"
+                        ? "border-blue-500 bg-slate-900/10 text-blue-400"
+                        : "border-border text-muted-foreground hover:border-blue-400/40"
                         }`}>
                       <Moon className="h-4 w-4 text-blue-400" /> Dark
                       {schoolForm.appearanceMode === "dark" && <Check className="h-3.5 w-3.5" />}

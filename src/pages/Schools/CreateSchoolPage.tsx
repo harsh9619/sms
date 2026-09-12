@@ -62,16 +62,16 @@ interface FormData {
 const SCHOOL_TYPES = ["Primary School", "Secondary School", "Higher Secondary", "College", "University", "Other"];
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Cambridge", "Other"];
 const SUBSCRIPTION_TIERS = [
-  { value: "free",       label: "Free",       desc: "Up to 100 students" },
-  { value: "basic",      label: "Basic",      desc: "Up to 500 students" },
-  { value: "premium",    label: "Premium",    desc: "Up to 2000 students" },
+  { value: "free", label: "Free", desc: "Up to 100 students" },
+  { value: "basic", label: "Basic", desc: "Up to 500 students" },
+  { value: "premium", label: "Premium", desc: "Up to 2000 students" },
   { value: "enterprise", label: "Enterprise", desc: "Unlimited students" },
 ];
 
 const STEPS = [
-  { id: 1, label: "Identity",   icon: School,  desc: "Name & type" },
-  { id: 2, label: "Contact",    icon: MapPin,  desc: "Address & info" },
-  { id: 3, label: "Config",     icon: BookOpen,desc: "Plan & settings" },
+  { id: 1, label: "Identity", icon: School, desc: "Name & type" },
+  { id: 2, label: "Contact", icon: MapPin, desc: "Address & info" },
+  { id: 3, label: "Config", icon: BookOpen, desc: "Plan & settings" },
   { id: 4, label: "Appearance", icon: Palette, desc: "Theme & mode" },
 ];
 
@@ -112,11 +112,11 @@ function CreateSchoolPageContent({
     schoolService.getMasterThemes()
       .then(setMasterThemes)
       .catch(() => setMasterThemes([
-        { id: 1, name: "default", label: "Ocean Blue",   color: "#3b82f6", sortOrder: 1 },
-        { id: 2, name: "emerald", label: "Emerald",      color: "#10b981", sortOrder: 2 },
-        { id: 3, name: "purple",  label: "Royal Purple", color: "#8b5cf6", sortOrder: 3 },
-        { id: 4, name: "rose",    label: "Rose",         color: "#f43f5e", sortOrder: 4 },
-        { id: 5, name: "amber",   label: "Sunset Amber", color: "#f97316", sortOrder: 5 },
+        { id: 1, name: "default", label: "Ocean Blue", color: "#3b82f6", sortOrder: 1 },
+        { id: 2, name: "emerald", label: "Emerald", color: "#10b981", sortOrder: 2 },
+        { id: 3, name: "purple", label: "Royal Purple", color: "#8b5cf6", sortOrder: 3 },
+        { id: 4, name: "rose", label: "Rose", color: "#f43f5e", sortOrder: 4 },
+        { id: 5, name: "amber", label: "Sunset Amber", color: "#f97316", sortOrder: 5 },
       ]))
       .finally(() => setThemesLoading(false));
   }, []);
@@ -262,11 +262,10 @@ function CreateSchoolPageContent({
           return (
             <React.Fragment key={s.id}>
               <div className="flex flex-col items-center gap-1.5 flex-1">
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center border-2 transition-all duration-300 ${
-                  isDone ? "bg-primary border-primary text-primary-foreground"
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center border-2 transition-all duration-300 ${isDone ? "bg-primary border-primary text-primary-foreground"
                     : isActive ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/20"
-                    : "bg-muted/50 border-border text-muted-foreground"
-                }`}>
+                      : "bg-muted/50 border-border text-muted-foreground"
+                  }`}>
                   {isDone ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                 </div>
                 <div className="text-center">
@@ -324,9 +323,8 @@ function CreateSchoolPageContent({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {SCHOOL_TYPES.map((t) => (
                     <button key={t} type="button" onClick={() => set("type", t)}
-                      className={`px-3 py-2.5 rounded-lg border text-xs font-medium text-left transition-all ${
-                        form.type === t ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
-                      }`}>{t}</button>
+                      className={`px-3 py-2.5 rounded-lg border text-xs font-medium text-left transition-all ${form.type === t ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
+                        }`}>{t}</button>
                   ))}
                 </div>
               </Field>
@@ -363,9 +361,8 @@ function CreateSchoolPageContent({
                 <div className="grid grid-cols-3 gap-2">
                   {BOARDS.map((b) => (
                     <button key={b} type="button" onClick={() => set("board", b)}
-                      className={`px-3 py-2.5 rounded-lg border text-xs font-medium transition-all ${
-                        form.board === b ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
-                      }`}>{b}</button>
+                      className={`px-3 py-2.5 rounded-lg border text-xs font-medium transition-all ${form.board === b ? "border-primary bg-primary/10 text-primary" : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
+                        }`}>{b}</button>
                   ))}
                 </div>
               </Field>
@@ -396,9 +393,8 @@ function CreateSchoolPageContent({
                 <div className="grid grid-cols-2 gap-3">
                   {SUBSCRIPTION_TIERS.map((t) => (
                     <button key={t.value} type="button" onClick={() => set("subscription", t.value)}
-                      className={`p-3.5 rounded-xl border text-left transition-all ${
-                        form.subscription === t.value ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-muted/20 hover:border-primary/40"
-                      }`}>
+                      className={`p-3.5 rounded-xl border text-left transition-all ${form.subscription === t.value ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-muted/20 hover:border-primary/40"
+                        }`}>
                       <p className={`text-sm font-bold ${form.subscription === t.value ? "text-primary" : "text-foreground"}`}>
                         {t.label}
                         {t.value === "premium" && <Sparkles className="inline h-3.5 w-3.5 ml-1 text-amber-500" />}
@@ -411,9 +407,8 @@ function CreateSchoolPageContent({
 
               <Field label="School Status">
                 <button type="button" onClick={() => set("isActive", !form.isActive)}
-                  className={`flex items-center gap-3 w-full p-4 rounded-xl border-2 transition-all ${
-                    form.isActive ? "border-emerald-500/50 bg-emerald-500/5" : "border-border bg-muted/20"
-                  }`}>
+                  className={`flex items-center gap-3 w-full p-4 rounded-xl border-2 transition-all ${form.isActive ? "border-emerald-500/50 bg-emerald-500/5" : "border-border bg-muted/20"
+                    }`}>
                   <div className={`h-5 w-10 rounded-full relative flex-shrink-0 transition-colors ${form.isActive ? "bg-emerald-500" : "bg-muted-foreground/30"}`}>
                     <div className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${form.isActive ? "translate-x-5" : "translate-x-0.5"}`} />
                   </div>
@@ -449,9 +444,8 @@ function CreateSchoolPageContent({
                         type="button"
                         id={`theme-${t.name}`}
                         onClick={() => set("theme", t.name)}
-                        className={`relative flex flex-col items-center gap-2.5 p-3 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
-                          form.theme === t.name ? "shadow-md" : "border-border bg-muted/20"
-                        }`}
+                        className={`relative flex flex-col items-center gap-2.5 p-3 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${form.theme === t.name ? "shadow-md" : "border-border bg-muted/20"
+                          }`}
                         style={form.theme === t.name ? { borderColor: t.color, background: `${t.color}0d` } : {}}
                       >
                         {form.theme === t.name && (
@@ -485,11 +479,10 @@ function CreateSchoolPageContent({
               <Field label="Appearance Mode">
                 <div className="grid grid-cols-2 gap-4">
                   <button type="button" id="appearance-light" onClick={() => set("appearanceMode", "light")}
-                    className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
-                      form.appearanceMode === "light"
+                    className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${form.appearanceMode === "light"
                         ? "border-amber-400 bg-amber-50/60 dark:bg-amber-900/10 shadow-md shadow-amber-200/50"
                         : "border-border bg-muted/20 hover:border-amber-300/50"
-                    }`}>
+                      }`}>
                     <div className="h-14 w-20 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center">
                       <Sun className="h-6 w-6 text-amber-500" />
                     </div>
@@ -501,11 +494,10 @@ function CreateSchoolPageContent({
                   </button>
 
                   <button type="button" id="appearance-dark" onClick={() => set("appearanceMode", "dark")}
-                    className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
-                      form.appearanceMode === "dark"
+                    className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${form.appearanceMode === "dark"
                         ? "border-blue-500 bg-slate-900/10 shadow-md shadow-blue-900/20"
                         : "border-border bg-muted/20 hover:border-blue-400/40"
-                    }`}>
+                      }`}>
                     <div className="h-14 w-20 rounded-lg bg-gray-900 border border-gray-700 shadow-sm flex items-center justify-center">
                       <Moon className="h-6 w-6 text-blue-400" />
                     </div>
