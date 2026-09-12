@@ -13,14 +13,15 @@ import {
 import studentService from "../../Services/student.service";
 import type { Student } from "../../types";
 
-function* handleFetchStudents(): Generator<any, void, any> {
+function* handleFetchStudents(action: { type: string; payload?: any }): Generator<any, void, any> {
   try {
-    const students: Student[] = yield call(studentService.getStudents);
-    yield put(fetchStudentsSuccess(students));
+    const response: any = yield call(studentService.getStudents, action.payload);
+    yield put(fetchStudentsSuccess(response));
   } catch (error: any) {
     yield put(fetchStudentsFailure(error.message || "Failed to fetch students"));
   }
 }
+
 
 function* handleCreateStudent(action: { type: string; payload: any }): Generator<any, void, any> {
   try {

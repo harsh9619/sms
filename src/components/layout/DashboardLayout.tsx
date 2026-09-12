@@ -57,6 +57,10 @@ export function DashboardLayout({ children }: SidebarProps) {
   const [showAcademicYearDropdown, setShowAcademicYearDropdown] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
+  console.log(academicYears, "academicYears");
+  console.log(activeAcademicYear, "activeAcademicYear");
+  console.log(activeSchool, "activeSchool");
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 1024) {
@@ -396,7 +400,10 @@ export function DashboardLayout({ children }: SidebarProps) {
         </header>
 
         {/* Page Content */}
-        <main key={activeSchool?.id} className="flex-1 overflow-y-auto p-6 bg-background">
+        <main
+          key={`${activeSchool?.id}_${activeAcademicYear?.schoolAcademicYearId || activeAcademicYear?.academicYearId || activeAcademicYear?.academicYear}`}
+          className="flex-1 overflow-y-auto p-6 bg-background"
+        >
           <div className="animate-fade-in">{children}</div>
         </main>
       </div>

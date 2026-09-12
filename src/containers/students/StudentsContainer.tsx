@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { connect, ConnectedProps } from "react-redux";
 import { Dispatch } from "redux";
 import { AppState } from "../../saga/rootReducer";
 import { StudentsUI } from "../../components/modules/students/StudentsUI";
 import type { Student } from "../../types";
 import { useSchool } from "../../context/SchoolContext";
-import { useAppDispatch, useAppSelector } from "../../saga/hooks";
 import {
   fetchStudentsRequest,
   createStudentRequest,
@@ -15,12 +14,14 @@ import {
 import { fetchClassesRequest } from "../../saga/classes/actions";
 
 const mapStateToProps = (state: AppState) => ({
-  reduxStudents: state.students.students,
-  reduxClasses: state.classes.classes,
+  students: state.students.students,
+  meta: state.students.meta,
+  loading: state.students.loading,
+  classes: state.classes.classes,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch) => ({
-  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  fetchStudentsRequest: (params?: any) => dispatch(fetchStudentsRequest(params)),
   fetchClassesRequest: () => dispatch(fetchClassesRequest()),
   createStudentRequest: (student: any) => dispatch(createStudentRequest(student)),
   updateStudentRequest: (payload: any) => dispatch(updateStudentRequest(payload)),
@@ -31,72 +32,113 @@ const mapper = connect(mapStateToProps, mapDispatchToProps);
 type PropsFromRedux = ConnectedProps<typeof mapper>;
 
 function StudentsContainerContent({
-  reduxStudents,
-  reduxClasses,
+  students,
+  meta,
+  loading,
+  classes,
   fetchStudentsRequest,
   fetchClassesRequest,
   createStudentRequest,
   updateStudentRequest,
   deleteStudentRequest,
 }: PropsFromRedux) {
-  const { activeSchool } = useSchool();
-  const [extraStudents] = useState<Student[]>([]);
-  const students = useMemo(() => [...reduxStudents, ...extraStudents], [reduxStudents, extraStudents]);
+  const { activeSchool, activeAcademicYear } = useSchool();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClass, setSelectedClass] = useState("all");
   const [selectedSection, setSelectedSection] = useState("all");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState<Student | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState<Partial<Student>>({});
 
   useEffect(() => {
-    fetchStudentsRequest();
     fetchClassesRequest();
-  }, [fetchStudentsRequest, fetchClassesRequest, activeSchool]);
+  }, [fetchClassesRequest, activeSchool, activeAcademicYear]);
 
-  const classes = useMemo(() => {
-    const set = new Set(students.map((s) => s.class));
-    return Array.from(set).sort();
-  }, [students]);
-
-  const sections = useMemo(() => {
-    const set = new Set(students.map((s) => s.section));
-    return Array.from(set).sort();
-  }, [students]);
-
-  const filteredStudents = useMemo(() => {
-    return students.filter((student) => {
-      const matchesSearch =
-        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesClass = selectedClass === "all" || student.class === selectedClass;
-      const matchesSection = selectedSection === "all" || student.section === selectedSection;
-      return matchesSearch && matchesClass && matchesSection;
+  useEffect(() => {
+    fetchStudentsRequest({
+      page,
+      limit,
+      search: searchQuery,
+      classId: selectedClass,
+      sectionId: selectedSection,
     });
-  }, [students, searchQuery, selectedClass, selectedSection]);
+  }, [fetchStudentsRequest, page, limit, searchQuery, selectedClass, selectedSection, activeSchool, activeAcademicYear]);
+
+  const handleClassChange = (val: string) => {
+    setSelectedClass(val);
+    setSelectedSection("all");
+    setPage(1);
+  };
+
+  const handleSectionChange = (val: string) => {
+    setSelectedSection(val);
+    setPage(1);
+  };
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setPage(1);
+  };
+
+  const handleLimitChange = (val: number) => {
+    setLimit(val);
+    setPage(1);
+  };
 
   const handleSave = () => {
     if (editingStudent) {
-      updateStudentRequest({ id: editingStudent.id, ...formData });
+      updateStudentRequest({
+        id: editingStudent.id,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        class_id: formData.class_id,
+        division_master_id: formData.division_master_id,
+        class: formData.class_name,
+        section: formData.division_name,
+        rollNumber: formData.roll_no,
+        roll_no: formData.roll_no,
+        parentName: formData.guardian_name,
+        guardian_name: formData.guardian_name,
+        parentPhone: formData.guardian_phone,
+        guardian_phone: formData.guardian_phone,
+        address: formData.address,
+        dateOfBirth: formData.dob,
+        dob: formData.dob,
+        gender: formData.gender || "male",
+        bloodGroup: formData.blood_group,
+        blood_group: formData.blood_group,
+        admissionDate: formData.admission_date,
+        admission_date: formData.admission_date,
+      });
     } else {
       const newStudent: any = {
         name: formData.name || "",
         email: formData.email || "",
         phone: formData.phone || "",
-        class: formData.class || "10",
-        section: formData.section || "A",
-        rollNumber: formData.rollNumber || `${Date.now()}`.slice(-4),
-        parentName: formData.parentName || "",
-        parentPhone: formData.parentPhone || "",
+        class_id: formData.class_id || null,
+        division_master_id: formData.division_master_id || null,
+        class: formData.class || formData.class_name || "",
+        section: formData.section || formData.division_name || "",
+        rollNumber: formData.rollNumber || formData.roll_no || `${Date.now()}`.slice(-4),
+        roll_no: formData.rollNumber || formData.roll_no || `${Date.now()}`.slice(-4),
+        parentName: formData.parentName || formData.guardian_name || "",
+        guardian_name: formData.parentName || formData.guardian_name || "",
+        parentPhone: formData.parentPhone || formData.guardian_phone || "",
+        guardian_phone: formData.parentPhone || formData.guardian_phone || "",
         address: formData.address || "",
-        dateOfBirth: formData.dateOfBirth || "",
+        dateOfBirth: formData.dateOfBirth || formData.dob || "",
+        dob: formData.dateOfBirth || formData.dob || "",
         gender: formData.gender || "male",
-        bloodGroup: formData.bloodGroup || "O+",
-        enrollmentDate: new Date().toISOString().split("T")[0],
-        status: "active",
+        bloodGroup: formData.bloodGroup || formData.blood_group || "O+",
+        blood_group: formData.bloodGroup || formData.blood_group || "O+",
+        admissionDate: formData.admissionDate || formData.admission_date || new Date().toISOString().split("T")[0],
+        admission_date: formData.admissionDate || formData.admission_date || new Date().toISOString().split("T")[0],
       };
       createStudentRequest(newStudent);
     }
@@ -125,15 +167,20 @@ function StudentsContainerContent({
 
   return (
     <StudentsUI
-      filteredStudents={filteredStudents}
+      students={students}
+      meta={meta}
+      loading={loading}
       searchQuery={searchQuery}
-      setSearchQuery={setSearchQuery}
+      setSearchQuery={handleSearchChange}
       selectedClass={selectedClass}
-      setSelectedClass={setSelectedClass}
+      setSelectedClass={handleClassChange}
       selectedSection={selectedSection}
-      setSelectedSection={setSelectedSection}
+      setSelectedSection={handleSectionChange}
+      page={page}
+      setPage={setPage}
+      limit={limit}
+      setLimit={handleLimitChange}
       classes={classes}
-      sections={sections}
       showModal={showModal}
       setShowModal={setShowModal}
       showDetail={showDetail}
@@ -151,3 +198,4 @@ function StudentsContainerContent({
 
 export const StudentsContainer = mapper(StudentsContainerContent);
 export default StudentsContainer;
+

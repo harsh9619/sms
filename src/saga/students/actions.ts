@@ -1,11 +1,12 @@
 import type { Student } from "../../types";
 import * as types from "./actionTypes";
 
-export const fetchStudentsRequest = () => ({
+export const fetchStudentsRequest = (payload?: any) => ({
   type: types.FETCH_STUDENTS_REQUEST,
+  payload,
 });
 
-export const fetchStudentsSuccess = (payload: Student[]) => ({
+export const fetchStudentsSuccess = (payload: any) => ({
   type: types.FETCH_STUDENTS_SUCCESS,
   payload,
 });
@@ -14,6 +15,7 @@ export const fetchStudentsFailure = (payload: string) => ({
   type: types.FETCH_STUDENTS_FAILURE,
   payload,
 });
+
 
 export const createStudentRequest = (payload: any) => ({
   type: types.CREATE_STUDENT_REQUEST,

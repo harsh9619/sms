@@ -25,20 +25,27 @@ export interface User {
 // ==================== Student Types ====================
 export interface Student {
   id: string;
+  school_id: string;
+  user_id: number | null;
   name: string;
   email: string;
   phone: string;
-  class: string;
+  class_id: number | null;
+  class_name: string;
+  division_master_id: number | null;
+  division_name: string;
   section: string;
-  rollNumber: string;
-  parentName: string;
-  parentPhone: string;
+  roll_no: string;
+  dob: string,
+  gender: string;
+  blood_group: string;
   address: string;
-  dateOfBirth: string;
-  gender: "male" | "female" | "other";
-  avatar?: string;
-  admissionDate: string;
-  bloodGroup?: string;
+  guardian_name: string;
+  guardian_phone: string;
+  parent_name: string;
+  parent_phone: string;
+  admission_date: string;
+  created_at: string;
 }
 
 // ==================== Teacher Types ====================
