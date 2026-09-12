@@ -1,141 +1,70 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../ui/Card";
+import React from "react";
+import { Card, CardContent } from "../../ui/Card";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { Badge } from "../../ui/Badge";
 import { Avatar, AvatarFallback } from "../../ui/Avatar";
 import type { Student } from "../../../types";
-import { useSchool } from "../../../context/SchoolContext";
 import {
   Search,
   Plus,
   Edit,
   Trash2,
   Eye,
-  Download,
-  Filter,
-  X,
-  User,
-  Phone,
   Mail,
-  MapPin,
-  Calendar,
+  Phone,
+  User,
   GraduationCap,
-  Upload,
-  AlertCircle,
-  CheckCircle,
-  FileSpreadsheet,
-  ImagePlus,
-  ChevronRight,
-  Loader2,
-  Table2,
+  X,
 } from "lucide-react";
-import * as XLSX from "xlsx";
-import Tesseract from "tesseract.js";
-import { transliterateHindiToEnglish } from "../../../lib/transliterate";
-import { useAppDispatch, useAppSelector } from "../../../saga/hooks";
-import {
-  fetchStudentsRequest,
-  createStudentRequest,
-  updateStudentRequest,
-  deleteStudentRequest,
-} from "../../../saga";
 
-interface BulkRow {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  class: string;
-  section: string;
-  rollNumber: string;
-  parentName: string;
-  parentPhone: string;
-  address: string;
-  dateOfBirth: string;
-  gender: "male" | "female" | "other";
-  bloodGroup?: string;
-  photoFile?: File;
-  photoPreview?: string;
-  errors: string[];
+interface StudentsUIProps {
+  filteredStudents: Student[];
+  searchQuery: string;
+  setSearchQuery: (val: string) => void;
+  selectedClass: string;
+  setSelectedClass: (val: string) => void;
+  selectedSection: string;
+  setSelectedSection: (val: string) => void;
+  classes: string[];
+  sections: string[];
+  showModal: boolean;
+  setShowModal: (val: boolean) => void;
+  showDetail: Student | null;
+  setShowDetail: (val: Student | null) => void;
+  editingStudent: Student | null;
+  formData: Partial<Student>;
+  setFormData: (val: Partial<Student>) => void;
+  handleSave: () => void;
+  handleDelete: (id: string) => void;
+  handleOpenAddModal: () => void;
+  handleOpenEditModal: (student: Student) => void;
 }
 
-export function StudentsUI() {
-  const dispatch = useAppDispatch();
-  const reduxStudents = useAppSelector((state) => state.students.students);
-  const { activeSchool } = useSchool();
-  const [extraStudents, setExtraStudents] = useState<Student[]>([]);
-  const students = useMemo(() => [...reduxStudents, ...extraStudents], [reduxStudents, extraStudents]);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedClass, setSelectedClass] = useState("all");
-  const [selectedSection, setSelectedSection] = useState("all");
-  const [showModal, setShowModal] = useState(false);
-  const [showDetail, setShowDetail] = useState<Student | null>(null);
-  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [formData, setFormData] = useState<Partial<Student>>({});
-
-  useEffect(() => {
-    dispatch(fetchStudentsRequest());
-  }, [dispatch, activeSchool]);
-
-  const classes = useMemo(() => {
-    const set = new Set(students.map((s) => s.class));
-    return Array.from(set).sort();
-  }, [students]);
-
-  const sections = useMemo(() => {
-    const set = new Set(students.map((s) => s.section));
-    return Array.from(set).sort();
-  }, [students]);
-
-  const filteredStudents = useMemo(() => {
-    return students.filter((student) => {
-      const matchesSearch =
-        student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesClass = selectedClass === "all" || student.class === selectedClass;
-      const matchesSection = selectedSection === "all" || student.section === selectedSection;
-      return matchesSearch && matchesClass && matchesSection;
-    });
-  }, [students, searchQuery, selectedClass, selectedSection]);
-
+export function StudentsUI({
+  filteredStudents,
+  searchQuery,
+  setSearchQuery,
+  selectedClass,
+  setSelectedClass,
+  selectedSection,
+  setSelectedSection,
+  classes,
+  sections,
+  showModal,
+  setShowModal,
+  showDetail,
+  setShowDetail,
+  editingStudent,
+  formData,
+  setFormData,
+  handleSave,
+  handleDelete,
+  handleOpenAddModal,
+  handleOpenEditModal,
+}: StudentsUIProps) {
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-
-  const handleSave = () => {
-    if (editingStudent) {
-      dispatch(updateStudentRequest({ id: editingStudent.id, ...formData }));
-    } else {
-      const newStudent: any = {
-        name: formData.name || "",
-        email: formData.email || "",
-        phone: formData.phone || "",
-        class: formData.class || "10",
-        section: formData.section || "A",
-        rollNumber: formData.rollNumber || `${Date.now()}`.slice(-4),
-        parentName: formData.parentName || "",
-        parentPhone: formData.parentPhone || "",
-        address: formData.address || "",
-        dateOfBirth: formData.dateOfBirth || "",
-        gender: formData.gender || "male",
-        bloodGroup: formData.bloodGroup || "O+",
-        enrollmentDate: new Date().toISOString().split("T")[0],
-        status: "active",
-      };
-      dispatch(createStudentRequest(newStudent));
-    }
-    setShowModal(false);
-    setEditingStudent(null);
-    setFormData({});
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this student?")) {
-      dispatch(deleteStudentRequest(id));
-    }
-  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -148,7 +77,7 @@ export function StudentsUI() {
           <p className="text-sm text-muted-foreground mt-1">{filteredStudents.length} students enrolled</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => { setEditingStudent(null); setFormData({}); setShowModal(true); }}>
+          <Button onClick={handleOpenAddModal}>
             <Plus className="h-4 w-4 mr-2" /> Add Student
           </Button>
         </div>
@@ -215,7 +144,7 @@ export function StudentsUI() {
                 <Button variant="ghost" size="sm" onClick={() => setShowDetail(student)} className="flex-1">
                   <Eye className="h-3.5 w-3.5 mr-1" /> View
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setEditingStudent(student); setFormData(student); setShowModal(true); }} className="flex-1">
+                <Button variant="ghost" size="sm" onClick={() => handleOpenEditModal(student)} className="flex-1">
                   <Edit className="h-3.5 w-3.5 mr-1" /> Edit
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => handleDelete(student.id)} className="hover:text-destructive">
@@ -276,3 +205,5 @@ export function StudentsUI() {
     </div>
   );
 }
+
+export default StudentsUI;

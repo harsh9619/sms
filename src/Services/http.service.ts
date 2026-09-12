@@ -16,7 +16,7 @@ class HttpService {
   private formatUrl(url: string): string {
     const schoolId = localStorage.getItem("sms_active_school_id");
     let finalUrl = url;
-    if (schoolId && finalUrl.startsWith("/api/") && !finalUrl.startsWith("/api/schools")) {
+    if (schoolId && finalUrl.startsWith("/api/") && !finalUrl.startsWith("/api/schools") && !finalUrl.startsWith("/api/master-themes")) {
       finalUrl = finalUrl.replace(/^\/api\//, `/api/${schoolId}/`);
     }
     return finalUrl;
