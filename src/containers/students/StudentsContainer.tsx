@@ -17,6 +17,7 @@ const mapStateToProps = (state: AppState) => ({
   students: state.students.students,
   meta: state.students.meta,
   loading: state.students.loading,
+  error: state.students.error,
   classes: state.classes.classes,
 });
 
@@ -35,6 +36,7 @@ function StudentsContainerContent({
   students,
   meta,
   loading,
+  error,
   classes,
   fetchStudentsRequest,
   fetchClassesRequest,
@@ -92,6 +94,7 @@ function StudentsContainerContent({
 
   const handleSave = () => {
     if (editingStudent) {
+      debugger;
       updateStudentRequest({
         id: editingStudent.id,
         name: formData.name,
@@ -117,6 +120,7 @@ function StudentsContainerContent({
         admission_date: formData.admission_date,
       });
     } else {
+      debugger
       const newStudent: any = {
         name: formData.name || "",
         email: formData.email || "",
@@ -170,6 +174,7 @@ function StudentsContainerContent({
       students={students}
       meta={meta}
       loading={loading}
+      error={error}
       searchQuery={searchQuery}
       setSearchQuery={handleSearchChange}
       selectedClass={selectedClass}

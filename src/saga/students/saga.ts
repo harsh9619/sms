@@ -1,5 +1,10 @@
-import { call, put, takeLatest } from "redux-saga/effects";
-import * as types from "./actionTypes";
+import { call, put, takeLatest, StrictEffect } from "redux-saga/effects";
+import {
+  FETCH_STUDENTS_REQUEST,
+  CREATE_STUDENT_REQUEST,
+  UPDATE_STUDENT_REQUEST,
+  DELETE_STUDENT_REQUEST,
+} from "./actionTypes";
 import {
   fetchStudentsSuccess,
   fetchStudentsFailure,
@@ -11,9 +16,23 @@ import {
   deleteStudentFailure,
 } from "./actions";
 import studentService from "../../Services/student.service";
-import type { Student } from "../../types";
+import {
+  Student,
+  FetchStudentRequestPayload,
+  FetchStudentSuccessPayload,
+  FetchStudentFailurePayload,
+  CreateStudentRequestPayload,
+  CreateStudentSuccessPayload,
+  CreateStudentFailurePayload,
+  UpdateStudentRequestPayload,
+  UpdateStudentSuccessPayload,
+  UpdateStudentFailurePayload,
+  DeleteStudentRequestPayload,
+  DeleteStudentSuccessPayload,
+  DeleteStudentFailurePayload
+} from "./types";
 
-function* handleFetchStudents(action: { type: string; payload?: any }): Generator<any, void, any> {
+function* handleFetchStudents(action: { type: string; payload?: FetchStudentRequestPayload }): Generator<StrictEffect, void, any> {
   try {
     const response: any = yield call(studentService.getStudents, action.payload);
     yield put(fetchStudentsSuccess(response));
@@ -23,36 +42,40 @@ function* handleFetchStudents(action: { type: string; payload?: any }): Generato
 }
 
 
-function* handleCreateStudent(action: { type: string; payload: any }): Generator<any, void, any> {
+function* handleCreateStudent(action: { type: string; payload: CreateStudentRequestPayload }): Generator<StrictEffect, void, any> {
   try {
-    const student: Student = yield call(studentService.createStudent, action.payload);
-    yield put(createStudentSuccess(student));
+    debugger;
+    const response: any = yield call(studentService.createStudent, action.payload);
+    yield put(createStudentSuccess({ student: response }));
   } catch (error: any) {
-    yield put(createStudentFailure(error.message || "Failed to create student"));
+    debugger;
+    yield put(createStudentFailure({ error: error.message || "Failed to create student" }));
   }
 }
 
-function* handleUpdateStudent(action: { type: string; payload: { id: string; student: any } }): Generator<any, void, any> {
+function* handleUpdateStudent(action: { type: string; payload: UpdateStudentRequestPayload }): Generator<StrictEffect, void, any> {
   try {
-    const student: Student = yield call(studentService.updateStudent, action.payload.id, action.payload.student);
-    yield put(updateStudentSuccess(student));
+    const response: any = yield call(studentService.updateStudent, action.payload.id, action.payload);
+    yield put(updateStudentSuccess({ student: response }));
   } catch (error: any) {
-    yield put(updateStudentFailure(error.message || "Failed to update student"));
+    debugger
+    yield put(updateStudentFailure({ error: error.message || "Failed to update student" }));
   }
 }
 
-function* handleDeleteStudent(action: { type: string; payload: string }): Generator<any, void, any> {
+function* handleDeleteStudent(action: { type: string; payload: DeleteStudentRequestPayload }): Generator<StrictEffect, void, any> {
   try {
-    yield call(studentService.deleteStudent, action.payload);
-    yield put(deleteStudentSuccess(action.payload));
+    yield call(studentService.deleteStudent, action.payload.id);
+    yield put(deleteStudentSuccess({ id: action.payload.id }));
   } catch (error: any) {
-    yield put(deleteStudentFailure(error.message || "Failed to delete student"));
+    yield put(deleteStudentFailure({ error: error.message || "Failed to delete student" }));
   }
 }
 
 export function* studentsSaga() {
-  yield takeLatest(types.FETCH_STUDENTS_REQUEST, handleFetchStudents);
-  yield takeLatest(types.CREATE_STUDENT_REQUEST, handleCreateStudent);
-  yield takeLatest(types.UPDATE_STUDENT_REQUEST, handleUpdateStudent);
-  yield takeLatest(types.DELETE_STUDENT_REQUEST, handleDeleteStudent);
+  yield takeLatest(FETCH_STUDENTS_REQUEST, handleFetchStudents);
+  yield takeLatest(CREATE_STUDENT_REQUEST, handleCreateStudent);
+  yield takeLatest(UPDATE_STUDENT_REQUEST, handleUpdateStudent);
+  yield takeLatest(DELETE_STUDENT_REQUEST, handleDeleteStudent);
 }
+

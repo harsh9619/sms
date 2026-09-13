@@ -4,9 +4,7 @@ import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
 import { Badge } from "../../ui/Badge";
 import { Avatar, AvatarFallback } from "../../ui/Avatar";
-import { ClassInfo } from "../../../types/index";
-import type { Student } from "../../../types";
-import { PaginationMeta } from "../../../saga/students/types";
+import type { StudentsUIProps } from "../../../saga/students/types";
 import {
   Search,
   Plus,
@@ -26,38 +24,12 @@ import {
   Heart,
 } from "lucide-react";
 
-interface StudentsUIProps {
-  students: Student[];
-  meta: PaginationMeta;
-  loading: boolean;
-  searchQuery: string;
-  setSearchQuery: (val: string) => void;
-  selectedClass: string;
-  setSelectedClass: (val: string) => void;
-  selectedSection: string;
-  setSelectedSection: (val: string) => void;
-  page: number;
-  setPage: (val: number) => void;
-  limit: number;
-  setLimit: (val: number) => void;
-  classes: ClassInfo[];
-  showModal: boolean;
-  setShowModal: (val: boolean) => void;
-  showDetail: Student | null;
-  setShowDetail: (val: Student | null) => void;
-  editingStudent: Student | null;
-  formData: Partial<Student>;
-  setFormData: (val: Partial<Student>) => void;
-  handleSave: () => void;
-  handleDelete: (id: string) => void;
-  handleOpenAddModal: () => void;
-  handleOpenEditModal: (student: Student) => void;
-}
 
 export function StudentsUI({
   students,
   meta,
   loading,
+  error,
   searchQuery,
   setSearchQuery,
   selectedClass,
@@ -89,6 +61,11 @@ export function StudentsUI({
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {error && (
+        <div className="bg-destructive/15 text-destructive border border-destructive/30 px-4 py-3 rounded-xl flex items-center justify-between font-medium text-sm">
+          <span>{error}</span>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

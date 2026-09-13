@@ -1,7 +1,20 @@
-import { StudentsState } from "./types";
-import * as types from "./actionTypes";
+import {
+  FETCH_STUDENTS_REQUEST,
+  FETCH_STUDENTS_SUCCESS,
+  FETCH_STUDENTS_FAILURE,
+  CREATE_STUDENT_REQUEST,
+  CREATE_STUDENT_SUCCESS,
+  CREATE_STUDENT_FAILURE,
+  UPDATE_STUDENT_REQUEST,
+  UPDATE_STUDENT_SUCCESS,
+  UPDATE_STUDENT_FAILURE,
+  DELETE_STUDENT_REQUEST,
+  DELETE_STUDENT_SUCCESS,
+  DELETE_STUDENT_FAILURE,
+} from "./actionTypes";
+import { StudentState, StudentActionTypes } from "./types";
 
-const initialState: StudentsState = {
+const initialState: StudentState = {
   students: [],
   meta: {
     total: 0,
@@ -13,57 +26,57 @@ const initialState: StudentsState = {
   error: null,
 };
 
-export function studentsReducer(state: StudentsState = initialState, action: any): StudentsState {
+export function studentsReducer(
+  state = initialState,
+  action: StudentActionTypes
+): StudentState {
   switch (action.type) {
-    case types.FETCH_STUDENTS_REQUEST:
-    case types.CREATE_STUDENT_REQUEST:
-    case types.UPDATE_STUDENT_REQUEST:
-    case types.DELETE_STUDENT_REQUEST:
+    case FETCH_STUDENTS_REQUEST:
+    case CREATE_STUDENT_REQUEST:
+    case UPDATE_STUDENT_REQUEST:
+    case DELETE_STUDENT_REQUEST:
       return { ...state, loading: true, error: null };
 
-    case types.FETCH_STUDENTS_SUCCESS: {
-      const isPaginated = action.payload && Array.isArray(action.payload.data);
-      const studentsList = isPaginated ? action.payload.data : (Array.isArray(action.payload) ? action.payload : []);
-      const metaInfo = isPaginated
-        ? action.payload.meta
-        : { total: studentsList.length, page: 1, limit: studentsList.length || 10, totalPages: 1 };
-
+    case FETCH_STUDENTS_SUCCESS: {
       return {
         ...state,
         loading: false,
-        students: studentsList,
-        meta: metaInfo,
+        students: action.payload.data,
+        meta: action.payload.meta,
       };
     }
 
-    case types.CREATE_STUDENT_SUCCESS:
+    case CREATE_STUDENT_SUCCESS:
+      debugger
       return {
         ...state,
         loading: false,
-        students: [action.payload, ...state.students],
+        students: [action.payload.student, ...state.students],
         meta: { ...state.meta, total: state.meta.total + 1 },
       };
 
-    case types.UPDATE_STUDENT_SUCCESS:
+    case UPDATE_STUDENT_SUCCESS:
       return {
         ...state,
         loading: false,
-        students: state.students.map((s) => (s.id === action.payload.id ? action.payload : s)),
+        students: state.students.map((s) =>
+          s.id === action.payload.student.id ? action.payload.student : s
+        ),
       };
 
-    case types.DELETE_STUDENT_SUCCESS:
+    case DELETE_STUDENT_SUCCESS:
       return {
         ...state,
         loading: false,
-        students: state.students.filter((s) => s.id !== action.payload),
+        students: state.students.filter((s) => s.id !== action.payload.id),
         meta: { ...state.meta, total: Math.max(0, state.meta.total - 1) },
       };
 
-    case types.FETCH_STUDENTS_FAILURE:
-    case types.CREATE_STUDENT_FAILURE:
-    case types.UPDATE_STUDENT_FAILURE:
-    case types.DELETE_STUDENT_FAILURE:
-      return { ...state, loading: false, error: action.payload };
+    case FETCH_STUDENTS_FAILURE:
+    case CREATE_STUDENT_FAILURE:
+    case UPDATE_STUDENT_FAILURE:
+    case DELETE_STUDENT_FAILURE:
+      return { ...state, loading: false, error: action.payload.error };
 
     default:
       return state;
