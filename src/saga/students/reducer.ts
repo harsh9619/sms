@@ -23,7 +23,12 @@ const initialState: StudentState = {
     totalPages: 1,
   },
   loading: false,
-  error: null,
+  fetchStudentSuccess: null,
+  fetchStudentMsg: null,
+  deleteStudentSuccess: null,
+  deleteStudentMsg: null,
+  addEditStudentSuccess: null,
+  addEditStudentMsg: null
 };
 
 export function studentsReducer(
@@ -32,10 +37,8 @@ export function studentsReducer(
 ): StudentState {
   switch (action.type) {
     case FETCH_STUDENTS_REQUEST:
-    case CREATE_STUDENT_REQUEST:
-    case UPDATE_STUDENT_REQUEST:
-    case DELETE_STUDENT_REQUEST:
-      return { ...state, loading: true, error: null };
+
+      return { ...state, loading: true };
 
     case FETCH_STUDENTS_SUCCESS: {
       return {
@@ -43,6 +46,21 @@ export function studentsReducer(
         loading: false,
         students: action.payload.data,
         meta: action.payload.meta,
+        fetchStudentSuccess: true,
+        fetchStudentMsg: null,
+      };
+    }
+
+    case UPDATE_STUDENT_REQUEST:
+    case DELETE_STUDENT_REQUEST:
+    case CREATE_STUDENT_REQUEST: {
+      return {
+        ...state,
+        loading: true,
+        addEditStudentSuccess: null,
+        addEditStudentMsg: null,
+        deleteStudentSuccess: null,
+        deleteStudentMsg: null,
       };
     }
 
@@ -53,6 +71,8 @@ export function studentsReducer(
         loading: false,
         students: [action.payload.student, ...state.students],
         meta: { ...state.meta, total: state.meta.total + 1 },
+        addEditStudentSuccess: true,
+        addEditStudentMsg: null,
       };
 
     case UPDATE_STUDENT_SUCCESS:
@@ -62,6 +82,8 @@ export function studentsReducer(
         students: state.students.map((s) =>
           s.id === action.payload.student.id ? action.payload.student : s
         ),
+        addEditStudentSuccess: true,
+        addEditStudentMsg: null,
       };
 
     case DELETE_STUDENT_SUCCESS:
@@ -70,13 +92,33 @@ export function studentsReducer(
         loading: false,
         students: state.students.filter((s) => s.id !== action.payload.id),
         meta: { ...state.meta, total: Math.max(0, state.meta.total - 1) },
+        deleteStudentSuccess: true,
+        deleteStudentMsg: null,
       };
 
     case FETCH_STUDENTS_FAILURE:
+      return {
+        ...state,
+        loading: false,
+        fetchStudentMsg: action.payload.fetchStudentMsg || null,
+        fetchStudentSuccess: action.payload.fetchStudentSuccess || false,
+      };
     case CREATE_STUDENT_FAILURE:
     case UPDATE_STUDENT_FAILURE:
+      return {
+        ...state,
+        loading: false,
+        addEditStudentMsg: action.payload.addEditStudentMsg || null,
+        addEditStudentSuccess: action.payload.addEditStudentSuccess || false,
+      };
+
     case DELETE_STUDENT_FAILURE:
-      return { ...state, loading: false, error: action.payload.error };
+      return {
+        ...state,
+        loading: false,
+        deleteStudentMsg: action.payload.deleteStudentMsg || null,
+        deleteStudentSuccess: action.payload.deleteStudentSuccess || false,
+      };
 
     default:
       return state;

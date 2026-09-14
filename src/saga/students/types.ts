@@ -13,6 +13,7 @@ import {
   DELETE_STUDENT_FAILURE,
 } from "./actionTypes";
 
+
 // ==================== Class Types ====================
 export interface DivisionInfo {
   id: string;
@@ -39,6 +40,45 @@ export interface ClassInfo {
   academicYearId?: string;
   academicYear?: string;
   classMasterId?: string;
+}
+
+export interface StudentsContainerProps {
+  students: Student[];
+  meta: PaginationMeta;
+  loading: boolean;
+  fetchStudentSuccess: boolean | null;
+  fetchStudentMsg: string | null;
+  deleteStudentSuccess: boolean | null;
+  deleteStudentMsg: string | null;
+  addEditStudentSuccess: boolean | null;
+  addEditStudentMsg: string | null;
+  page: number;
+  searchQuery: string;
+  setSearchQuery: (val: string) => void;
+  selectedClass: string;
+  setSelectedClass: (val: string) => void;
+  selectedSection: string;
+  setSelectedSection: (val: string) => void;
+  setPage: (val: number) => void;
+  limit: number;
+  setLimit: (val: number) => void;
+  classes: ClassInfo[];
+  showModal: boolean;
+  setShowModal: (val: boolean) => void;
+  showDetail: Student | null;
+  setShowDetail: (val: Student | null) => void;
+  editingStudent: Student | null;
+  formData: Partial<Student>;
+  setFormData: (val: Partial<Student>) => void;
+  fetchStudentsRequest: (params?: FetchStudentRequestPayload) => void;
+  createStudentRequest: (student: CreateStudentRequestPayload) => void;
+  updateStudentRequest: (payload: UpdateStudentRequestPayload) => void;
+  deleteStudentRequest: (payload: DeleteStudentRequestPayload) => void;
+  fetchClassesRequest: () => void;
+  handleSave: () => void;
+  handleDelete: (id: string) => void;
+  handleOpenAddModal: () => void;
+  handleOpenEditModal: (student: Student) => void;
 }
 
 export interface StudentsUIProps {
@@ -118,7 +158,8 @@ export interface FetchStudentSuccessPayload {
 }
 
 export interface FetchStudentFailurePayload {
-  error: string;
+  fetchStudentSuccess: boolean | null;
+  fetchStudentMsg: string | null;
 }
 
 export interface FetchStudentRequest {
@@ -146,7 +187,8 @@ export interface CreateStudentSuccessPayload {
 }
 
 export interface CreateStudentFailurePayload {
-  error: string;
+  addEditStudentSuccess: boolean | null;
+  addEditStudentMsg: string | null;
 }
 
 export interface CreateStudentRequest {
@@ -175,7 +217,8 @@ export interface UpdateStudentSuccessPayload {
 }
 
 export interface UpdateStudentFailurePayload {
-  error: string;
+  addEditStudentSuccess: boolean | null;
+  addEditStudentMsg: string | null;
 }
 
 export interface UpdateStudentRequest {
@@ -203,7 +246,8 @@ export interface DeleteStudentSuccessPayload {
 }
 
 export interface DeleteStudentFailurePayload {
-  error: string;
+  deleteStudentSuccess: boolean | null;
+  deleteStudentMsg: string | null;
 }
 
 export interface DeleteStudentRequest {
@@ -225,7 +269,12 @@ export interface StudentState {
   students: Student[];
   meta: PaginationMeta;
   loading: boolean;
-  error: string | null;
+  fetchStudentSuccess: boolean | null;
+  fetchStudentMsg: string | null;
+  deleteStudentSuccess: boolean | null;
+  deleteStudentMsg: string | null;
+  addEditStudentSuccess: boolean | null;
+  addEditStudentMsg: string | null;
 }
 
 // Student Action Types Union

@@ -37,7 +37,10 @@ function* handleFetchStudents(action: { type: string; payload?: FetchStudentRequ
     const response: any = yield call(studentService.getStudents, action.payload);
     yield put(fetchStudentsSuccess(response));
   } catch (error: any) {
-    yield put(fetchStudentsFailure(error.message || "Failed to fetch students"));
+    yield put(fetchStudentsFailure({
+      fetchStudentSuccess: false,
+      fetchStudentMsg: error.message || "Failed to fetch students"
+    }));
   }
 }
 
@@ -49,7 +52,10 @@ function* handleCreateStudent(action: { type: string; payload: CreateStudentRequ
     yield put(createStudentSuccess({ student: response }));
   } catch (error: any) {
     debugger;
-    yield put(createStudentFailure({ error: error.message || "Failed to create student" }));
+    yield put(createStudentFailure({
+      addEditStudentSuccess: false,
+      addEditStudentMsg: error.message || "Failed to create student"
+    }));
   }
 }
 
@@ -59,7 +65,10 @@ function* handleUpdateStudent(action: { type: string; payload: UpdateStudentRequ
     yield put(updateStudentSuccess({ student: response }));
   } catch (error: any) {
     debugger
-    yield put(updateStudentFailure({ error: error.message || "Failed to update student" }));
+    yield put(updateStudentFailure({
+      addEditStudentSuccess: false,
+      addEditStudentMsg: error.message || "Failed to update student"
+    }));
   }
 }
 
@@ -68,7 +77,10 @@ function* handleDeleteStudent(action: { type: string; payload: DeleteStudentRequ
     yield call(studentService.deleteStudent, action.payload.id);
     yield put(deleteStudentSuccess({ id: action.payload.id }));
   } catch (error: any) {
-    yield put(deleteStudentFailure({ error: error.message || "Failed to delete student" }));
+    yield put(deleteStudentFailure({
+      deleteStudentSuccess: false,
+      deleteStudentMsg: error.message || "Failed to delete student"
+    }));
   }
 }
 

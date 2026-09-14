@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { connect, ConnectedProps } from "react-redux";
+import { toast } from 'react-toastify';
 import { Dispatch } from "redux";
 import { AppState } from "../../saga/rootReducer";
 import { StudentsUI } from "../../components/modules/students/StudentsUI";
@@ -11,41 +12,35 @@ import {
   updateStudentRequest,
   deleteStudentRequest,
 } from "../../saga";
+import {
+  StudentsContainerProps,
+  CreateStudentRequestPayload,
+  UpdateStudentRequestPayload,
+  DeleteStudentRequestPayload,
+  FetchStudentRequestPayload,
+} from "../../saga/students/types";
 import { fetchClassesRequest } from "../../saga/classes/actions";
 
-const mapStateToProps = (state: AppState) => ({
-  students: state.students.students,
-  meta: state.students.meta,
-  loading: state.students.loading,
-  error: state.students.error,
-  classes: state.classes.classes,
-});
+function StudentsContainerContent(props: StudentsContainerProps) {
+  const {
+    students,
+    meta,
+    loading,
+    fetchStudentSuccess,
+    fetchStudentMsg,
+    addEditStudentSuccess,
+    addEditStudentMsg,
+    deleteStudentSuccess,
+    deleteStudentMsg,
+    classes,
+    fetchStudentsRequest,
+    fetchClassesRequest,
+    createStudentRequest,
+    updateStudentRequest,
+    deleteStudentRequest,
+  } = props;
 
-const mapDispatchToProps = (dispatch: Dispatch) => ({
-  fetchStudentsRequest: (params?: any) => dispatch(fetchStudentsRequest(params)),
-  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
-  createStudentRequest: (student: any) => dispatch(createStudentRequest(student)),
-  updateStudentRequest: (payload: any) => dispatch(updateStudentRequest(payload)),
-  deleteStudentRequest: (id: string) => dispatch(deleteStudentRequest(id)),
-});
-
-const mapper = connect(mapStateToProps, mapDispatchToProps);
-type PropsFromRedux = ConnectedProps<typeof mapper>;
-
-function StudentsContainerContent({
-  students,
-  meta,
-  loading,
-  error,
-  classes,
-  fetchStudentsRequest,
-  fetchClassesRequest,
-  createStudentRequest,
-  updateStudentRequest,
-  deleteStudentRequest,
-}: PropsFromRedux) {
   const { activeSchool, activeAcademicYear } = useSchool();
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClass, setSelectedClass] = useState("all");
   const [selectedSection, setSelectedSection] = useState("all");
@@ -56,10 +51,38 @@ function StudentsContainerContent({
   const [showDetail, setShowDetail] = useState<Student | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState<Partial<Student>>({});
+  const [formError, setFormError] = useState<any>({});
 
   useEffect(() => {
     fetchClassesRequest();
   }, [fetchClassesRequest, activeSchool, activeAcademicYear]);
+
+  useEffect(() => {
+    if (addEditStudentSuccess || deleteStudentSuccess) {
+      fetchStudentsRequest({
+        page,
+        limit,
+        search: searchQuery,
+        classId: selectedClass,
+        divisionId: selectedSection,
+      });
+
+      setShowModal(false);
+      setEditingStudent(null);
+      setFormData({});
+    }
+    else if (addEditStudentSuccess === false && addEditStudentMsg) {
+      toast.error(addEditStudentMsg)
+      setFormError(prev => ({
+        ...prev,
+        email: addEditStudentMsg,
+      }))
+    }
+    else if (deleteStudentSuccess === false && deleteStudentMsg) {
+      toast.error(deleteStudentMsg)
+    }
+  }, [addEditStudentSuccess, addEditStudentMsg, deleteStudentSuccess, deleteStudentMsg]);
+
 
   useEffect(() => {
     fetchStudentsRequest({
@@ -67,7 +90,7 @@ function StudentsContainerContent({
       limit,
       search: searchQuery,
       classId: selectedClass,
-      sectionId: selectedSection,
+      divisionId: selectedSection,
     });
   }, [fetchStudentsRequest, page, limit, searchQuery, selectedClass, selectedSection, activeSchool, activeAcademicYear]);
 
@@ -94,7 +117,6 @@ function StudentsContainerContent({
 
   const handleSave = () => {
     if (editingStudent) {
-      debugger;
       updateStudentRequest({
         id: editingStudent.id,
         name: formData.name,
@@ -120,7 +142,6 @@ function StudentsContainerContent({
         admission_date: formData.admission_date,
       });
     } else {
-      debugger
       const newStudent: any = {
         name: formData.name || "",
         email: formData.email || "",
@@ -146,9 +167,9 @@ function StudentsContainerContent({
       };
       createStudentRequest(newStudent);
     }
-    setShowModal(false);
-    setEditingStudent(null);
-    setFormData({});
+    // setShowModal(false);
+    // setEditingStudent(null);
+    // setFormData({});
   };
 
   const handleDelete = (id: string) => {
@@ -174,7 +195,7 @@ function StudentsContainerContent({
       students={students}
       meta={meta}
       loading={loading}
-      error={error}
+      error={addEditStudentMsg || deleteStudentMsg}
       searchQuery={searchQuery}
       setSearchQuery={handleSearchChange}
       selectedClass={selectedClass}
@@ -200,6 +221,40 @@ function StudentsContainerContent({
     />
   );
 }
+
+
+const mapStateToProps = (state: AppState) => ({
+  students: state.students.students,
+  meta: state.students.meta,
+  loading: state.students.loading,
+  fetchStudentSuccess: state.students.fetchStudentSuccess,
+  fetchStudentMsg: state.students.fetchStudentMsg,
+  addEditStudentSuccess: state.students.addEditStudentSuccess,
+  addEditStudentMsg: state.students.addEditStudentMsg,
+  deleteStudentSuccess: state.students.deleteStudentSuccess,
+  deleteStudentMsg: state.students.deleteStudentMsg,
+  classes: state.classes.classes,
+});
+
+const mapDispatchToProps = (dispatch: Dispatch) => ({
+  fetchStudentsRequest: (
+    payload?: FetchStudentRequestPayload
+  ) => dispatch(fetchStudentsRequest(payload)),
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
+  createStudentRequest: (
+    payload: CreateStudentRequestPayload
+  ) => dispatch(createStudentRequest(payload)),
+  updateStudentRequest: (
+    payload: UpdateStudentRequestPayload
+  ) => dispatch(updateStudentRequest(payload)),
+  deleteStudentRequest: (
+    payload: DeleteStudentRequestPayload
+  ) => dispatch(deleteStudentRequest(id)),
+});
+
+const mapper = connect(mapStateToProps, mapDispatchToProps);
+
+
 
 export const StudentsContainer = mapper(StudentsContainerContent);
 export default StudentsContainer;

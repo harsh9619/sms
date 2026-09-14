@@ -25,6 +25,8 @@ import { MyFeesPage } from "./pages/Fees/MyFeesPage";
 import { MySalaryPage } from "./pages/Salary/MySalaryPage";
 import { UsersPage } from "./pages/Users/UsersPage";
 import { CreateSchoolPage } from "./pages/Schools/CreateSchoolPage";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import "./index.css";
 
 function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
@@ -50,173 +52,176 @@ function AppRoutes() {
   const defaultRedirect = activeSchool ? `/school/${activeSchool.id}/dashboard` : "/login";
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to={defaultRedirect} replace /> : <LoginContainer />}
-      />
-      <Route
-        path="/school/:schoolId/dashboard"
-        element={
-          <ProtectedRoute>
-            <DashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/students"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher"]}>
-            <StudentsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/teachers"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <TeachersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/classes"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher"]}>
-            <ClassesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/classes/assign"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <AssignTeacherPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/class-subject-config"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <ClassSubjectConfigPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/subject-teacher-config"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <SubjectTeacherConfigPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/attendance"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher"]}>
-            <AttendancePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/my-attendance"
-        element={
-          <ProtectedRoute allowedRoles={["student"]}>
-            <MyAttendancePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/users"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <UsersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/settings"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <SettingsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/reports/fee-salary"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <FeeSalaryReportPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/reports/attendance"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher"]}>
-            <AttendanceReportPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/timetable"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
-            <TimetablePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/homework"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
-            <HomeworkPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/notices"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
-            <NoticesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/marks"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
-            <MarksPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/my-fees"
-        element={
-          <ProtectedRoute allowedRoles={["student"]}>
-            <MyFeesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/my-salary"
-        element={
-          <ProtectedRoute allowedRoles={["teacher"]}>
-            <MySalaryPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/school/:schoolId/schools/create"
-        element={
-          <ProtectedRoute allowedRoles={["admin"]}>
-            <CreateSchoolPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to={defaultRedirect} replace />} />
-    </Routes>
+    <>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <Routes>
+        <Route
+          path="/login"
+          element={isAuthenticated ? <Navigate to={defaultRedirect} replace /> : <LoginContainer />}
+        />
+        <Route
+          path="/school/:schoolId/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/students"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+              <StudentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/teachers"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <TeachersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/classes"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+              <ClassesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/classes/assign"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AssignTeacherPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/class-subject-config"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ClassSubjectConfigPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/subject-teacher-config"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <SubjectTeacherConfigPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/attendance"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+              <AttendancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/my-attendance"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <MyAttendancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <UsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/settings"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/reports/fee-salary"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <FeeSalaryReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/reports/attendance"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+              <AttendanceReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/timetable"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+              <TimetablePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/homework"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+              <HomeworkPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/notices"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+              <NoticesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/marks"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+              <MarksPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/my-fees"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <MyFeesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/my-salary"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <MySalaryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/schools/create"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CreateSchoolPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to={defaultRedirect} replace />} />
+      </Routes>
+    </>
   );
 }
 
