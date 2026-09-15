@@ -19,7 +19,7 @@ export const classService = {
   },
 
   deleteClass: async (id: string): Promise<any> => {
-    return httpService.delete(`/api/classes/${id}`);
+    return httpService.delete(`/api/classes/class_div_subject/${id}`);
   },
 
   getClassMasters: async (): Promise<any[]> => {
