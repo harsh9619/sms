@@ -4,6 +4,7 @@ import {
   CREATE_STUDENT_REQUEST,
   UPDATE_STUDENT_REQUEST,
   DELETE_STUDENT_REQUEST,
+  EXPORT_STUDENTS_REQUEST,
 } from "./actionTypes";
 import {
   fetchStudentsSuccess,
@@ -14,6 +15,8 @@ import {
   updateStudentFailure,
   deleteStudentSuccess,
   deleteStudentFailure,
+  exportStudentsSuccess,
+  exportStudentsFailure,
 } from "./actions";
 import studentService from "../../Services/student.service";
 import {
@@ -91,11 +94,21 @@ function* handleBulkCreateStudents(action: { type: string; payload: { students: 
   }
 }
 
+function* handleExportStudents(action: { type: string; payload?: FetchStudentRequestPayload }): Generator<StrictEffect, void, any> {
+  try {
+    const response: any = yield call(studentService.exportStudents, action.payload);
+    yield put(exportStudentsSuccess(response));
+  } catch (error: any) {
+    yield put(exportStudentsFailure(error.message || "Failed to export students"));
+  }
+}
+
 export function* studentsSaga() {
   yield takeLatest(FETCH_STUDENTS_REQUEST, handleFetchStudents);
   yield takeLatest(CREATE_STUDENT_REQUEST, handleCreateStudent);
   yield takeLatest(UPDATE_STUDENT_REQUEST, handleUpdateStudent);
   yield takeLatest(DELETE_STUDENT_REQUEST, handleDeleteStudent);
   yield takeLatest("students/BULK_CREATE_STUDENTS_REQUEST", handleBulkCreateStudents);
+  yield takeLatest(EXPORT_STUDENTS_REQUEST, handleExportStudents);
 }
 

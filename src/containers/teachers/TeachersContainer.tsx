@@ -20,6 +20,7 @@ import {
 } from "../../saga/teachers/types";
 import { TeachersUI } from "../../components/modules/teachers/TeachersUI";
 import * as XLSX from "xlsx";
+import teacherService from "../../Services/teacher.service";
 
 function TeachersContainerContent(props: TeachersContainerProps) {
   const {
@@ -41,7 +42,7 @@ function TeachersContainerContent(props: TeachersContainerProps) {
   const { activeSchool } = useSchool();
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(50);
 
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState<Teacher | null>(null);
@@ -148,22 +149,30 @@ function TeachersContainerContent(props: TeachersContainerProps) {
     setShowModal(true);
   };
 
-  const handleExportExcel = () => {
-    const data = teachers.map((t) => ({
-      Name: t.name,
-      Email: t.email,
-      Phone: t.phone,
-      Subject: t.subject,
-      Department: t.department,
-      Qualification: t.qualification,
-      Experience: t.experience,
-      Address: t.address,
-      Salary: t.salary || "",
-    }));
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, "Teachers");
-    XLSX.writeFile(wb, "teachers_data.xlsx");
+  const handleExportExcel = async () => {
+    try {
+      const exportTeachers = await teacherService.exportTeachers();
+      const listToExport = exportTeachers && exportTeachers.length > 0 ? exportTeachers : teachers;
+
+      const data = listToExport.map((t: any) => ({
+        Name: t.name || "",
+        Email: t.email || "",
+        Phone: t.phone || "",
+        Subject: t.subject || "",
+        Department: t.department || "",
+        Qualification: t.qualification || "",
+        Experience: t.experience || "",
+        Address: t.address || "",
+        Salary: t.salary || "",
+        Status: t.status ? "Active" : "Inactive",
+      }));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Teachers");
+      XLSX.writeFile(wb, "teachers_data.xlsx");
+    } catch (err) {
+      toast.error("Failed to export teachers data");
+    }
   };
 
   return (

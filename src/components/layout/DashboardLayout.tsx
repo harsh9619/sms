@@ -122,15 +122,14 @@ export function DashboardLayout({ children }: SidebarProps) {
 
   const navItems = [
     { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin", "teacher", "student"] },
-    { path: "/students", icon: GraduationCap, label: "Students", roles: ["admin", "teacher"] },
-    { path: "/teachers", icon: Users, label: "Teachers", roles: ["admin"] },
-    { path: "/users", icon: Users, label: "Users", roles: ["admin"] },
-    { path: "/classes", icon: BookOpen, label: "Class-Teacher Config", roles: ["admin", "teacher"] },
-    { path: "/class-subject-config", icon: Layers, label: "Class-Subject Config", roles: ["admin"] },
-    { path: "/subject-teacher-config", icon: UserCheck, label: "Subject-Teacher Config", roles: ["admin"] },
-    { path: "/timetable", icon: Calendar, label: "Timetable", roles: ["admin", "teacher", "student"] },
+    { path: "/students", icon: GraduationCap, label: "Students Details", roles: ["admin", "teacher"] },
+    { path: "/teachers", icon: Users, label: "Teachers Details", roles: ["admin"] },
+    { path: "/users", icon: Users, label: "Users Details", roles: ["admin"] },
+    { path: "/classes", icon: BookOpen, label: "Class Teacher Allocation", roles: ["admin", "teacher"] },
+    { path: "/subject-teacher-config", icon: UserCheck, label: "Subject Teacher Allocation", roles: ["admin", "teacher"] },
     { path: "/attendance", icon: ClipboardCheck, label: "Attendance", roles: ["admin", "teacher"] },
     { path: "/my-attendance", icon: ClipboardCheck, label: "My Attendance", roles: ["student"] },
+    { path: "/timetable", icon: Calendar, label: "Timetable", roles: ["admin", "teacher", "student"] },
     { path: "/homework", icon: ClipboardList, label: "Homework", roles: ["admin", "teacher", "student"] },
     { path: "/marks", icon: Award, label: "Exams & Marks", roles: ["admin", "teacher", "student"] },
     { path: "/notices", icon: Megaphone, label: "Notices", roles: ["admin", "teacher", "student"] },
@@ -139,6 +138,7 @@ export function DashboardLayout({ children }: SidebarProps) {
     { path: "/reports/attendance", icon: BarChart3, label: "Reports", roles: ["admin", "teacher"] },
     { path: "/reports/fee-salary", icon: DollarSign, label: "Finance", roles: ["admin"] },
     { path: "/schools/create", icon: PlusCircle, label: "New School", roles: ["admin"] },
+    { path: "/class-subject-config", icon: Layers, label: "Class Subject Allocation", roles: ["admin"] },
     { path: "/settings", icon: Settings, label: "Settings", roles: ["admin"] },
   ];
 

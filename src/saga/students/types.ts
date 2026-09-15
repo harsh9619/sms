@@ -109,6 +109,7 @@ export interface StudentsUIProps {
   handleOpenAddModal: () => void;
   handleOpenEditModal: (student: Student) => void;
   handleRefresh?: () => void;
+  handleExportExcel: () => void;
 }
 
 export interface Student {

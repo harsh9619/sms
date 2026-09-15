@@ -88,3 +88,17 @@ export const bulkCreateTeachersFailure = (payload: any) => ({
   type: types.BULK_CREATE_TEACHERS_FAILURE,
   payload,
 });
+
+export const exportTeachersRequest = () => ({
+  type: types.EXPORT_TEACHERS_REQUEST,
+});
+
+export const exportTeachersSuccess = (payload: any) => ({
+  type: types.EXPORT_TEACHERS_SUCCESS,
+  payload,
+});
+
+export const exportTeachersFailure = (payload: any) => ({
+  type: types.EXPORT_TEACHERS_FAILURE,
+  payload,
+});

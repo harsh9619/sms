@@ -2,10 +2,12 @@ import React, { useState, useEffect } from "react";
 import { connect, ConnectedProps } from "react-redux";
 import { toast } from 'react-toastify';
 import { Dispatch } from "redux";
+import * as XLSX from "xlsx";
 import { AppState } from "../../saga/rootReducer";
 import { StudentsUI } from "../../components/modules/students/StudentsUI";
 import type { Student } from "../../types";
 import { useSchool } from "../../context/SchoolContext";
+import studentService from "../../Services/student.service";
 import {
   fetchStudentsRequest,
   createStudentRequest,
@@ -45,7 +47,7 @@ function StudentsContainerContent(props: StudentsContainerProps) {
   const [selectedClass, setSelectedClass] = useState("all");
   const [selectedSection, setSelectedSection] = useState("all");
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(50);
 
   const [showModal, setShowModal] = useState(false);
   const [showDetail, setShowDetail] = useState<Student | null>(null);
@@ -188,6 +190,39 @@ function StudentsContainerContent(props: StudentsContainerProps) {
     setShowModal(true);
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const exportData = await studentService.exportStudents({
+        search: searchQuery,
+        classId: selectedClass,
+        sectionId: selectedSection,
+      });
+
+      const listToExport = exportData && exportData.length > 0 ? exportData : students;
+
+      const data = listToExport.map((s: any) => ({
+        "Roll No": s.roll_no || "",
+        "Name": s.name || "",
+        "Email": s.email || "",
+        "Phone": s.phone || "",
+        "Class": s.class_name || s.section ? `${s.class_name || ""} ${s.division_name || s.section || ""}`.trim() : "",
+        "Gender": s.gender || "",
+        "Guardian Name": s.guardian_name || s.parent_name || "",
+        "Guardian Phone": s.guardian_phone || s.parent_phone || "",
+        "Blood Group": s.blood_group || "",
+        "Address": s.address || "",
+        "Admission Date": s.admission_date || "",
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Students");
+      XLSX.writeFile(wb, "students_data.xlsx");
+    } catch (err) {
+      toast.error("Failed to export students data");
+    }
+  };
+
   return (
     <StudentsUI
       students={students}
@@ -216,6 +251,7 @@ function StudentsContainerContent(props: StudentsContainerProps) {
       handleDelete={handleDelete}
       handleOpenAddModal={handleOpenAddModal}
       handleOpenEditModal={handleOpenEditModal}
+      handleExportExcel={handleExportExcel}
       handleRefresh={() =>
         fetchStudentsRequest({
           page,

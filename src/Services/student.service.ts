@@ -24,6 +24,16 @@ export const studentService = {
     return httpService.get(`/api/students${queryString}`);
   },
 
+  exportStudents: async (params?: GetStudentsParams): Promise<Student[]> => {
+    const query = new URLSearchParams();
+    if (params?.search) query.append("search", params.search);
+    if (params?.classId && params.classId !== "all") query.append("classId", params.classId);
+    if (params?.sectionId && params.sectionId !== "all") query.append("sectionId", params.sectionId);
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return httpService.get(`/api/students/export${queryString}`);
+  },
+
   createStudent: async (student: any): Promise<Student> => {
     return httpService.post<Student>("/api/students", student);
   },

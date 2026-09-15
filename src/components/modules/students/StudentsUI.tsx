@@ -24,6 +24,9 @@ import {
   MapPin,
   Heart,
   Upload,
+  Filter,
+  RefreshCw,
+  Download,
 } from "lucide-react";
 import { BulkUploadModal } from "../../ui/BulkUploadModal";
 import studentService from "../../../Services/student.service";
@@ -56,6 +59,7 @@ export function StudentsUI({
   handleDelete,
   handleOpenAddModal,
   handleOpenEditModal,
+  handleExportExcel,
   handleRefresh,
 }: StudentsUIProps) {
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
@@ -161,6 +165,15 @@ export function StudentsUI({
             </p>
           </div>
           <div className="flex gap-2">
+            {handleExportExcel && (
+              <Button
+                variant="outline"
+                className="rounded-xl border-border hover:bg-muted shadow-sm text-xs font-semibold"
+                onClick={handleExportExcel}
+              >
+                <Download className="h-4 w-4 mr-2 text-primary" /> Export Excel
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => setShowBulkModal(true)}
@@ -173,38 +186,80 @@ export function StudentsUI({
           </div>
         </div>
 
-        <Card>
-          <CardContent className="pt-4 pb-4 flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Search by name, roll number, email, or guardian..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                icon={<Search className="h-4 w-4" />}
-              />
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold"
-              >
-                <option value="all">All Classes</option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-              <select
-                value={selectedSection}
-                disabled={!selectedClass || selectedClass === "all"}
-                onChange={(e) => setSelectedSection(e.target.value)}
-                className="h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold"
-              >
-                <option value="all">All Sections</option>
-                {classes.find((c) => c.id === selectedClass)?.divisions?.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+        {/* Search & Filter Bar */}
+        <Card className="border-border/60 bg-card/60 backdrop-blur-sm shadow-sm">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+              {/* Search Box */}
+              <div className="flex-1 relative">
+                <Input
+                  placeholder="Search by student name, roll no, email, or guardian contact..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  icon={<Search className="h-4 w-4 text-muted-foreground" />}
+                  className="w-full pl-9 pr-9 h-10 rounded-xl border-border bg-background/50 focus:bg-background transition-all text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-muted"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Class & Division Filters */}
+              <div className="flex items-center gap-2.5 shrink-0">
+                {/* <div className="flex items-center gap-2 px-3 h-10 rounded-xl border border-border bg-background/50 text-xs font-semibold text-muted-foreground">
+                  <Filter className="h-3.5 w-3.5 text-primary" />
+                  <span>Filters</span>
+                </div> */}
+
+                {/* Class Select */}
+                <select
+                  value={selectedClass}
+                  onChange={(e) => setSelectedClass(e.target.value)}
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
+                >
+                  <option value="all">All Classes</option>
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+
+                {/* Section Select */}
+                <select
+                  value={selectedSection}
+                  disabled={!selectedClass || selectedClass === "all"}
+                  onChange={(e) => setSelectedSection(e.target.value)}
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <option value="all">All Sections</option>
+                  {classes.find((c) => c.id === selectedClass)?.divisions?.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+
+                {/* Clear Filters Button */}
+                {/* {(searchQuery || selectedClass !== "all" || selectedSection !== "all") && ( */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!(searchQuery || selectedClass !== "all" || selectedSection !== "all")}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedClass("all");
+                    setSelectedSection("all");
+                  }}
+                  className="h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Reset all filters"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Reset
+                </Button>
+                {/* )} */}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -228,12 +283,15 @@ export function StudentsUI({
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
                     <tr className="bg-muted/40 border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                      {/* <th className="py-3 px-4">Roll No</th> */}
+                      <th className="py-3 px-4">Student Name</th>
+                      <th className="py-3 px-4">Class </th>
+                      <th className="py-3 px-4">Div</th>
                       <th className="py-3 px-4">Roll No</th>
-                      <th className="py-3 px-4">Student</th>
-                      <th className="py-3 px-4">Class / Division</th>
-                      <th className="py-3 px-4">Contact Info</th>
+                      <th className="py-3 px-4">Gender</th>
                       <th className="py-3 px-4">Guardian</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
+                      <th className="py-3 px-4">Contact Info</th>
+                      <th className="py-3 px-4 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -242,34 +300,57 @@ export function StudentsUI({
                         key={student.id}
                         className="hover:bg-muted/30 transition-colors group"
                       >
-                        <td className="py-3 px-4 font-medium text-xs">
+                        {/* <td className="py-3 px-4 font-medium text-xs">
                           <span className="font-mono">
                             {student.roll_no || "N/A"}
                           </span>
-                        </td>
+                        </td> */}
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
-                            <Avatar size="sm">
-                              <AvatarFallback>{getInitials(student.name)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-semibold text-foreground">{student.name}</div>
-                              <div className="text-xs text-muted-foreground capitalize">
-                                {student.gender || "Student"}
-                              </div>
-                            </div>
+
+                            <div className="font-semibold text-foreground">{student.name}</div>
+
                           </div>
                         </td>
 
                         <td className="py-3 px-4">
-                          {(student.class_name || student.division_name) ? (
-                            <Badge variant="secondary" className="font-semibold text-xs">
-                              {student.class_name || ""}{student.division_name ? `-${student.division_name}` : ""}
-                            </Badge>
+                          {student.class_name ? (
+                            <span className="font-semibold text-xs">
+                              {student.class_name || ""}
+                            </span>
                           ) : (
                             <span className="text-xs text-muted-foreground">Unassigned</span>
                           )}
                         </td>
+
+                        <td className="py-3 px-4">
+                          {student.division_name ? (
+                            <span className="font-semibold text-xs">
+                              {student.division_name ? `${student.division_name}` : ""}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Unassigned</span>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-4 font-semibold text-xs capitalize">
+                          {student.roll_no}
+                        </td>
+
+                        <td className="py-3 px-4 font-semibold text-xs capitalize">
+                          {student.gender || "male"}
+                        </td>
+
+                        <td className="py-3 px-4 text-xs">
+                          {student.parent_name || student.guardian_name ? (
+                            <div className="font-medium text-foreground">
+                              {student.parent_name || student.guardian_name}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">N/A</span>
+                          )}
+                        </td>
+
                         <td className="py-3 px-4 text-xs space-y-0.5">
                           {student.email && (
                             <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -283,28 +364,19 @@ export function StudentsUI({
                               <span>{student.phone}</span>
                             </div>
                           )}
-                          {!student.email && !student.phone && (
-                            <span className="text-muted-foreground">N/A</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-xs">
-                          {student.parent_name || student.guardian_name ? (
-                            <div>
-                              <div className="font-medium text-foreground">
-                                {student.parent_name || student.guardian_name}
-                              </div>
-                              {(student.parent_phone || student.guardian_phone) && (
-                                <div className="text-muted-foreground text-[11px]">
-                                  {student.parent_phone || student.guardian_phone}
-                                </div>
-                              )}
+                          {(student.parent_phone || student.guardian_phone) && (
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3 w-3 shrink-0 text-primary" />
+                              <span>{student.parent_phone || student.guardian_phone}</span>
                             </div>
-                          ) : (
+                          )}
+                          {!student.email && !student.phone && !(student.parent_phone || student.guardian_phone) && (
                             <span className="text-muted-foreground">N/A</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
+
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
                             <Button
                               variant="ghost"
                               size="icon"

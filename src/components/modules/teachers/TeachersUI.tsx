@@ -30,6 +30,7 @@ import {
   LayoutGrid,
   List,
   Filter,
+  RefreshCw,
 } from "lucide-react";
 import { BulkUploadModal } from "../../ui/BulkUploadModal";
 import teacherService from "../../../Services/teacher.service";
@@ -283,6 +284,22 @@ export function TeachersUI({
                 </button>
               </div>
 
+              {/* Reset Filter Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!(searchQuery || statusFilter !== "all")}
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("all");
+                }}
+                className="h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Reset all filters"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Reset
+              </Button>
+
               {/* View Switcher Toggle */}
               <div className="inline-flex items-center p-1 rounded-2xl bg-muted/50 border border-border/60 gap-1 text-xs">
                 <button
@@ -470,7 +487,6 @@ export function TeachersUI({
                             <div className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
                               {teacher.name}
                             </div>
-                            <span className="text-[10px] text-muted-foreground">Faculty Member</span>
                           </div>
                         </div>
                       </td>

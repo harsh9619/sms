@@ -111,7 +111,11 @@ export function BulkUploadModal({
       if (onSuccess) {
         onSuccess();
       }
-      handleClose();
+      // If 100% clean success (no skipped/errors), close automatically.
+      // If there are skipped rows or errors, keep modal open to show error details.
+      if (res.skippedCount === 0 && (!res.errors || res.errors.length === 0)) {
+        handleClose();
+      }
     } catch (err: any) {
       setParseError(err.message || "Failed to upload bulk records.");
     } finally {

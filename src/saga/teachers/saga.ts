@@ -4,6 +4,8 @@ import {
   CREATE_TEACHER_REQUEST,
   UPDATE_TEACHER_REQUEST,
   DELETE_TEACHER_REQUEST,
+  EXPORT_TEACHERS_REQUEST,
+  BULK_CREATE_TEACHERS_REQUEST,
 } from "./actionTypes";
 import {
   fetchTeachersSuccess,
@@ -14,6 +16,8 @@ import {
   updateTeacherFailure,
   deleteTeacherSuccess,
   deleteTeacherFailure,
+  exportTeachersSuccess,
+  exportTeachersFailure,
 } from "./actions";
 import teacherService from "../../Services/teacher.service";
 import {
@@ -81,12 +85,22 @@ function* handleBulkCreateTeachers(action: { type: string; payload: { teachers: 
   }
 }
 
+function* handleExportTeachers(): Generator<StrictEffect, void, any> {
+  try {
+    const response: any = yield call(teacherService.exportTeachers);
+    yield put(exportTeachersSuccess(response));
+  } catch (error: any) {
+    yield put(exportTeachersFailure(error.message || "Failed to export teachers"));
+  }
+}
+
 export function* teachersSaga() {
   yield takeLatest(FETCH_TEACHERS_REQUEST, handleFetchTeachers);
   yield takeLatest(CREATE_TEACHER_REQUEST, handleCreateTeacher);
   yield takeLatest(UPDATE_TEACHER_REQUEST, handleUpdateTeacher);
   yield takeLatest(DELETE_TEACHER_REQUEST, handleDeleteTeacher);
   yield takeLatest("teachers/BULK_CREATE_TEACHERS_REQUEST", handleBulkCreateTeachers);
+  yield takeLatest(EXPORT_TEACHERS_REQUEST, handleExportTeachers);
 }
 
 export default teachersSaga;

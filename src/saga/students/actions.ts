@@ -42,6 +42,9 @@ import {
   BULK_CREATE_STUDENTS_REQUEST,
   BULK_CREATE_STUDENTS_SUCCESS,
   BULK_CREATE_STUDENTS_FAILURE,
+  EXPORT_STUDENTS_REQUEST,
+  EXPORT_STUDENTS_SUCCESS,
+  EXPORT_STUDENTS_FAILURE,
 } from "./actionTypes";
 
 
@@ -143,5 +146,20 @@ export const bulkCreateStudentsSuccess = (payload: any) => ({
 
 export const bulkCreateStudentsFailure = (payload: any) => ({
   type: BULK_CREATE_STUDENTS_FAILURE,
+  payload,
+});
+
+export const exportStudentsRequest = (payload?: FetchStudentRequestPayload) => ({
+  type: EXPORT_STUDENTS_REQUEST,
+  payload,
+});
+
+export const exportStudentsSuccess = (payload: Student[]) => ({
+  type: EXPORT_STUDENTS_SUCCESS,
+  payload,
+});
+
+export const exportStudentsFailure = (payload: string) => ({
+  type: EXPORT_STUDENTS_FAILURE,
   payload,
 });

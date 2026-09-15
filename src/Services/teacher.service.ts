@@ -5,6 +5,7 @@ export interface GetTeachersParams {
   page?: number;
   limit?: number;
   search?: string;
+  status?: string;
 }
 
 export const teacherService = {
@@ -13,9 +14,19 @@ export const teacherService = {
     if (params?.page) query.append("page", String(params.page));
     if (params?.limit) query.append("limit", String(params.limit));
     if (params?.search) query.append("search", params.search);
+    if (params?.status && params.status !== "all") query.append("status", params.status);
 
     const queryString = query.toString() ? `?${query.toString()}` : "";
     return httpService.get(`/api/teachers${queryString}`);
+  },
+
+  exportTeachers: async (params?: GetTeachersParams): Promise<Teacher[]> => {
+    const query = new URLSearchParams();
+    if (params?.search) query.append("search", params.search);
+    if (params?.status && params.status !== "all") query.append("status", params.status);
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return httpService.get(`/api/teachers/export${queryString}`);
   },
 
   createTeacher: async (teacher: any): Promise<Teacher> => {
