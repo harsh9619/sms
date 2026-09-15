@@ -27,12 +27,15 @@ export interface CreateTeacherRequestPayload {
   name: string;
   email: string;
   phone?: string;
+  avatar?: string;
+  avatar_url?: string;
   subject?: string;
   department?: string;
   qualification?: string;
   experience?: string;
   address?: string;
   salary?: number;
+  status?: boolean;
 }
 
 export interface CreateTeacherSuccessPayload {
@@ -68,6 +71,20 @@ export interface DeleteTeacherSuccessPayload {
 export interface DeleteTeacherFailurePayload {
   deleteTeacherSuccess: boolean | null;
   deleteTeacherMsg: string | null;
+}
+
+export interface BulkCreateTeachersRequestPayload {
+  teachers: Array<{
+    name: string;
+    email: string;
+    phone?: string;
+  }>;
+}
+
+export interface BulkCreateTeachersSuccessPayload {
+  addedCount: number;
+  skippedCount: number;
+  errors: Array<{ email: string; reason: string }>;
 }
 
 export interface TeachersState {
@@ -139,4 +156,5 @@ export interface TeachersUIProps {
   handleOpenAddModal: () => void;
   handleOpenEditModal: (teacher: Teacher) => void;
   handleExportExcel: () => void;
+  handleRefresh?: () => void;
 }

@@ -65,7 +65,6 @@ export function studentsReducer(
     }
 
     case CREATE_STUDENT_SUCCESS:
-      debugger
       return {
         ...state,
         loading: false,

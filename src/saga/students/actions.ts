@@ -39,6 +39,9 @@ import {
   DELETE_STUDENT_REQUEST,
   DELETE_STUDENT_SUCCESS,
   DELETE_STUDENT_FAILURE,
+  BULK_CREATE_STUDENTS_REQUEST,
+  BULK_CREATE_STUDENTS_SUCCESS,
+  BULK_CREATE_STUDENTS_FAILURE,
 } from "./actionTypes";
 
 
@@ -125,5 +128,20 @@ export const deleteStudentFailure = (
   payload: DeleteStudentFailurePayload
 ): DeleteStudentFailure => ({
   type: DELETE_STUDENT_FAILURE,
+  payload,
+});
+
+export const bulkCreateStudentsRequest = (payload: { students: any[] }) => ({
+  type: BULK_CREATE_STUDENTS_REQUEST,
+  payload,
+});
+
+export const bulkCreateStudentsSuccess = (payload: any) => ({
+  type: BULK_CREATE_STUDENTS_SUCCESS,
+  payload,
+});
+
+export const bulkCreateStudentsFailure = (payload: any) => ({
+  type: BULK_CREATE_STUDENTS_FAILURE,
   payload,
 });

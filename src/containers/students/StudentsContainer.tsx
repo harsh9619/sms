@@ -173,9 +173,7 @@ function StudentsContainerContent(props: StudentsContainerProps) {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this student?")) {
-      deleteStudentRequest(id);
-    }
+    deleteStudentRequest({ id });
   };
 
   const handleOpenAddModal = () => {
@@ -218,6 +216,15 @@ function StudentsContainerContent(props: StudentsContainerProps) {
       handleDelete={handleDelete}
       handleOpenAddModal={handleOpenAddModal}
       handleOpenEditModal={handleOpenEditModal}
+      handleRefresh={() =>
+        fetchStudentsRequest({
+          page,
+          limit,
+          search: searchQuery,
+          classId: selectedClass,
+          divisionId: selectedSection,
+        })
+      }
     />
   );
 }
@@ -249,7 +256,7 @@ const mapDispatchToProps = (dispatch: Dispatch) => ({
   ) => dispatch(updateStudentRequest(payload)),
   deleteStudentRequest: (
     payload: DeleteStudentRequestPayload
-  ) => dispatch(deleteStudentRequest(id)),
+  ) => dispatch(deleteStudentRequest(payload)),
 });
 
 const mapper = connect(mapStateToProps, mapDispatchToProps);

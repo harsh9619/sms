@@ -47,11 +47,9 @@ function* handleFetchStudents(action: { type: string; payload?: FetchStudentRequ
 
 function* handleCreateStudent(action: { type: string; payload: CreateStudentRequestPayload }): Generator<StrictEffect, void, any> {
   try {
-    debugger;
     const response: any = yield call(studentService.createStudent, action.payload);
     yield put(createStudentSuccess({ student: response }));
   } catch (error: any) {
-    debugger;
     yield put(createStudentFailure({
       addEditStudentSuccess: false,
       addEditStudentMsg: error.message || "Failed to create student"
@@ -64,7 +62,6 @@ function* handleUpdateStudent(action: { type: string; payload: UpdateStudentRequ
     const response: any = yield call(studentService.updateStudent, action.payload.id, action.payload);
     yield put(updateStudentSuccess({ student: response }));
   } catch (error: any) {
-    debugger
     yield put(updateStudentFailure({
       addEditStudentSuccess: false,
       addEditStudentMsg: error.message || "Failed to update student"
@@ -84,10 +81,21 @@ function* handleDeleteStudent(action: { type: string; payload: DeleteStudentRequ
   }
 }
 
+function* handleBulkCreateStudents(action: { type: string; payload: { students: any[] } }): Generator<StrictEffect, void, any> {
+  try {
+    const response: any = yield call(studentService.bulkCreateStudents, action.payload.students);
+    yield put({ type: "students/BULK_CREATE_STUDENTS_SUCCESS", payload: response });
+    yield put({ type: FETCH_STUDENTS_REQUEST });
+  } catch (error: any) {
+    yield put({ type: "students/BULK_CREATE_STUDENTS_FAILURE", payload: error.message });
+  }
+}
+
 export function* studentsSaga() {
   yield takeLatest(FETCH_STUDENTS_REQUEST, handleFetchStudents);
   yield takeLatest(CREATE_STUDENT_REQUEST, handleCreateStudent);
   yield takeLatest(UPDATE_STUDENT_REQUEST, handleUpdateStudent);
   yield takeLatest(DELETE_STUDENT_REQUEST, handleDeleteStudent);
+  yield takeLatest("students/BULK_CREATE_STUDENTS_REQUEST", handleBulkCreateStudents);
 }
 

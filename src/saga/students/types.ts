@@ -76,7 +76,7 @@ export interface StudentsContainerProps {
   deleteStudentRequest: (payload: DeleteStudentRequestPayload) => void;
   fetchClassesRequest: () => void;
   handleSave: () => void;
-  handleDelete: (id: string) => void;
+  // handleDelete: (id: string) => void;
   handleOpenAddModal: () => void;
   handleOpenEditModal: (student: Student) => void;
 }
@@ -108,6 +108,7 @@ export interface StudentsUIProps {
   handleDelete: (id: string) => void;
   handleOpenAddModal: () => void;
   handleOpenEditModal: (student: Student) => void;
+  handleRefresh?: () => void;
 }
 
 export interface Student {
@@ -263,6 +264,16 @@ export interface DeleteStudentSuccess {
 export interface DeleteStudentFailure {
   type: typeof DELETE_STUDENT_FAILURE;
   payload: DeleteStudentFailurePayload;
+}
+
+export interface BulkCreateStudentsRequestPayload {
+  students: Array<any>;
+}
+
+export interface BulkCreateStudentsSuccessPayload {
+  addedCount: number;
+  skippedCount: number;
+  errors: Array<{ email: string; reason: string }>;
 }
 
 export interface StudentState {

@@ -23,7 +23,10 @@ import {
   Calendar,
   MapPin,
   Heart,
+  Upload,
 } from "lucide-react";
+import { BulkUploadModal } from "../../ui/BulkUploadModal";
+import studentService from "../../../Services/student.service";
 
 
 export function StudentsUI({
@@ -53,15 +56,21 @@ export function StudentsUI({
   handleDelete,
   handleOpenAddModal,
   handleOpenEditModal,
+  handleRefresh,
 }: StudentsUIProps) {
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<any | null>(null);
 
   useEffect(() => {
     setFieldErrors({});
   }, [showModal]);
 
   useEffect(() => {
-    setFieldErrors((prev) => ({ ...prev, ['email']: error }));
+    if (error) {
+      const errorMsg = typeof error === "object" ? (error.message || JSON.stringify(error)) : String(error);
+      setFieldErrors((prev) => ({ ...prev, email: errorMsg }));
+    }
   }, [error]);
 
 
@@ -152,6 +161,12 @@ export function StudentsUI({
             </p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkModal(true)}
+            >
+              <Upload className="h-4 w-4 mr-2 text-primary" /> Bulk Upload
+            </Button>
             <Button onClick={handleOpenAddModal}>
               <Plus className="h-4 w-4 mr-2" /> Add Student
             </Button>
@@ -312,7 +327,7 @@ export function StudentsUI({
                               variant="ghost"
                               size="icon"
                               title="Delete Student"
-                              onClick={() => handleDelete(student.id)}
+                              onClick={() => setStudentToDelete(student)}
                               className="h-8 w-8 text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -824,6 +839,89 @@ export function StudentsUI({
                   onClick={() => setShowDetail(null)}
                 >
                   Close Profile
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Upload Modal */}
+        <BulkUploadModal
+          isOpen={showBulkModal}
+          onClose={() => setShowBulkModal(false)}
+          title="Bulk Import Students"
+          templateHeaders={[
+            "name",
+            "email",
+            "class",
+            "division",
+            "parentName",
+            "parentPhone",
+            "dateOfBirth",
+            "gender",
+            "bloodGroup",
+            "address",
+          ]}
+          sampleRow={{}}
+          onUpload={async (data) => {
+            return studentService.bulkCreateStudents(data);
+          }}
+          onSuccess={() => {
+            if (handleRefresh) {
+              handleRefresh();
+            }
+          }}
+        />
+
+        {/* Delete Student Confirmation Modal */}
+        {studentToDelete && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+            onClick={() => setStudentToDelete(null)}
+          >
+            <div
+              className="bg-card text-card-foreground border border-border rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <h3 className="text-lg font-bold text-destructive flex items-center gap-2">
+                  <Trash2 className="h-5 w-5" /> Delete Student
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => setStudentToDelete(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="py-2 text-sm text-muted-foreground space-y-2">
+                <p>
+                  Are you sure you want to delete student{" "}
+                  <strong className="text-foreground font-semibold">{studentToDelete.name}</strong>?
+                </p>
+                <p className="text-xs text-muted-foreground/80">
+                  This action cannot be undone. The student record will be removed.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2 border-t border-border">
+                <Button
+                  variant="outline"
+                  onClick={() => setStudentToDelete(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    handleDelete(studentToDelete.id);
+                    setStudentToDelete(null);
+                  }}
+                >
+                  Delete Student
                 </Button>
               </div>
             </div>

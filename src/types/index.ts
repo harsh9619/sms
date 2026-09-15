@@ -62,6 +62,18 @@ export interface Teacher {
   avatar?: string;
   joinDate: string;
   salary?: number;
+  status: boolean;
+}
+
+export interface BulkUploadError {
+  email: string;
+  reason: string;
+}
+
+export interface BulkUploadResult {
+  addedCount: number;
+  skippedCount: number;
+  errors: BulkUploadError[];
 }
 
 // ==================== Class Types ====================

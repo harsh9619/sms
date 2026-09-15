@@ -71,11 +71,22 @@ function* handleDeleteTeacher(action: { type: string; payload: DeleteTeacherRequ
   }
 }
 
+function* handleBulkCreateTeachers(action: { type: string; payload: { teachers: any[] } }): Generator<StrictEffect, void, any> {
+  try {
+    const response: any = yield call(teacherService.bulkCreateTeachers, action.payload.teachers);
+    yield put({ type: "teachers/BULK_CREATE_TEACHERS_SUCCESS", payload: response });
+    yield put({ type: FETCH_TEACHERS_REQUEST });
+  } catch (error: any) {
+    yield put({ type: "teachers/BULK_CREATE_TEACHERS_FAILURE", payload: error.message });
+  }
+}
+
 export function* teachersSaga() {
   yield takeLatest(FETCH_TEACHERS_REQUEST, handleFetchTeachers);
   yield takeLatest(CREATE_TEACHER_REQUEST, handleCreateTeacher);
   yield takeLatest(UPDATE_TEACHER_REQUEST, handleUpdateTeacher);
   yield takeLatest(DELETE_TEACHER_REQUEST, handleDeleteTeacher);
+  yield takeLatest("teachers/BULK_CREATE_TEACHERS_REQUEST", handleBulkCreateTeachers);
 }
 
 export default teachersSaga;

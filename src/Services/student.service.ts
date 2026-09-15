@@ -35,6 +35,10 @@ export const studentService = {
   deleteStudent: async (id: string): Promise<any> => {
     return httpService.delete(`/api/students/${id}`);
   },
+
+  bulkCreateStudents: async (students: any[]): Promise<any> => {
+    return httpService.post("/api/students/bulk", { students });
+  },
 };
 
 export default studentService;

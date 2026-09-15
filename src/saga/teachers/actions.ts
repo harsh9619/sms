@@ -73,3 +73,18 @@ export const deleteTeacherFailure = (payload: DeleteTeacherFailurePayload) => ({
   type: types.DELETE_TEACHER_FAILURE,
   payload,
 });
+
+export const bulkCreateTeachersRequest = (payload: { teachers: any[] }) => ({
+  type: types.BULK_CREATE_TEACHERS_REQUEST,
+  payload,
+});
+
+export const bulkCreateTeachersSuccess = (payload: any) => ({
+  type: types.BULK_CREATE_TEACHERS_SUCCESS,
+  payload,
+});
+
+export const bulkCreateTeachersFailure = (payload: any) => ({
+  type: types.BULK_CREATE_TEACHERS_FAILURE,
+  payload,
+});

@@ -98,45 +98,52 @@ function TeachersContainerContent(props: TeachersContainerProps) {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        avatar: formData.avatar || formData.avatar_url,
+        avatar_url: formData.avatar_url || formData.avatar,
         subject: formData.subject,
         department: formData.department,
         qualification: formData.qualification,
         experience: formData.experience,
         address: formData.address,
         salary: formData.salary ? Number(formData.salary) : undefined,
+        status: formData.status !== undefined ? formData.status : true,
       });
     } else {
       const newTeacher: any = {
         name: formData.name || "",
         email: formData.email || "",
         phone: formData.phone || "",
+        avatar: formData.avatar || formData.avatar_url || "",
+        avatar_url: formData.avatar_url || formData.avatar || "",
         subject: formData.subject || "",
         department: formData.department || "",
         qualification: formData.qualification || "",
         experience: formData.experience || "",
         address: formData.address || "",
         salary: formData.salary ? Number(formData.salary) : undefined,
+        status: formData.status !== undefined ? formData.status : true,
       };
       createTeacherRequest(newTeacher);
     }
   };
 
   const handleDelete = (id: string) => {
-    if (confirm("Are you sure you want to delete this teacher?")) {
-      deleteTeacherRequest({ id });
-    }
+    deleteTeacherRequest({ id });
   };
 
   const handleOpenAddModal = () => {
     setEditingTeacher(null);
-    setFormData({});
+    setFormData({ status: true });
     setFormError({});
     setShowModal(true);
   };
 
   const handleOpenEditModal = (teacher: Teacher) => {
     setEditingTeacher(teacher);
-    setFormData(teacher);
+    setFormData({
+      ...teacher,
+      status: teacher.status !== undefined ? teacher.status : true,
+    });
     setFormError({});
     setShowModal(true);
   };
@@ -184,6 +191,13 @@ function TeachersContainerContent(props: TeachersContainerProps) {
       handleOpenAddModal={handleOpenAddModal}
       handleOpenEditModal={handleOpenEditModal}
       handleExportExcel={handleExportExcel}
+      handleRefresh={() =>
+        fetchTeachersRequest({
+          page,
+          limit,
+          search: searchQuery,
+        })
+      }
     />
   );
 }

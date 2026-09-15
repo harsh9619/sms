@@ -29,6 +29,10 @@ export const teacherService = {
   deleteTeacher: async (id: string): Promise<any> => {
     return httpService.delete(`/api/teachers/${id}`);
   },
+
+  bulkCreateTeachers: async (teachers: any[]): Promise<any> => {
+    return httpService.post("/api/teachers/bulk", { teachers });
+  },
 };
 
 export default teacherService;

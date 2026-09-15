@@ -24,7 +24,15 @@ import {
   Download,
   MapPin,
   IndianRupee,
+  Camera,
+  AlertTriangle,
+  Upload,
+  LayoutGrid,
+  List,
+  Filter,
 } from "lucide-react";
+import { BulkUploadModal } from "../../ui/BulkUploadModal";
+import teacherService from "../../../Services/teacher.service";
 
 export function TeachersUI({
   teachers,
@@ -49,56 +57,66 @@ export function TeachersUI({
   handleOpenAddModal,
   handleOpenEditModal,
   handleExportExcel,
+  handleRefresh,
 }: TeachersUIProps) {
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+
+  const getImageUrl = (url?: string) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+      return url;
+    }
+    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const cleanBaseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    const cleanPath = url.startsWith("/") ? url : `/${url}`;
+    return `${cleanBaseUrl}${cleanPath}`;
+  };
 
   useEffect(() => {
     setFieldErrors({});
   }, [showModal]);
 
   useEffect(() => {
-    if (error?.email) {
-      setFieldErrors((prev) => ({ ...prev, email: error.email }));
+    if (error) {
+      const errorMsg = typeof error === "object" ? (error.message || JSON.stringify(error)) : String(error);
+      setFieldErrors((prev) => ({ ...prev, email: errorMsg }));
     }
   }, [error]);
 
   const validateField = (name: string, value: string) => {
     let err = "";
-    if (name === "name") {
-      if (!value.trim()) err = "Full Name is required";
+    if (name === "name" && !value.trim()) {
+      err = "Name is required";
     } else if (name === "email") {
       if (!value.trim()) {
-        err = "Email Address is required";
+        err = "Email is required";
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
-        err = "Please enter a valid email address";
+        err = "Invalid email format";
       }
-    } else if (name === "phone") {
-      if (value.trim() && !/^[6-9]\d{9}$/.test(value.trim())) {
-        err = "Phone must be a valid 10-digit number starting with 6-9";
+    } else if (name === "phone" && value.trim()) {
+      if (!/^[6-9]\d{9}$/.test(value.trim())) {
+        err = "Enter valid 10-digit mobile number starting with 6-9";
       }
     }
-
     setFieldErrors((prev) => ({ ...prev, [name]: err }));
   };
 
-  const validateAndSave = () => {
+  const handleFormSubmit = () => {
     const errors: { [key: string]: string } = {};
-
-    const name = formData.name?.trim();
-    if (!name) {
-      errors.name = "Full Name is required";
+    if (!formData.name?.trim()) {
+      errors.name = "Name is required";
     }
-
-    const email = formData.email?.trim();
-    if (!email) {
-      errors.email = "Email Address is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errors.email = "Please enter a valid email address";
+    if (!formData.email?.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      errors.email = "Invalid email format";
     }
-
-    const phone = formData.phone?.trim();
-    if (phone && !/^[6-9]\d{9}$/.test(phone)) {
-      errors.phone = "Phone must be a valid 10-digit number starting with 6-9";
+    if (formData.phone?.trim() && !/^[6-9]\d{9}$/.test(formData.phone.trim())) {
+      errors.phone = "Enter valid 10-digit mobile number starting with 6-9";
     }
 
     setFieldErrors(errors);
@@ -110,229 +128,471 @@ export function TeachersUI({
 
   const totalPages = meta?.totalPages || 1;
   const totalTeachers = meta?.total !== undefined ? meta.total : teachers.length;
+  const activeTeachersCount = teachers.filter((t) => t.status !== false).length;
+  const inactiveTeachersCount = teachers.filter((t) => t.status === false).length;
+
+  const filteredTeachers = teachers.filter((t) => {
+    if (statusFilter === "active") return t.status !== false;
+    if (statusFilter === "inactive") return t.status === false;
+    return true;
+  });
 
   return (
     <>
       <Loader loading={loading} />
 
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="space-y-6 animate-fade-in pb-8">
+        {/* Top Header Banner */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-6 rounded-3xl border border-primary/15 shadow-sm">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-7 w-7 text-primary" />
-              Teachers Management
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {totalTeachers} {totalTeachers === 1 ? "teacher" : "teachers"} registered
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="p-2.5 rounded-2xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
+                <Users className="h-6 w-6" />
+              </span>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                  Teachers Directory
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  Manage faculty profiles, contact records, and quick actions.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportExcel}>
-              <Download className="h-4 w-4 mr-2" /> Export Excel
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              className="rounded-xl border-border hover:bg-muted shadow-sm text-xs font-semibold"
+              onClick={() => setShowBulkModal(true)}
+            >
+              <Upload className="h-4 w-4 mr-2 text-primary" /> Bulk Upload
             </Button>
-            <Button onClick={handleOpenAddModal}>
-              <Plus className="h-4 w-4 mr-2" /> Add Teacher
+            <Button
+              variant="outline"
+              className="rounded-xl border-border hover:bg-muted shadow-sm text-xs font-semibold"
+              onClick={handleExportExcel}
+            >
+              <Download className="h-4 w-4 mr-2 text-primary" /> Export Excel
+            </Button>
+            <Button
+              className="rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/25 text-xs font-semibold"
+              onClick={handleOpenAddModal}
+            >
+              <Plus className="h-4 w-4 mr-2" /> Add New Teacher
             </Button>
           </div>
         </div>
 
-        <Card>
-          <CardContent className="pt-4 pb-4 flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+        {/* Stats Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="border-border/60 bg-card/60 backdrop-blur-sm shadow-sm hover:shadow transition-all">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Total Teachers</p>
+                <h3 className="text-xl font-bold text-foreground">{totalTeachers}</h3>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 bg-card/60 backdrop-blur-sm shadow-sm hover:shadow transition-all">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Briefcase className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Active Staff</p>
+                <h3 className="text-xl font-bold text-foreground">{activeTeachersCount}</h3>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60 bg-card/60 backdrop-blur-sm shadow-sm hover:shadow transition-all">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-2xl bg-destructive/10 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Inactive Staff</p>
+                <h3 className="text-xl font-bold text-foreground">{inactiveTeachersCount}</h3>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search & View Switcher Bar */}
+        <Card className="border-border/80 shadow-sm">
+          <CardContent className="p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="w-full md:max-w-md">
               <Input
-                placeholder="Search teachers by name, subject, or email..."
+                placeholder="Search teachers by name, phone, email"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                icon={<Search className="h-4 w-4" />}
+                icon={<Search className="h-4 w-4 text-muted-foreground" />}
+                className="rounded-xl bg-background"
               />
+            </div>
+
+            {/* Filter Pills & View Switcher */}
+            <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 w-full md:w-auto">
+              {/* Status Segmented Pill Tabs */}
+              <div className="inline-flex items-center p-1 rounded-2xl bg-muted/50 border border-border/60 gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all duration-200 flex items-center gap-1.5 ${statusFilter === "all"
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                >
+                  All
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-primary/10 text-primary font-bold">
+                    {teachers.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("active")}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all duration-200 flex items-center gap-1.5 ${statusFilter === "active"
+                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm ring-1 ring-emerald-500/30"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                  Active
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                    {activeTeachersCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("inactive")}
+                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all duration-200 flex items-center gap-1.5 ${statusFilter === "inactive"
+                    ? "bg-destructive/15 text-destructive shadow-sm ring-1 ring-destructive/30"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                >
+                  <span className="h-2 w-2 rounded-full bg-destructive inline-block" />
+                  Inactive
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-destructive/20 text-destructive font-bold">
+                    {inactiveTeachersCount}
+                  </span>
+                </button>
+              </div>
+
+              {/* View Switcher Toggle */}
+              <div className="inline-flex items-center p-1 rounded-2xl bg-muted/50 border border-border/60 gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("table")}
+                  title="Table View"
+                  className={`p-1.5 rounded-xl transition-all duration-200 ${viewMode === "table"
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("card")}
+                  title="Card View"
+                  className={`p-1.5 rounded-xl transition-all duration-200 ${viewMode === "card"
+                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
+                    : "text-muted-foreground hover:text-foreground"
+                    }`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Teacher Table View */}
-        {teachers.length === 0 ? (
-          <Card className="p-8 text-center">
-            <div className="flex flex-col items-center justify-center gap-2">
-              <Users className="h-12 w-12 text-muted-foreground/50" />
-              <h3 className="text-lg font-semibold">No teachers found</h3>
-              <p className="text-sm text-muted-foreground">
-                Try adjusting your search criteria.
+        {/* Teachers Content Area */}
+        {filteredTeachers.length === 0 ? (
+          <Card className="p-12 text-center border-dashed border-2">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <div className="p-4 rounded-full bg-muted/60 text-muted-foreground">
+                <Users className="h-10 w-10" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">No teachers found</h3>
+              <p className="text-xs text-muted-foreground max-w-sm">
+                No teacher records match your search or status filter criteria.
               </p>
+              <Button
+                size="sm"
+                onClick={handleOpenAddModal}
+                className="mt-2 rounded-xl text-xs"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Add First Teacher
+              </Button>
             </div>
           </Card>
-        ) : (
-          <>
-            <Card className="overflow-hidden border border-border">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-muted/40 border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                      <th className="py-3.5 px-4">Teacher Name</th>
-                      <th className="py-3.5 px-4">Contact Info</th>
-                      <th className="py-3.5 px-4">Subject / Dept</th>
-                      <th className="py-3.5 px-4">Qualification</th>
-                      <th className="py-3.5 px-4">Experience</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {teachers.map((teacher) => (
-                      <tr
-                        key={teacher.id}
-                        className="hover:bg-muted/30 transition-colors group"
+        ) : viewMode === "card" ? (
+          /* Cards View Mode */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredTeachers.map((teacher) => (
+              <Card
+                key={teacher.id}
+                className="group relative overflow-hidden border border-border/70 hover:border-primary/40 hover:shadow-xl transition-all duration-300 rounded-3xl bg-card flex flex-col justify-between"
+              >
+                {/* Decorative Banner Background */}
+                <div className="h-16 bg-gradient-to-r from-primary/15 via-primary/5 to-indigo-500/10 border-b border-border/40" />
+
+                <CardContent className="p-5 pt-0 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    {/* Header Avatar & Name */}
+                    <div className="flex items-end justify-between -mt-8 mb-3">
+                      <Avatar className="h-14 w-14 ring-4 ring-card shadow-md transition-transform group-hover:scale-105">
+                        {teacher.avatar ? (
+                          <img
+                            src={getImageUrl(teacher.avatar)}
+                            alt={teacher.name}
+                            className="h-full w-full object-cover rounded-full"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-primary text-primary-foreground font-bold text-base">
+                            {getInitials(teacher.name)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${teacher.status === false
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                          }`}
                       >
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar size="sm">
-                              <AvatarFallback>{getInitials(teacher.name)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-semibold text-foreground">{teacher.name}</div>
-                              {teacher.department && (
-                                <div className="text-xs text-muted-foreground">
-                                  {teacher.department}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
+                        {teacher.status === false ? "Inactive" : "Active"}
+                      </Badge>
+                    </div>
 
-                        <td className="py-3 px-4 text-xs space-y-1">
-                          <div className="flex items-center gap-1.5 text-foreground font-medium">
-                            <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
-                            <span className="truncate max-w-[180px]">{teacher.email}</span>
-                          </div>
-                          {teacher.phone && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Phone className="h-3.5 w-3.5 shrink-0" />
-                              <span>{teacher.phone}</span>
-                            </div>
-                          )}
-                        </td>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-foreground text-base tracking-tight truncate group-hover:text-primary transition-colors" title={teacher.name}>
+                        {teacher.name}
+                      </h3>
+                    </div>
 
-                        <td className="py-3 px-4">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {teacher.subject ? (
-                              <Badge variant="default" className="text-xs font-medium">
-                                {teacher.subject}
-                              </Badge>
+                    {/* Info Pills */}
+                    <div className="mt-4 space-y-2 text-xs">
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/30 border border-border/40 text-muted-foreground group-hover:bg-muted/50 transition-colors">
+                        <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="truncate text-foreground/90 font-medium" title={teacher.email}>
+                          {teacher.email || "No email available"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 rounded-xl bg-muted/30 border border-border/40 text-muted-foreground group-hover:bg-muted/50 transition-colors">
+                        <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="text-foreground/90 font-medium">
+                          {teacher.phone || "No phone number"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions Footer */}
+                  <div className="pt-3 border-t border-border/50 flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground font-medium">Actions</span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-xl hover:bg-primary/10 hover:text-primary transition-colors"
+                        title="View Profile Details"
+                        onClick={() => setShowDetail(teacher)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-xl hover:bg-muted transition-colors"
+                        title="Edit Teacher"
+                        onClick={() => handleOpenEditModal(teacher)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-xl hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        title="Delete Teacher"
+                        onClick={() => setTeacherToDelete(teacher)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* Table View Mode */
+          <Card className="overflow-hidden border border-border/80 rounded-3xl shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr className="bg-muted/40 border-b border-border/70 text-[11px] uppercase tracking-wider text-muted-foreground font-bold">
+                    <th className="py-3.5 px-5">Teacher</th>
+                    <th className="py-3.5 px-5">Contact Phone</th>
+                    <th className="py-3.5 px-5">Email Address</th>
+                    <th className="py-3.5 px-5">Status</th>
+                    <th className="py-3.5 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {filteredTeachers.map((teacher) => (
+                    <tr
+                      key={teacher.id}
+                      className="hover:bg-muted/30 transition-colors group"
+                    >
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 ring-2 ring-primary/10">
+                            {teacher.avatar ? (
+                              <img
+                                src={getImageUrl(teacher.avatar)}
+                                alt={teacher.name}
+                                className="h-full w-full object-cover rounded-full"
+                              />
                             ) : (
-                              <span className="text-xs text-muted-foreground">Unassigned</span>
+                              <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                                {getInitials(teacher.name)}
+                              </AvatarFallback>
                             )}
-                          </div>
-                        </td>
-
-                        <td className="py-3 px-4 text-xs font-medium text-foreground">
-                          {teacher.qualification ? (
-                            <div className="flex items-center gap-1.5">
-                              <Award className="h-3.5 w-3.5 text-primary shrink-0" />
-                              <span>{teacher.qualification}</span>
+                          </Avatar>
+                          <div>
+                            <div className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
+                              {teacher.name}
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-
-                        <td className="py-3 px-4 text-xs font-medium text-foreground">
-                          {teacher.experience ? (
-                            <div className="flex items-center gap-1.5">
-                              <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                              <span>{teacher.experience}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                              title="View Details"
-                              onClick={() => setShowDetail(teacher)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-muted"
-                              title="Edit Teacher"
-                              onClick={() => handleOpenEditModal(teacher)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              title="Delete Teacher"
-                              onClick={() => handleDelete(teacher.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <span className="text-[10px] text-muted-foreground">Faculty Member</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                        </div>
+                      </td>
 
-            {/* Pagination Toolbar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
-              <div className="text-xs text-muted-foreground">
-                Showing <span className="font-semibold">{Math.min((page - 1) * limit + 1, totalTeachers)}</span> to{" "}
-                <span className="font-semibold">{Math.min(page * limit, totalTeachers)}</span> of{" "}
-                <span className="font-semibold">{totalTeachers}</span> teachers
-              </div>
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2 text-foreground font-medium text-xs">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{teacher.phone || "-"}</span>
+                        </div>
+                      </td>
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                </Button>
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2 text-foreground font-medium text-xs">
+                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="truncate max-w-[200px]">{teacher.email}</span>
+                        </div>
+                      </td>
 
-                <div className="flex items-center gap-1 px-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                    .map((p, idx, arr) => {
-                      const prev = arr[idx - 1];
-                      const showEllipsis = prev && p - prev > 1;
-                      return (
-                        <React.Fragment key={p}>
-                          {showEllipsis && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                      <td className="py-3.5 px-5">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold ${teacher.status === false
+                            ? "bg-destructive/10 text-destructive border-destructive/20"
+                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                            }`}
+                        >
+                          {teacher.status === false ? "Inactive" : "Active"}
+                        </Badge>
+                      </td>
+
+                      <td className="py-3.5 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
-                            variant={page === p ? "default" : "ghost"}
-                            size="sm"
-                            className="h-8 w-8 p-0 text-xs"
-                            onClick={() => setPage(p)}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
+                            title="View Details"
+                            onClick={() => setShowDetail(teacher)}
                           >
-                            {p}
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        </React.Fragment>
-                      );
-                    })}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-muted"
+                            title="Edit Teacher"
+                            onClick={() => handleOpenEditModal(teacher)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                            title="Delete Teacher"
+                            onClick={() => setTeacherToDelete(teacher)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </>
+          </Card>
+        )}
+
+        {/* Pagination Toolbar */}
+        {teachers.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+            <div className="text-xs text-muted-foreground">
+              Showing <span className="font-semibold">{Math.min((page - 1) * limit + 1, totalTeachers)}</span> to{" "}
+              <span className="font-semibold">{Math.min(page * limit, totalTeachers)}</span> of{" "}
+              <span className="font-semibold">{totalTeachers}</span> teachers
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+              </Button>
+
+              <div className="flex items-center gap-1 px-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .map((p, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && p - prev > 1;
+                    return (
+                      <React.Fragment key={p}>
+                        {showEllipsis && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                        <Button
+                          variant={page === p ? "default" : "ghost"}
+                          size="sm"
+                          className="h-8 w-8 p-0 text-xs rounded-lg font-semibold"
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </Button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Add/Edit Modal */}
@@ -342,15 +602,15 @@ export function TeachersUI({
             onClick={() => setShowModal(false)}
           >
             <div
-              className="bg-card border border-border/80 rounded-3xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-hidden flex flex-col transition-all relative"
+              className="bg-card border border-border/80 rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex justify-between items-center px-6 py-4 border-b border-border bg-gradient-to-r from-muted/30 via-background to-muted/10">
+              <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-11 w-11 ring-2 ring-primary/20 shadow-sm">
-                    <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
-                      {getInitials(formData.name || "")}
+                  <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+                    <AvatarFallback className="bg-primary text-primary-foreground font-bold">
+                      {editingTeacher ? getInitials(editingTeacher.name) : <Plus className="h-5 w-5" />}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -382,13 +642,76 @@ export function TeachersUI({
               {/* Form Body */}
               <div className="p-6 overflow-y-auto space-y-5 flex-1 text-xs">
                 {/* Section 1: Basic Information */}
-                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-3">
+                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                       <User className="h-3.5 w-3.5 text-primary" /> Basic Information
                     </h4>
                     <span className="text-[10px] text-muted-foreground">* Required fields</span>
                   </div>
+
+                  {/* Profile Image Upload & URL Picker */}
+                  <div className="flex flex-col sm:flex-row items-center gap-4 p-3.5 bg-card border border-border/60 rounded-2xl">
+                    <div className="relative group shrink-0">
+                      <Avatar className="h-16 w-16 ring-2 ring-primary/20 shadow-md">
+                        {formData.avatar || formData.avatar_url ? (
+                          <img
+                            src={getImageUrl(formData.avatar || formData.avatar_url)}
+                            alt="Teacher Preview"
+                            className="h-full w-full object-cover rounded-full"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-primary text-primary-foreground font-bold text-lg">
+                            {getInitials(formData.name || "")}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <label className="absolute bottom-0 right-0 bg-primary text-primary-foreground p-1.5 rounded-full shadow-md cursor-pointer hover:bg-primary/90 transition-transform group-hover:scale-110" title="Upload Photo">
+                        <Camera className="h-3.5 w-3.5" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setFormData({
+                                  ...formData,
+                                  avatar: reader.result as string,
+                                  avatar_url: reader.result as string,
+                                });
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+                    <div className="flex-1 w-full space-y-1">
+                      <label className="text-xs font-medium text-foreground block">
+                        Profile Avatar (Upload Image or Paste URL)
+                      </label>
+                      <Input
+                        placeholder="Paste image URL or click camera icon to upload"
+                        value={formData.avatar || formData.avatar_url || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            avatar: e.target.value,
+                            avatar_url: e.target.value,
+                          })
+                        }
+                        icon={<Camera className="h-4 w-4 text-muted-foreground" />}
+                        className="text-xs"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Click the camera icon on avatar to upload photo, or paste image URL.
+                      </p>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="text-xs font-medium text-foreground mb-1 block">
                       Full Name <span className="text-destructive">*</span>
@@ -423,9 +746,9 @@ export function TeachersUI({
                           if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: "" });
                         }}
                         icon={<Mail className="h-4 w-4 text-muted-foreground" />}
-                        className={fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}
+                        className={fieldErrors.email && fieldErrors.email !== '{}' ? "border-destructive focus-visible:ring-destructive" : ""}
                       />
-                      {fieldErrors.email && (
+                      {fieldErrors.email && fieldErrors.email !== '{}' && (
                         <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.email}</p>
                       )}
                     </div>
@@ -456,85 +779,23 @@ export function TeachersUI({
                       )}
                     </div>
                   </div>
-                </div>
 
-                {/* Section 2: Professional Details */}
-                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Briefcase className="h-3.5 w-3.5 text-primary" /> Professional Details
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-foreground mb-1 block">
-                        Subject
-                      </label>
-                      <Input
-                        placeholder="e.g. Mathematics"
-                        value={formData.subject || ""}
-                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                        icon={<Award className="h-4 w-4 text-muted-foreground" />}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-foreground mb-1 block">
-                        Department
-                      </label>
-                      <Input
-                        placeholder="e.g. Science"
-                        value={formData.department || ""}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                        icon={<Briefcase className="h-4 w-4 text-muted-foreground" />}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-foreground mb-1 block">
-                        Qualification
-                      </label>
-                      <Input
-                        placeholder="e.g. M.Sc, B.Ed"
-                        value={formData.qualification || ""}
-                        onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-foreground mb-1 block">
-                        Experience
-                      </label>
-                      <Input
-                        placeholder="e.g. 5 years"
-                        value={formData.experience || ""}
-                        onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                      />
-                    </div>
-                  </div>
                   <div>
                     <label className="text-xs font-medium text-foreground mb-1 block">
-                      Monthly Salary (₹)
+                      Account Status
                     </label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 45000"
-                      value={formData.salary || ""}
-                      onChange={(e) => setFormData({ ...formData, salary: Number(e.target.value) })}
-                      icon={<IndianRupee className="h-4 w-4 text-muted-foreground" />}
-                    />
+                    <select
+                      value={formData.status !== false ? "true" : "false"}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value === "true" })}
+                      className="w-full rounded-xl border border-border bg-background p-2.5 text-xs text-foreground focus:ring-2 focus:ring-primary/50 outline-none"
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Inactive</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Section 3: Address Details */}
-                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-primary" /> Residential Address
-                  </h4>
-                  <div>
-                    <Input
-                      placeholder="Residential address details"
-                      value={formData.address || ""}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      icon={<MapPin className="h-4 w-4 text-muted-foreground" />}
-                    />
-                  </div>
-                </div>
+                {/* Basic Information Only */}
               </div>
 
               {/* Footer */}
@@ -546,20 +807,22 @@ export function TeachersUI({
                     <span className="text-emerald-500 font-medium">✓ Ready to save</span>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <Button
+                    type="button"
                     variant="outline"
-                    className="rounded-xl px-5 text-xs font-semibold"
+                    className="rounded-xl text-xs"
                     onClick={() => setShowModal(false)}
                   >
                     Cancel
                   </Button>
                   <Button
-                    className="rounded-xl px-6 text-xs font-semibold"
+                    type="button"
+                    className="rounded-xl text-xs font-semibold bg-primary text-primary-foreground shadow-md"
                     disabled={loading || !formData.name || !formData.email}
-                    onClick={validateAndSave}
+                    onClick={handleFormSubmit}
                   >
-                    {editingTeacher ? "Update Teacher" : "Save Teacher"}
+                    {editingTeacher ? "Update Teacher" : "Create Teacher"}
                   </Button>
                 </div>
               </div>
@@ -567,7 +830,7 @@ export function TeachersUI({
           </div>
         )}
 
-        {/* View Detail Modal */}
+        {/* View Detail Modal (Card View) */}
         {showDetail && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in"
@@ -582,24 +845,21 @@ export function TeachersUI({
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-4">
                     <Avatar className="h-16 w-16 ring-4 ring-background shadow-md">
-                      <AvatarFallback className="text-lg font-bold bg-primary text-primary-foreground">
-                        {getInitials(showDetail.name)}
-                      </AvatarFallback>
+                      {showDetail.avatar ? (
+                        <img
+                          src={getImageUrl(showDetail.avatar)}
+                          alt={showDetail.name}
+                          className="h-full w-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <AvatarFallback className="text-lg font-bold bg-primary text-primary-foreground">
+                          {getInitials(showDetail.name)}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
                     <div>
                       <h2 className="text-xl font-bold text-foreground">{showDetail.name}</h2>
-                      <div className="flex items-center gap-2 mt-1">
-                        {showDetail.subject && (
-                          <Badge variant="default" className="text-[11px]">
-                            {showDetail.subject}
-                          </Badge>
-                        )}
-                        {showDetail.department && (
-                          <Badge variant="secondary" className="text-[11px]">
-                            {showDetail.department}
-                          </Badge>
-                        )}
-                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">Teacher Profile</p>
                     </div>
                   </div>
                   <Button
@@ -615,6 +875,21 @@ export function TeachersUI({
 
               {/* Information Grid */}
               <div className="p-6 space-y-3.5 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between py-2 border-b border-border/40">
+                  <span className="font-medium text-foreground flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-primary" /> Status
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold ${showDetail.status === false
+                      ? "bg-destructive/10 text-destructive border-destructive/20"
+                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      }`}
+                  >
+                    {showDetail.status === false ? "Inactive" : "Active"}
+                  </Badge>
+                </div>
+
                 <div className="flex items-center justify-between py-2 border-b border-border/40">
                   <span className="font-medium text-foreground flex items-center gap-2">
                     <Mail className="h-3.5 w-3.5 text-primary" /> Email Address
@@ -633,43 +908,16 @@ export function TeachersUI({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-border/40">
-                  <span className="font-medium text-foreground flex items-center gap-2">
-                    <Briefcase className="h-3.5 w-3.5 text-primary" /> Experience
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {showDetail.experience || "N/A"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between py-2 border-b border-border/40">
-                  <span className="font-medium text-foreground flex items-center gap-2">
-                    <Award className="h-3.5 w-3.5 text-primary" /> Qualification
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {showDetail.qualification || "N/A"}
-                  </span>
-                </div>
-
-                {showDetail.salary && (
+                {showDetail.joinDate && (
                   <div className="flex items-center justify-between py-2 border-b border-border/40">
                     <span className="font-medium text-foreground flex items-center gap-2">
-                      <IndianRupee className="h-3.5 w-3.5 text-primary" /> Monthly Salary
+                      <User className="h-3.5 w-3.5 text-primary" /> Join Date
                     </span>
                     <span className="font-semibold text-foreground">
-                      ₹{showDetail.salary.toLocaleString()}
+                      {new Date(showDetail.joinDate).toLocaleDateString()}
                     </span>
                   </div>
                 )}
-
-                <div className="flex items-center justify-between py-2">
-                  <span className="font-medium text-foreground flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5 text-primary" /> Address
-                  </span>
-                  <span className="font-semibold text-foreground text-right max-w-[200px] truncate">
-                    {showDetail.address || "N/A"}
-                  </span>
-                </div>
               </div>
 
               {/* Footer Action */}
@@ -685,6 +933,80 @@ export function TeachersUI({
             </div>
           </div>
         )}
+
+        {/* Delete Confirmation Modal (ClassSubjectConfig style) */}
+        {teacherToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+            <Card className="w-full max-w-md border-destructive/30 shadow-2xl bg-card">
+              <CardContent className="p-0">
+                {/* Header */}
+                <div className="flex flex-row items-center justify-between p-6 pb-4 border-b border-border/40">
+                  <div className="flex items-center gap-2.5 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                    <h3 className="text-lg font-bold text-foreground">Remove Teacher</h3>
+                  </div>
+                  <button
+                    onClick={() => setTeacherToDelete(null)}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-muted"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Body Content */}
+                <div className="p-6 space-y-4">
+                  <p className="text-sm font-medium">
+                    Are you sure you want to delete{" "}
+                    <span className="font-bold text-foreground">
+                      {teacherToDelete.name}
+                    </span>
+                    ?
+                  </p>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border/40 bg-muted/20">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setTeacherToDelete(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="font-bold gap-2"
+                    onClick={() => {
+                      handleDelete(teacherToDelete.id);
+                      setTeacherToDelete(null);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Confirm Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Bulk Upload Modal */}
+        <BulkUploadModal
+          isOpen={showBulkModal}
+          onClose={() => setShowBulkModal(false)}
+          title="Bulk Import Teachers"
+          templateHeaders={["name", "email", "phone"]}
+          sampleRow={{}}
+          onUpload={async (data) => {
+            return teacherService.bulkCreateTeachers(data);
+          }}
+          onSuccess={() => {
+            if (handleRefresh) {
+              handleRefresh();
+            }
+          }}
+        />
       </div>
     </>
   );
