@@ -5,7 +5,11 @@ import { Input } from "../../ui/Input";
 import { Badge } from "../../ui/Badge";
 import { Avatar, AvatarFallback } from "../../ui/Avatar";
 import { Loader } from "../../ui/Loader";
-import type { TeachersUIProps } from "../../../saga/teachers/types";
+import type { TeachersUIProps, RoleMaster } from "../../../saga/teachers/types";
+import { capitalizeFirstLetter } from "../../../lib/utils";
+import {
+  TEACHER_CREATION_ROLES
+} from "../../../constants/common"
 import {
   Search,
   Plus,
@@ -65,6 +69,7 @@ export function TeachersUI({
   const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
 
   const getImageUrl = (url?: string) => {
     if (!url) return "";
@@ -77,7 +82,9 @@ export function TeachersUI({
     return `${cleanBaseUrl}${cleanPath}`;
   };
 
-  const [masterRoles, setMasterRoles] = useState<any[]>([]);
+  const [masterRoles, setMasterRoles] = useState<RoleMaster[]>([]);
+
+  console.log("masterRoles", masterRoles);
 
   useEffect(() => {
     teacherService.getRoles().then((res) => {
@@ -142,9 +149,17 @@ export function TeachersUI({
   const activeTeachersCount = teachers.filter((t) => t.status !== false).length;
   const inactiveTeachersCount = teachers.filter((t) => t.status === false).length;
 
-  const filteredTeachers = teachers.filter((t) => {
-    if (statusFilter === "active") return t.status !== false;
-    if (statusFilter === "inactive") return t.status === false;
+  const filteredTeachers = teachers.filter((t: any) => {
+    if (statusFilter === "active" && t.status === false) return false;
+    if (statusFilter === "inactive" && t.status !== false) return false;
+    if (roleFilter !== "all") {
+      const teacherRoleId = String(t.roleId || t.role_id || "");
+      const teacherRoleName = (t.roleName || t.role || "").toLowerCase();
+      const target = roleFilter.toLowerCase();
+      if (teacherRoleId !== roleFilter && teacherRoleName !== target) {
+        return false;
+      }
+    }
     return true;
   });
 
@@ -247,6 +262,39 @@ export function TeachersUI({
 
             {/* Filter Pills & View Switcher */}
             <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 w-full md:w-auto">
+              {/* Role Filter Dropdown */}
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground hidden sm:inline-block" />
+                {/* Reset Filter Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!(searchQuery || statusFilter !== "all" || roleFilter !== "all")}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("all");
+                    setRoleFilter("all");
+                  }}
+                  className="h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Reset all filters"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Reset
+                </Button>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted/50 border border-border/60 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                >
+                  <option value="all">All Roles</option>
+                  {masterRoles?.filter((r) => TEACHER_CREATION_ROLES?.includes(r?.roleName?.toUpperCase())).map((r) => (
+                    <option key={r.roleId} value={String(r.roleId)}>
+                      {capitalizeFirstLetter(r.roleName)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Status Segmented Pill Tabs */}
               <div className="inline-flex items-center p-1 rounded-2xl bg-muted/50 border border-border/60 gap-1 text-xs">
                 <button
@@ -294,21 +342,7 @@ export function TeachersUI({
                 </button>
               </div>
 
-              {/* Reset Filter Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!(searchQuery || statusFilter !== "all")}
-                onClick={() => {
-                  setSearchQuery("");
-                  setStatusFilter("all");
-                }}
-                className="h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
-                title="Reset all filters"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Reset
-              </Button>
+
 
               {/* View Switcher Toggle */}
               <div className="inline-flex items-center p-1 rounded-2xl bg-muted/50 border border-border/60 gap-1 text-xs">
@@ -400,8 +434,12 @@ export function TeachersUI({
 
                     <div className="space-y-1">
                       <h3 className="font-bold text-foreground text-base tracking-tight truncate group-hover:text-primary transition-colors" title={teacher.name}>
-                        {teacher.name}
+                        {capitalizeFirstLetter(teacher.name)}
                       </h3>
+                      <p className="text-[11px] font-medium text-primary flex items-center gap-1">
+                        <Briefcase className="h-3 w-3" />
+                        {capitalizeFirstLetter(teacher.roleName) || "Teacher"}
+                      </p>
                     </div>
 
                     {/* Info Pills */}
@@ -468,6 +506,7 @@ export function TeachersUI({
                     <th className="py-3.5 px-5">Teacher</th>
                     <th className="py-3.5 px-5">Contact Phone</th>
                     <th className="py-3.5 px-5">Email Address</th>
+                    <th className="py-3.5 px-5">Role</th>
                     <th className="py-3.5 px-5">Status</th>
                     <th className="py-3.5 px-5 text-right">Actions</th>
                   </tr>
@@ -495,10 +534,7 @@ export function TeachersUI({
                           </Avatar>
                           <div>
                             <div className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
-                              {teacher.name}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">
-                              Role #{teacher.roleId || 3} — {teacher.roleName || "teacher"}
+                              {capitalizeFirstLetter(teacher.name)}
                             </div>
                           </div>
                         </div>
@@ -515,6 +551,12 @@ export function TeachersUI({
                         <div className="flex items-center gap-2 text-foreground font-medium text-xs">
                           <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="truncate max-w-[200px]">{teacher.email}</span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2 text-foreground font-medium text-xs">
+                          <span className="truncate max-w-[200px]">{capitalizeFirstLetter(teacher.roleName) || "-"}</span>
                         </div>
                       </td>
 
@@ -1056,7 +1098,7 @@ export function TeachersUI({
           isOpen={showBulkModal}
           onClose={() => setShowBulkModal(false)}
           title="Bulk Import Teachers"
-          templateHeaders={["name", "email", "phone"]}
+          templateHeaders={["name", "email", "phone", "role"]}
           sampleRow={{}}
           onUpload={async (data) => {
             return teacherService.bulkCreateTeachers(data);

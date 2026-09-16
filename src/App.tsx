@@ -209,7 +209,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/my-salary"
           element={
-            <ProtectedRoute allowedRoles={["teacher"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/my-salary")}>
               <MySalaryPage />
             </ProtectedRoute>
           }
@@ -217,7 +217,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/schools/create"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/schools/create")}>
               <CreateSchoolPage />
             </ProtectedRoute>
           }

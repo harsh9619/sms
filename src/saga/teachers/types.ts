@@ -1,5 +1,12 @@
 import type { Teacher } from "../../types";
 
+export interface RoleMaster {
+  roleId: number;
+  roleName: string;
+  label: string;
+  description?: string;
+}
+
 export interface PaginationMeta {
   total: number;
   page: number;

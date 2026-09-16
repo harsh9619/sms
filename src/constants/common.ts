@@ -1,0 +1,1 @@
+export const TEACHER_CREATION_ROLES = ["PRINCIPAL", "TEACHER",];
