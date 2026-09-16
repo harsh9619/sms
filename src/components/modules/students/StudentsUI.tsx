@@ -285,7 +285,7 @@ export function StudentsUI({
                       <th className="py-3 px-4">Student Name</th>
                       <th className="py-3 px-4">Class </th>
                       <th className="py-3 px-4">Div</th>
-                      <th className="py-3 px-4">Roll No</th>
+                      {/* <th className="py-3 px-4">Roll No</th> */}
                       <th className="py-3 px-4">Gender</th>
                       <th className="py-3 px-4">Guardian</th>
                       <th className="py-3 px-4">Contact Info</th>
@@ -331,9 +331,9 @@ export function StudentsUI({
                           )}
                         </td>
 
-                        <td className="py-3 px-4 font-semibold text-xs capitalize">
+                        {/* <td className="py-3 px-4 font-semibold text-xs capitalize">
                           {student.roll_no}
-                        </td>
+                        </td> */}
 
                         <td className="py-3 px-4 font-semibold text-xs capitalize">
                           {student.gender || "male"}
@@ -1125,104 +1125,7 @@ export function StudentsUI({
             "bloodGroup",
             "address",
           ]}
-          sampleRows={[
-            {
-              registration_no: "REG-2024-001",
-              academic_year: "2024-2025",
-              admission_date: "2024-04-10",
-              name: "Aarav Sharma",
-              email: "aarav.sharma@example.com",
-              class: "10th",
-              division: "A",
-              caste_category: "OBC",
-              sub_caste: "Yadav",
-              father_name: "Rajesh Sharma",
-              father_occupation: "Business",
-              father_qualification: "Graduate",
-              mother_name: "Sunita Sharma",
-              mother_occupation: "Homemaker",
-              mother_qualification: "Higher Secondary",
-              parentPhone: "9876543210",
-              whatsapp_no: "9876543210",
-              dateOfBirth: "2010-05-15",
-              gender: "male",
-              aadhar_no: "123456789012",
-              bloodGroup: "O+",
-              address: "123 Green Park, Civil Lines, Jaipur",
-            },
-            {
-              registration_no: "REG-2024-002",
-              academic_year: "2024-2025",
-              admission_date: "2024-04-12",
-              name: "Ananya Patel",
-              email: "ananya.patel@example.com",
-              class: "10th",
-              division: "B",
-              caste_category: "GEN",
-              sub_caste: "Patel",
-              father_name: "Ramesh Patel",
-              father_occupation: "Engineer",
-              father_qualification: "Post Graduate",
-              mother_name: "Meena Patel",
-              mother_occupation: "Teacher",
-              mother_qualification: "Graduate",
-              parentPhone: "9812345678",
-              whatsapp_no: "9812345678",
-              dateOfBirth: "2010-08-22",
-              gender: "female",
-              aadhar_no: "234567890123",
-              bloodGroup: "B+",
-              address: "45 Lotus Colony, M.G. Road, Indore",
-            },
-            {
-              registration_no: "REG-2024-003",
-              academic_year: "2024-2025",
-              admission_date: "2024-04-15",
-              name: "Rohan Verma",
-              email: "",
-              class: "9th",
-              division: "A",
-              caste_category: "SC",
-              sub_caste: "Verma",
-              father_name: "Suresh Verma",
-              father_occupation: "Govt Service",
-              father_qualification: "Graduate",
-              mother_name: "Kavita Verma",
-              mother_occupation: "Homemaker",
-              mother_qualification: "Matriculate",
-              parentPhone: "9765432109",
-              whatsapp_no: "9765432109",
-              dateOfBirth: "2011-03-10",
-              gender: "male",
-              aadhar_no: "345678901234",
-              bloodGroup: "A+",
-              address: "78 Vikas Nagar, Sector 4, Bhopal",
-            },
-            {
-              registration_no: "REG-2024-004",
-              academic_year: "2024-2025",
-              admission_date: "2024-04-18",
-              name: "Priya Singh",
-              email: "priya.singh@example.com",
-              class: "9th",
-              division: "B",
-              caste_category: "ST",
-              sub_caste: "Gond",
-              father_name: "Mahesh Singh",
-              father_occupation: "Farmer",
-              father_qualification: "Higher Secondary",
-              mother_name: "Anita Singh",
-              mother_occupation: "Homemaker",
-              mother_qualification: "Middle School",
-              parentPhone: "9654321098",
-              whatsapp_no: "9654321098",
-              dateOfBirth: "2011-11-05",
-              gender: "female",
-              aadhar_no: "456789012345",
-              bloodGroup: "AB+",
-              address: "12 Tribal Colony, Main Road, Ujjain",
-            },
-          ]}
+          sampleRows={{}}
           onUpload={async (data) => {
             return studentService.bulkCreateStudents(data);
           }}
