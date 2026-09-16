@@ -26,6 +26,7 @@ import { MySalaryPage } from "./pages/Salary/MySalaryPage";
 import { UsersPage } from "./pages/Users/UsersPage";
 import { CreateSchoolPage } from "./pages/Schools/CreateSchoolPage";
 import { ToastContainer } from "react-toastify";
+import { getRolesForPath } from "./constants/navigation";
 import "react-toastify/dist/ReactToastify.css";
 import "./index.css";
 
@@ -38,18 +39,20 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    const redirectPath = activeSchool ? `/school/${activeSchool.id}/dashboard` : "/login";
-    return <Navigate to={redirectPath} replace />;
+    const schoolId = activeSchool?.id || "1";
+    return <Navigate to={`/school/${schoolId}/dashboard`} replace />;
   }
 
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 
 function AppRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { activeSchool } = useSchool();
 
-  const defaultRedirect = activeSchool ? `/school/${activeSchool.id}/dashboard` : "/login";
+  const defaultRedirect = activeSchool
+    ? `/school/${activeSchool.id}/dashboard`
+    : "/school/1/dashboard";
 
   return (
     <>
@@ -62,7 +65,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={getRolesForPath("/dashboard")}>
               <DashboardPage />
             </ProtectedRoute>
           }
@@ -70,7 +73,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/students"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/students")}>
               <StudentsPage />
             </ProtectedRoute>
           }
@@ -78,7 +81,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/teachers"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/teachers")}>
               <TeachersPage />
             </ProtectedRoute>
           }
@@ -86,7 +89,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/classes"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/classes")}>
               <ClassesPage />
             </ProtectedRoute>
           }
@@ -94,7 +97,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/classes/assign"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/classes/assign") || ["admin"]}>
               <AssignTeacherPage />
             </ProtectedRoute>
           }
@@ -102,7 +105,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/class-subject-config"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/class-subject-config")}>
               <ClassSubjectConfigPage />
             </ProtectedRoute>
           }
@@ -110,7 +113,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/subject-teacher-config"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/subject-teacher-config")}>
               <SubjectTeacherConfigPage />
             </ProtectedRoute>
           }
@@ -118,7 +121,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/attendance"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/attendance")}>
               <AttendancePage />
             </ProtectedRoute>
           }
@@ -126,7 +129,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/my-attendance"
           element={
-            <ProtectedRoute allowedRoles={["student"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/my-attendance")}>
               <MyAttendancePage />
             </ProtectedRoute>
           }
@@ -134,7 +137,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/users"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/users")}>
               <UsersPage />
             </ProtectedRoute>
           }
@@ -142,7 +145,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/settings"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/settings")}>
               <SettingsPage />
             </ProtectedRoute>
           }
@@ -150,7 +153,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/reports/fee-salary"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/reports/fee-salary")}>
               <FeeSalaryReportPage />
             </ProtectedRoute>
           }
@@ -158,7 +161,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/reports/attendance"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/reports/attendance")}>
               <AttendanceReportPage />
             </ProtectedRoute>
           }
@@ -166,7 +169,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/timetable"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/timetable")}>
               <TimetablePage />
             </ProtectedRoute>
           }
@@ -174,7 +177,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/homework"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/homework")}>
               <HomeworkPage />
             </ProtectedRoute>
           }
@@ -182,7 +185,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/notices"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/notices")}>
               <NoticesPage />
             </ProtectedRoute>
           }
@@ -190,7 +193,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/marks"
           element={
-            <ProtectedRoute allowedRoles={["admin", "teacher", "student"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/marks")}>
               <MarksPage />
             </ProtectedRoute>
           }
@@ -198,7 +201,7 @@ function AppRoutes() {
         <Route
           path="/school/:schoolId/my-fees"
           element={
-            <ProtectedRoute allowedRoles={["student"]}>
+            <ProtectedRoute allowedRoles={getRolesForPath("/my-fees")}>
               <MyFeesPage />
             </ProtectedRoute>
           }

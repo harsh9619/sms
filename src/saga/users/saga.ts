@@ -15,9 +15,10 @@ import {
 import userService from "../../Services/user.service";
 import type { User } from "../../types";
 
-function* handleFetchUsers(): Generator<any, void, any> {
+function* handleFetchUsers(action: { type: string; payload?: string | { schoolId?: string } }): Generator<any, void, any> {
   try {
-    const users: User[] = yield call(userService.getUsers);
+    const schoolId = typeof action.payload === "string" ? action.payload : action.payload?.schoolId;
+    const users: User[] = yield call(userService.getUsers, schoolId);
     yield put(fetchUsersSuccess(users));
   } catch (error: any) {
     yield put(fetchUsersFailure(error.message || "Failed to fetch users"));

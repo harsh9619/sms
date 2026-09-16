@@ -110,11 +110,8 @@ export function ClassSubjectConfigPage() {
         classSubjectService.getSubjects().catch(() => []),
       ]);
 
-      console.log(classes)
-
       setClassesList(classes);
       setClassMasters(masters);
-      console.log(divs.map((d) => d.name));
       setDivMasters(divs.map((d) => d.name));
       setMasterSubjects(subjects);
       setAllAssignedSubjects(assigned);

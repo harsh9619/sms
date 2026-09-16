@@ -47,15 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fetch all users via Redux Saga if user is admin
   useEffect(() => {
     if (user && user.role === "admin") {
-      dispatch(fetchAuthAllUsersRequest());
+      dispatch(fetchAuthAllUsersRequest(activeSchoolId || undefined));
     }
-  }, [user, dispatch]);
+  }, [user, activeSchoolId, dispatch]);
 
 
-  // Prefetch users via Redux Saga to enable server-side auth simulation
+  // Prefetch users via Redux Saga when authenticated to enable server-side auth simulation
   useEffect(() => {
-    dispatch(fetchUsersRequest());
-  }, [dispatch]);
+    if (token || user) {
+      dispatch(fetchUsersRequest(activeSchoolId || undefined));
+    }
+  }, [token, user, activeSchoolId, dispatch]);
 
   // Fetch current user via Redux Saga if token exists but user state is empty
   useEffect(() => {

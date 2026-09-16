@@ -36,6 +36,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import type { UserRole } from "../../types";
+import { navItems } from "../../constants/navigation";
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -57,9 +58,6 @@ export function DashboardLayout({ children }: SidebarProps) {
   const [showAcademicYearDropdown, setShowAcademicYearDropdown] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
-  console.log(academicYears, "academicYears");
-  console.log(activeAcademicYear, "activeAcademicYear");
-  console.log(activeSchool, "activeSchool");
 
   useEffect(() => {
     const handleResize = () => {
@@ -119,28 +117,6 @@ export function DashboardLayout({ children }: SidebarProps) {
       .toUpperCase()
       .slice(0, 2);
   };
-
-  const navItems = [
-    { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["admin", "teacher", "student"] },
-    { path: "/students", icon: GraduationCap, label: "Students Details", roles: ["admin", "teacher"] },
-    { path: "/teachers", icon: Users, label: "Teachers Details", roles: ["admin"] },
-    { path: "/users", icon: Users, label: "Users Details", roles: ["admin"] },
-    { path: "/classes", icon: BookOpen, label: "Class Teacher Allocation", roles: ["admin", "teacher"] },
-    { path: "/subject-teacher-config", icon: UserCheck, label: "Subject Teacher Allocation", roles: ["admin", "teacher"] },
-    { path: "/attendance", icon: ClipboardCheck, label: "Attendance", roles: ["admin", "teacher"] },
-    { path: "/my-attendance", icon: ClipboardCheck, label: "My Attendance", roles: ["student"] },
-    { path: "/timetable", icon: Calendar, label: "Timetable", roles: ["admin", "teacher", "student"] },
-    { path: "/homework", icon: ClipboardList, label: "Homework", roles: ["admin", "teacher", "student"] },
-    { path: "/marks", icon: Award, label: "Exams & Marks", roles: ["admin", "teacher", "student"] },
-    { path: "/notices", icon: Megaphone, label: "Notices", roles: ["admin", "teacher", "student"] },
-    { path: "/my-fees", icon: CreditCard, label: "Fees", roles: ["student"] },
-    { path: "/my-salary", icon: Coins, label: "Salary", roles: ["teacher"] },
-    { path: "/reports/attendance", icon: BarChart3, label: "Reports", roles: ["admin", "teacher"] },
-    { path: "/reports/fee-salary", icon: DollarSign, label: "Finance", roles: ["admin"] },
-    { path: "/schools/create", icon: PlusCircle, label: "New School", roles: ["admin"] },
-    { path: "/class-subject-config", icon: Layers, label: "Class Subject Allocation", roles: ["admin"] },
-    { path: "/settings", icon: Settings, label: "Settings", roles: ["admin"] },
-  ];
 
   const filteredNav = navItems.filter((item) => user && item.roles.includes(user.role));
 

@@ -1,5 +1,5 @@
 import httpService from "Services/http.service";
-import type { Teacher } from "../types";
+import type { Teacher, RoleMaster } from "../types";
 
 export interface GetTeachersParams {
   page?: number;
@@ -43,6 +43,10 @@ export const teacherService = {
 
   bulkCreateTeachers: async (teachers: any[]): Promise<any> => {
     return httpService.post("/api/teachers/bulk", { teachers });
+  },
+
+  getRoles: async (): Promise<RoleMaster[]> => {
+    return httpService.get<RoleMaster[]>("/api/teachers/roles");
   },
 };
 

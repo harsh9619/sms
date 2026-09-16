@@ -108,6 +108,8 @@ function TeachersContainerContent(props: TeachersContainerProps) {
         address: formData.address,
         salary: formData.salary ? Number(formData.salary) : undefined,
         status: formData.status !== undefined ? formData.status : true,
+        roleId: formData.roleId || 3,
+        role: formData.roleName || "teacher",
       });
     } else {
       const newTeacher: any = {
@@ -123,6 +125,8 @@ function TeachersContainerContent(props: TeachersContainerProps) {
         address: formData.address || "",
         salary: formData.salary ? Number(formData.salary) : undefined,
         status: formData.status !== undefined ? formData.status : true,
+        roleId: formData.roleId || 3,
+        role: formData.roleName || "teacher",
       };
       createTeacherRequest(newTeacher);
     }

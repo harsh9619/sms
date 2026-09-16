@@ -77,6 +77,16 @@ export function TeachersUI({
     return `${cleanBaseUrl}${cleanPath}`;
   };
 
+  const [masterRoles, setMasterRoles] = useState<any[]>([]);
+
+  useEffect(() => {
+    teacherService.getRoles().then((res) => {
+      if (res && Array.isArray(res)) {
+        setMasterRoles(res);
+      }
+    }).catch(() => { });
+  }, []);
+
   useEffect(() => {
     setFieldErrors({});
   }, [showModal]);
@@ -487,6 +497,9 @@ export function TeachersUI({
                             <div className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
                               {teacher.name}
                             </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              Role #{teacher.roleId || 3} — {teacher.roleName || "teacher"}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -796,18 +809,49 @@ export function TeachersUI({
                     </div>
                   </div>
 
-                  <div>
-                    <label className="text-xs font-medium text-foreground mb-1 block">
-                      Account Status
-                    </label>
-                    <select
-                      value={formData.status !== false ? "true" : "false"}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value === "true" })}
-                      className="w-full rounded-xl border border-border bg-background p-2.5 text-xs text-foreground focus:ring-2 focus:ring-primary/50 outline-none"
-                    >
-                      <option value="true">Active</option>
-                      <option value="false">Inactive</option>
-                    </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Role
+                      </label>
+                      <select
+                        value={formData.roleId ? String(formData.roleId) : "3"}
+                        onChange={(e) => {
+                          const selectedRoleId = Number(e.target.value);
+                          const matched = masterRoles.find((r) => r.roleId === selectedRoleId);
+                          setFormData({
+                            ...formData,
+                            roleId: selectedRoleId,
+                            roleName: matched ? matched.roleName : "teacher",
+                          });
+                        }}
+                        className="w-full rounded-xl border border-border bg-background p-2.5 text-xs text-foreground focus:ring-2 focus:ring-primary/50 outline-none"
+                      >
+                        {masterRoles.length > 0 ? (
+                          masterRoles.map((r) => (
+                            <option key={r.roleId} value={r.roleId}>
+                              {r.label || r.roleName}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="3">ID #3 - Teacher (teacher)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Account Status
+                      </label>
+                      <select
+                        value={formData.status !== false ? "true" : "false"}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value === "true" })}
+                        className="w-full rounded-xl border border-border bg-background p-2.5 text-xs text-foreground focus:ring-2 focus:ring-primary/50 outline-none"
+                      >
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 

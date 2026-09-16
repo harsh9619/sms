@@ -2,12 +2,14 @@ import httpService from "Services/http.service";
 import type { User } from "../types";
 
 export const userService = {
-  getUsers: async (): Promise<User[]> => {
-    return httpService.get<User[]>("/api/users");
+  getUsers: async (schoolId?: string): Promise<User[]> => {
+    const url = schoolId ? `/api/users?schoolId=${schoolId}` : "/api/users";
+    return httpService.get<User[]>(url);
   },
 
-  getAllUsers: async (): Promise<User[]> => {
-    return httpService.get<User[]>("/api/users?all=true");
+  getAllUsers: async (schoolId?: string): Promise<User[]> => {
+    const url = schoolId ? `/api/users?all=true&schoolId=${schoolId}` : "/api/users?all=true";
+    return httpService.get<User[]>(url);
   },
 
   createUser: async (user: any): Promise<User> => {

@@ -29,9 +29,10 @@ function* handleFetchCurrentUser(): Generator<any, void, any> {
   }
 }
 
-function* handleFetchAuthAllUsers(): Generator<any, void, any> {
+function* handleFetchAuthAllUsers(action: { type: string; payload?: string | { schoolId?: string } }): Generator<any, void, any> {
   try {
-    const users: User[] = yield call(authService.getAllUsers);
+    const schoolId = typeof action.payload === "string" ? action.payload : action.payload?.schoolId;
+    const users: User[] = yield call(authService.getUsers, schoolId);
     yield put(fetchAuthAllUsersSuccess(users));
   } catch (error: any) {
     yield put(fetchAuthAllUsersFailure(error.message || "Failed to fetch all users"));

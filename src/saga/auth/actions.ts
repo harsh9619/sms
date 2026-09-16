@@ -30,8 +30,9 @@ export const fetchCurrentUserFailure = (payload: string) => ({
   payload,
 });
 
-export const fetchAuthAllUsersRequest = () => ({
+export const fetchAuthAllUsersRequest = (payload?: string | { schoolId?: string }) => ({
   type: types.FETCH_AUTH_ALL_USERS_REQUEST,
+  payload,
 });
 
 export const fetchAuthAllUsersSuccess = (payload: User[]) => ({

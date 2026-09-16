@@ -16,8 +16,14 @@ export const authService = {
     return data.user;
   },
 
-  getAllUsers: async (): Promise<User[]> => {
-    return httpService.get<User[]>("/api/users?all=true");
+  getAllUsers: async (schoolId?: string): Promise<User[]> => {
+    const url = schoolId ? `/api/users?all=true&schoolId=${schoolId}` : "/api/users?all=true";
+    return httpService.get<User[]>(url);
+  },
+
+  getUsers: async (schoolId?: string): Promise<User[]> => {
+    const url = schoolId ? `/api/users?schoolId=${schoolId}` : "/api/users";
+    return httpService.get<User[]>(url);
   },
 };
 

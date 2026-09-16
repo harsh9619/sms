@@ -15,8 +15,25 @@ import {
   deleteUserRequest,
 } from "../../saga";
 import { School, useSchool } from "../../context/SchoolContext";
-import { User } from "../../types";
-import { Plus, Edit, Trash2, Users, X } from "lucide-react";
+import { User, RoleMaster } from "../../types";
+import { teacherService } from "../../Services/teacher.service";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Users,
+  X,
+  Search,
+  UserCheck,
+  GraduationCap,
+  ShieldCheck,
+  Building2,
+  Filter,
+  CheckCircle2,
+  XCircle,
+  Phone,
+  Mail,
+} from "lucide-react";
 
 const mapStateToProps = (state: AppState) => ({
   schools: state.school.schools,
@@ -39,7 +56,6 @@ function UsersPageContent({
   schools,
   users,
   loading,
-  fetchSchoolsRequest,
   fetchUsersRequest,
   createUserRequest,
   updateUserRequest,
@@ -48,23 +64,30 @@ function UsersPageContent({
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"name" | "email" | "role" | "school">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [roles, setRoles] = useState<RoleMaster[]>([]);
   const [formState, setFormState] = useState({
     name: "",
     email: "",
     phone: "",
     role: "teacher",
+    roleId: "",
     schoolId: "",
   });
   const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const { activeSchool } = useSchool();
 
   useEffect(() => {
-    fetchSchoolsRequest();
-    // fetchUsersRequest();
-  }, [fetchSchoolsRequest, fetchUsersRequest, activeSchool]);
+    fetchUsersRequest();
+  }, [fetchUsersRequest, activeSchool]);
+
+  useEffect(() => {
+    teacherService.getRoles()
+      .then((data) => setRoles(data))
+      .catch((err) => console.error("Failed to load roles in UsersPage:", err));
+  }, []);
 
   const openCreateModal = () => {
     setEditingUser(null);
@@ -79,7 +102,7 @@ function UsersPageContent({
       email: user.email,
       phone: user.phone || "",
       role: user.role,
-      schoolId: user.schoolIds?.[0] || activeSchool?.id || schools[0]?.id || "",
+      schoolId: user.schoolId || user.schoolIds?.[0] || activeSchool?.id || schools[0]?.id || "",
     });
     setFormError(null);
     setShowModal(true);
@@ -108,40 +131,110 @@ function UsersPageContent({
   const filteredUsers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const visibleUsers = activeSchool
-      ? users.filter((user) => user.schoolIds?.includes(activeSchool.id))
+      ? users.filter((user) => user.schoolId === activeSchool.id || user.schoolIds?.includes(activeSchool.id))
       : users;
+
     const withSchoolName = visibleUsers.map((user) => ({
       ...user,
-      schoolName: schools.find((s) => s.id === user.schoolIds?.[0])?.name || "Unassigned",
+      schoolName: schools.find((s) => s.id === (user.schoolId || user.schoolIds?.[0]))?.name || "Unassigned",
     }));
 
-    const filtered = query
-      ? withSchoolName.filter((user) =>
-        [user.name, user.email, user.role, user.schoolName]
+    let filtered = withSchoolName;
+
+    if (roleFilter !== "all") {
+      filtered = filtered.filter((u) => {
+        if (roleFilter === "admin") return u.role === "admin" || u.role === "school_admin" || u.role === "super_admin";
+        return u.role === roleFilter;
+      });
+    }
+
+    if (query) {
+      filtered = filtered.filter((user) =>
+        [user.name, user.email, user.role, user.schoolName, user.phone || ""]
           .join(" ")
           .toLowerCase()
           .includes(query)
-      )
-      : withSchoolName;
+      );
+    }
 
     return filtered.slice().sort((a, b) => {
-      const left = (sortBy === "school" ? a.schoolName : a[sortBy]).toLowerCase();
-      const right = (sortBy === "school" ? b.schoolName : b[sortBy]).toLowerCase();
+      const left = (sortBy === "school" ? a.schoolName : a[sortBy] || "").toLowerCase();
+      const right = (sortBy === "school" ? b.schoolName : b[sortBy] || "").toLowerCase();
       if (left < right) return sortDir === "asc" ? -1 : 1;
       if (left > right) return sortDir === "asc" ? 1 : -1;
       return 0;
     });
-  }, [users, schools, searchQuery, sortBy, sortDir]);
+  }, [users, schools, activeSchool, searchQuery, roleFilter, sortBy, sortDir]);
+
+  // Statistics counters
+  const stats = useMemo(() => {
+    const baseUsers = activeSchool
+      ? users.filter((u) => u.schoolId === activeSchool.id || u.schoolIds?.includes(activeSchool.id))
+      : users;
+    return {
+      total: baseUsers.length,
+      admins: baseUsers.filter((u) => u.role === "admin" || u.role === "school_admin" || u.role === "super_admin").length,
+      teachers: baseUsers.filter((u) => u.role === "teacher").length,
+      students: baseUsers.filter((u) => u.role === "student").length,
+    };
+  }, [users, activeSchool]);
+
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
+
+  useEffect(() => {
+    setFieldErrors({});
+  }, [showModal]);
+
+  const validateField = (name: string, value: string) => {
+    let err = "";
+    if (name === "name" && !value.trim()) {
+      err = "Name is required";
+    } else if (name === "email") {
+      if (!value.trim()) {
+        err = "Email is required";
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+        err = "Invalid email format";
+      }
+    } else if (name === "phone" && value.trim()) {
+      if (!/^[6-9]\d{9}$/.test(value.trim())) {
+        err = "Enter valid 10-digit mobile number starting with 6-9";
+      }
+    }
+    setFieldErrors((prev) => ({ ...prev, [name]: err }));
+  };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingUser(null);
     setFormError(null);
+    setFieldErrors({});
   };
 
   const handleSave = () => {
-    if (!formState.name.trim() || !formState.email.trim() || !formState.role || !formState.schoolId) {
-      setFormError("Name, email, role, and school are required.");
+    const errors: { [key: string]: string } = {};
+    if (!formState.name.trim()) {
+      errors.name = "Name is required";
+    }
+    if (!formState.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email.trim())) {
+      errors.email = "Invalid email format";
+    }
+    if (!formState.phone.trim()) {
+      errors.phone = "Enter valid 10-digit mobile number";
+    } else if (!/^[6-9]\d{9}$/.test(formState.phone.trim())) {
+      errors.phone = "Enter valid 10-digit mobile number";
+    }
+
+    setFieldErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
+
+    const targetSchoolId = formState.schoolId || activeSchool?.id || schools[0]?.id || "";
+    if (!targetSchoolId && schools.length > 0) {
+      setFormError("School assignment is required.");
       return;
     }
 
@@ -150,7 +243,8 @@ function UsersPageContent({
       email: formState.email.trim(),
       phone: formState.phone.trim() || null,
       role: formState.role,
-      schoolId: formState.schoolId,
+      roleId: formState.roleId,
+      schoolId: targetSchoolId,
     };
 
     if (editingUser) {
@@ -168,103 +262,217 @@ function UsersPageContent({
     deleteUserRequest(user.id);
   };
 
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case "admin":
+      case "school_admin":
+      case "super_admin":
+        return <Badge variant="default" className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1 font-semibold"><ShieldCheck className="h-3 w-3" /> Admin</Badge>;
+      case "teacher":
+        return <Badge variant="secondary" className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 gap-1 font-semibold"><UserCheck className="h-3 w-3" /> Teacher</Badge>;
+      case "student":
+        return <Badge variant="outline" className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 gap-1 font-semibold"><GraduationCap className="h-3 w-3" /> Student</Badge>;
+      default:
+        return <Badge variant="outline" className="capitalize">{role}</Badge>;
+    }
+  };
+
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 rounded-2xl border border-primary/15 shadow-sm">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-7 w-7 text-primary" />
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
+              <Users className="h-6 w-6" />
+            </div>
             User Directory
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Create, edit, and remove user accounts for admins, teachers, and students.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage user accounts, roles, contact details, and school assignments across the institution.
+          </p>
         </div>
-        <Button onClick={openCreateModal} className="shadow-lg shadow-primary/10">
-          <Plus className="h-4 w-4 mr-2" /> Add User
+        <Button onClick={openCreateModal} className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all gap-2 self-start md:self-auto">
+          <Plus className="h-4.5 w-4.5" /> Add New User
         </Button>
       </div>
 
-      <Card className="border border-border/80 shadow-xl">
-        <CardHeader className="bg-muted/30 border-b border-border/40">
-          <CardTitle className="text-base font-semibold">Users</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-4">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto] items-center">
-            <Input
-              placeholder="Search by name, email, role, or school..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Sort by:</span>
-              <button
-                onClick={() => toggleSort("name")}
-                className={`px-2 py-1 rounded-lg border ${sortBy === "name" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"}`}
-              >
-                Name {sortBy === "name" ? (sortDir === "asc" ? "▲" : "▼") : ""}
-              </button>
-              <button
-                onClick={() => toggleSort("email")}
-                className={`px-2 py-1 rounded-lg border ${sortBy === "email" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"}`}
-              >
-                Email {sortBy === "email" ? (sortDir === "asc" ? "▲" : "▼") : ""}
-              </button>
-              <button
-                onClick={() => toggleSort("role")}
-                className={`px-2 py-1 rounded-lg border ${sortBy === "role" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"}`}
-              >
-                Role {sortBy === "role" ? (sortDir === "asc" ? "▲" : "▼") : ""}
-              </button>
-              <button
-                onClick={() => toggleSort("school")}
-                className={`px-2 py-1 rounded-lg border ${sortBy === "school" ? "border-primary bg-primary/10 text-primary" : "border-border bg-background"}`}
-              >
-                School {sortBy === "school" ? (sortDir === "asc" ? "▲" : "▼") : ""}
-              </button>
+      {/* Analytics / Stats Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border border-border/70 hover:border-primary/40 transition-all shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Users</p>
+              <h3 className="text-2xl font-bold mt-1">{stats.total}</h3>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/60 text-foreground">
+              <Users className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/70 hover:border-amber-500/40 transition-all shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Admins</p>
+              <h3 className="text-2xl font-bold mt-1 text-amber-600 dark:text-amber-400">{stats.admins}</h3>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/70 hover:border-blue-500/40 transition-all shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Teachers</p>
+              <h3 className="text-2xl font-bold mt-1 text-blue-600 dark:text-blue-400">{stats.teachers}</h3>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              <UserCheck className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border/70 hover:border-emerald-500/40 transition-all shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Students</p>
+              <h3 className="text-2xl font-bold mt-1 text-emerald-600 dark:text-emerald-400">{stats.students}</h3>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <GraduationCap className="h-5 w-5" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Card */}
+      <Card className="border border-border/80 shadow-xl overflow-hidden">
+        <CardHeader className="bg-muted/20 border-b border-border/40 p-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, role, phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 bg-background border-border/80 focus:border-primary"
+              />
+            </div>
+
+            {/* Role Filter Tabs & Sorting */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center bg-muted/60 p-1 rounded-xl border border-border/50 text-xs">
+                {(["all", "admin", "teacher", "student"] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRoleFilter(r)}
+                    className={`px-3 py-1.5 rounded-lg capitalize font-medium transition-all ${roleFilter === r
+                      ? "bg-background text-foreground shadow-sm font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                      }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+
+              {/* Column Sort Selector */}
+              <div className="flex items-center gap-1 text-xs border border-border/60 rounded-xl bg-background p-1">
+                <span className="text-muted-foreground px-2 font-medium flex items-center gap-1">
+                  <Filter className="h-3 w-3" /> Sort:
+                </span>
+                {(["name", "email", "role", "school"] as const).map((col) => (
+                  <button
+                    key={col}
+                    onClick={() => toggleSort(col)}
+                    className={`px-2.5 py-1 rounded-lg capitalize transition-all ${sortBy === col ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:bg-muted"
+                      }`}
+                  >
+                    {col} {sortBy === col ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
+        </CardHeader>
 
+        <CardContent className="p-0">
           {loading ? (
-            <div className="py-12 flex flex-col items-center justify-center gap-3">
-              <div className="h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
-              <p className="text-sm text-muted-foreground animate-pulse">Loading users...</p>
+            <div className="py-20 flex flex-col items-center justify-center gap-3">
+              <div className="h-9 w-9 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <p className="text-sm font-medium text-muted-foreground animate-pulse">Fetching users...</p>
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">No users match your search.</div>
+            <div className="py-20 text-center flex flex-col items-center justify-center gap-2">
+              <div className="p-4 rounded-full bg-muted/50 text-muted-foreground">
+                <Users className="h-8 w-8" />
+              </div>
+              <h4 className="font-semibold text-base">No Users Found</h4>
+              <p className="text-xs text-muted-foreground max-w-sm">
+                No users match your active search filter. Try clearing query filters or add a new user.
+              </p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-border text-left text-sm">
-                <thead>
+              <table className="w-full text-left text-sm divide-y divide-border">
+                <thead className="bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   <tr>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">Name</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">Email</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">Role</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground">School</th>
-                    <th className="px-4 py-3 font-semibold text-muted-foreground text-right">Actions</th>
+                    <th className="px-6 py-4">User Info</th>
+                    <th className="px-6 py-4">Contact Detail</th>
+                    <th className="px-6 py-4">Role</th>
+                    <th className="px-6 py-4">Assigned School</th>
+                    <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border">
+                <tbody className="divide-y divide-border/60 bg-card">
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="bg-card/60 hover:bg-muted/50 transition-colors">
-                      <td className="px-4 py-4 whitespace-nowrap">
+                    <tr key={user.id} className="hover:bg-muted/40 transition-colors group">
+                      <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <Avatar size="sm" className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold">
-                            <AvatarFallback>{user.name.split(" ").map((token) => token[0]).join("").toUpperCase().slice(0, 2)}</AvatarFallback>
+                          <Avatar size="sm" className="bg-primary/15 text-primary border border-primary/20 font-bold h-10 w-10">
+                            <AvatarFallback>
+                              {user.name
+                                .split(" ")
+                                .map((t) => t[0])
+                                .join("")
+                                .toUpperCase()
+                                .slice(0, 2)}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-semibold text-foreground">{user.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{user.phone || "—"}</p>
+                            <p className="font-semibold text-foreground group-hover:text-primary transition-colors">{user.name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Mail className="h-3 w-3" /> {user.email}
+                            </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-muted-foreground">{user.email}</td>
-                      <td className="px-4 py-4 whitespace-nowrap capitalize text-muted-foreground">{user.role}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-muted-foreground">{user.schoolName}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right">
-                        <div className="inline-flex items-center gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => openEditModal(user)}>
+                      <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                        {user.phone ? (
+                          <span className="flex items-center gap-1.5 text-xs">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground" /> {user.phone}
+                          </span>
+                        ) : (
+                          <span className="text-xs italic text-muted-foreground/60">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">{getRoleBadge(user.role)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-muted/50 px-2.5 py-1 rounded-lg border border-border/40">
+                          <Building2 className="h-3.5 w-3.5 text-primary/70" />
+                          {user.schoolName}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary" onClick={() => openEditModal(user)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(user)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDelete(user)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -278,74 +486,137 @@ function UsersPageContent({
         </CardContent>
       </Card>
 
+      {/* Modal Dialog */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in" onClick={closeModal}>
-          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg m-4 overflow-hidden animate-scale-in" onClick={(event) => event.stopPropagation()}>
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <h3 className="font-bold text-base">{editingUser ? "Edit User" : "Add User"}</h3>
-              <button onClick={closeModal} className="text-muted-foreground hover:text-foreground">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4" onClick={closeModal}>
+          <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-border flex items-center justify-between bg-muted/20">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <Users className="h-5 w-5" />
+                </div>
+                <h3 className="font-bold text-base">{editingUser ? "Edit User Record" : "Add User Account"}</h3>
+              </div>
+              <button onClick={closeModal} className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-5 space-y-4 text-left">
-              {formError && <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-xs font-medium">{formError}</div>}
+
+            <div className="p-6 space-y-4 text-left">
+              {formError && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium flex items-center gap-2">
+                  <XCircle className="h-4 w-4 shrink-0" />
+                  {formError}
+                </div>
+              )}
+
               <div className="grid gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Name *</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Full Name *</label>
                   <Input
-                    placeholder="Full name"
+                    placeholder="Enter full name..."
                     value={formState.name}
-                    onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+                    onInput={(e) => validateField("name", (e.target as HTMLInputElement).value)}
+                    onChange={(e) => {
+                      setFormState({ ...formState, name: e.target.value });
+                      if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: "" });
+                    }}
+                    className={`h-10 ${fieldErrors.name ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   />
+                  {fieldErrors.name && (
+                    <p className="text-[11px] text-destructive font-medium">{fieldErrors.name}</p>
+                  )}
                 </div>
+
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Email *</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email Address *</label>
                   <Input
-                    placeholder="Email address"
+                    type="email"
+                    placeholder="e.g. user@school.com"
                     value={formState.email}
-                    onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                    onInput={(e) => validateField("email", (e.target as HTMLInputElement).value)}
+                    onChange={(e) => {
+                      setFormState({ ...formState, email: e.target.value });
+                      if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: "" });
+                    }}
+                    className={`h-10 ${fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   />
+                  {fieldErrors.email && (
+                    <p className="text-[11px] text-destructive font-medium">{fieldErrors.email}</p>
+                  )}
                 </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Phone</label>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Phone Number *</label>
                     <Input
-                      placeholder="Phone number"
+                      placeholder="+91 98765 43210"
                       value={formState.phone}
-                      onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
+                      onInput={(e) => validateField("phone", (e.target as HTMLInputElement).value)}
+                      onChange={(e) => {
+                        let value = e.target.value;
+                        if (value.length > 0) {
+                          if (!/^[6-9]/.test(value) || /[^0-9]/.test(value)) {
+                            value = value.slice(0, -1);
+                          }
+                        }
+                        setFormState({ ...formState, phone: value });
+                        if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: "" });
+                      }}
+                      maxLength={10}
+                      className={`h-10 ${fieldErrors.phone ? "border-destructive focus-visible:ring-destructive" : ""}`}
                     />
+                    {fieldErrors.phone && (
+                      <p className="text-[11px] text-destructive font-medium">{fieldErrors.phone}</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Role *</label>
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role *</label>
                     <select
                       value={formState.role}
-                      onChange={(e) => setFormState({ ...formState, role: e.target.value })}
-                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                      onChange={(e) => {
+                        const selectedRole = roles.find((r) => r.roleName === e.target.value || r.label === e.target.value);
+                        setFormState({
+                          ...formState,
+                          role: e.target.value,
+                          roleId: selectedRole ? String(selectedRole.roleId) : formState.roleId,
+                        });
+                      }}
+                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none capitalize"
                     >
-                      <option value="admin">Admin</option>
-                      <option value="teacher">Teacher</option>
-                      <option value="student">Student</option>
+                      {roles && roles.length > 0 && (
+                        roles.map((r) => (
+                          <option key={r.roleId} value={r.roleName}>
+                            {r.label || r.roleName}
+                          </option>
+                        ))
+                      )}
                     </select>
                   </div>
                 </div>
+
+
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">School *</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assigned School *</label>
                   <select
                     value={formState.schoolId}
                     onChange={(e) => setFormState({ ...formState, schoolId: e.target.value })}
                     className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                   >
-                    <option value="">Select school</option>
+
                     {schools.map((school) => (
                       <option key={school.id} value={school.id}>{school.name}</option>
                     ))}
                   </select>
                 </div>
+
+
               </div>
             </div>
-            <div className="p-5 border-t border-border flex justify-end gap-2.5">
+
+            <div className="p-5 border-t border-border flex justify-end gap-2.5 bg-muted/20">
               <Button variant="outline" onClick={closeModal}>Cancel</Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button onClick={handleSave} className="shadow-md shadow-primary/20">
                 {editingUser ? "Save Changes" : "Create User"}
               </Button>
             </div>

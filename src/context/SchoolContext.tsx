@@ -56,10 +56,12 @@ export function SchoolProvider({ children }: { children: ReactNode }) {
     dispatch(fetchSchoolsRequest());
   }, [dispatch]);
 
-  // Fetch schools on initial mount
+  // Fetch schools on initial mount or when user authenticates
   useEffect(() => {
-    refetchSchools();
-  }, [refetchSchools]);
+    if (isAuthenticated) {
+      refetchSchools();
+    }
+  }, [isAuthenticated, refetchSchools]);
 
   // Compute schools accessible to the current logged-in user based on role
   const userSchools = React.useMemo(() => {

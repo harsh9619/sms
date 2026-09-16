@@ -10,7 +10,7 @@ export interface User {
   phone?: string;
   address?: string;
   joinDate: string;
-  schoolIds?: string[];
+  schoolId: string;
   // Teacher-specific
   subject?: string;
   department?: string;
@@ -48,6 +48,13 @@ export interface Student {
   created_at: string;
 }
 
+export interface RoleMaster {
+  roleId: number;
+  roleName: string;
+  label: string;
+  description?: string;
+}
+
 // ==================== Teacher Types ====================
 export interface Teacher {
   id: string;
@@ -63,6 +70,8 @@ export interface Teacher {
   joinDate: string;
   salary?: number;
   status: boolean;
+  roleId?: number;
+  roleName?: string;
 }
 
 export interface BulkUploadError {

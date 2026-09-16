@@ -1,8 +1,9 @@
 import type { User } from "../../types";
 import * as types from "./actionTypes";
 
-export const fetchUsersRequest = () => ({
+export const fetchUsersRequest = (payload?: string | { schoolId?: string }) => ({
   type: types.FETCH_USERS_REQUEST,
+  payload,
 });
 
 export const fetchUsersSuccess = (payload: User[]) => ({
