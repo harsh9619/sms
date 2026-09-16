@@ -27,6 +27,7 @@ import {
   Filter,
   RefreshCw,
   Download,
+  Shield,
 } from "lucide-react";
 import { BulkUploadModal } from "../../ui/BulkUploadModal";
 import studentService from "../../../Services/student.service";
@@ -48,6 +49,7 @@ export function StudentsUI({
   limit,
   setLimit,
   classes,
+  castes = [],
   showModal,
   setShowModal,
   showDetail,
@@ -84,9 +86,7 @@ export function StudentsUI({
     if (name === "name") {
       if (!value.trim()) err = "Full Name is required";
     } else if (name === "email") {
-      if (!value.trim()) {
-        err = "Email Address is required";
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+      if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
         err = "Please enter a valid email address";
       }
     } else if (name === "phone") {
@@ -111,9 +111,7 @@ export function StudentsUI({
     }
 
     const email = formData.email?.trim();
-    if (!email) {
-      errors.email = "Email Address is required";
-    } else {
+    if (email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         errors.email = "Please enter a valid email address";
@@ -283,7 +281,7 @@ export function StudentsUI({
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>
                     <tr className="bg-muted/40 border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                      {/* <th className="py-3 px-4">Roll No</th> */}
+                      <th className="py-3 px-4">Admission No.</th>
                       <th className="py-3 px-4">Student Name</th>
                       <th className="py-3 px-4">Class </th>
                       <th className="py-3 px-4">Div</th>
@@ -300,11 +298,11 @@ export function StudentsUI({
                         key={student.id}
                         className="hover:bg-muted/30 transition-colors group"
                       >
-                        {/* <td className="py-3 px-4 font-medium text-xs">
+                        <td className="py-3 px-4 font-semibold ">
                           <span className="font-mono">
-                            {student.roll_no || "N/A"}
+                            {student.registration_no || "N/A"}
                           </span>
-                        </td> */}
+                        </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
 
@@ -470,20 +468,18 @@ export function StudentsUI({
         {/* Add/Edit Modal */}
         {showModal && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-3 sm:p-4 animate-fade-in"
             onClick={() => setShowModal(false)}
           >
             <div
-              className="bg-card border border-border/80 rounded-3xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-hidden flex flex-col transition-all relative"
+              className="bg-card border border-border/80 rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col transition-all relative"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Loading Overlay */}
-
               {/* Header with Live Preview */}
-              <div className="flex justify-between items-center px-6 py-4 border-b border-border bg-gradient-to-r from-muted/30 via-background to-muted/10">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-11 w-11 ring-2 ring-primary/20 shadow-sm">
-                    <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm">
+              <div className="flex justify-between items-center px-6 py-4 border-b border-border/70 bg-gradient-to-r from-primary/10 via-background to-primary/5">
+                <div className="flex items-center gap-3.5">
+                  <Avatar className="h-12 w-12 ring-2 ring-primary/20 shadow-md">
+                    <AvatarFallback className="bg-primary text-primary-foreground font-bold text-base">
                       {getInitials(formData.name || "")}
                     </AvatarFallback>
                   </Avatar>
@@ -491,15 +487,15 @@ export function StudentsUI({
                     <h2 className="text-base font-bold text-foreground flex items-center gap-2">
                       {editingStudent ? "Edit Student Profile" : "Enroll New Student"}
                       {formData.name && (
-                        <span className="text-xs font-normal text-muted-foreground truncate max-w-[140px]">
-                          — {formData.name}
+                        <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full truncate max-w-[160px]">
+                          {formData.name}
                         </span>
                       )}
                     </h2>
                     <p className="text-[11px] text-muted-foreground">
                       {editingStudent
-                        ? "Modify academic or personal attributes"
-                        : "Enter student info, assign class and guardian"}
+                        ? "Update student academic, personal, parent, and caste attributes"
+                        : "Enter student admission details, assign class, caste category, and guardian info"}
                     </p>
                   </div>
                 </div>
@@ -514,86 +510,50 @@ export function StudentsUI({
               </div>
 
               {/* Form Body */}
-              <div className="p-6 overflow-y-auto space-y-5 flex-1 text-xs">
-                {/* Section 1: Basic Profile */}
-                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5 text-primary" /> Basic Information
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1 text-xs">
+                {/* Section 1: Academic & Admission Information */}
+                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4.5 space-y-3.5 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
+                      <GraduationCap className="h-4 w-4 text-primary" /> Academic & Admission Details
                     </h4>
-                    <span className="text-[10px] text-muted-foreground">* Required fields</span>
+                    <span className="text-[10px] text-muted-foreground font-medium">* Required fields</span>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-foreground mb-1 block">
-                      Full Name <span className="text-destructive">*</span>
-                    </label>
-                    <Input
-                      placeholder="Enter Full Name"
-                      value={formData.name || ""}
-                      onInput={(e) => validateField("name", (e.target as HTMLInputElement).value)}
-                      onChange={(e) => {
-                        setFormData({ ...formData, name: e.target.value });
-                        if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: "" });
-                      }}
-                      icon={<User className="h-4 w-4 text-muted-foreground" />}
-                      className={fieldErrors.name ? "border-destructive focus-visible:ring-destructive" : ""}
-                    />
-                    {fieldErrors.name && (
-                      <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.name}</p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
                     <div>
                       <label className="text-xs font-medium text-foreground mb-1 block">
-                        Email Address <span className="text-destructive">*</span>
+                        Registration No.
                       </label>
                       <Input
-                        type="email"
-                        placeholder="Enter Email Address"
-                        value={formData.email || ""}
-                        onInput={(e) => validateField("email", (e.target as HTMLInputElement).value)}
-                        onChange={(e) => {
-                          setFormData({ ...formData, email: e.target.value });
-                          if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: "" });
-                        }}
-                        icon={<Mail className="h-4 w-4 text-muted-foreground" />}
-                        className={fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}
+                        placeholder="e.g. REG-2024-001"
+                        value={formData.registration_no || ""}
+                        onChange={(e) => setFormData({ ...formData, registration_no: e.target.value })}
                       />
-                      {fieldErrors.email && (
-                        <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.email}</p>
-                      )}
-
-
                     </div>
-                    {/* <div>
-                    <label className="text-xs font-medium text-foreground mb-1 block">
-                      Phone Number
-                    </label>
-                    <Input
-                      placeholder="Enter Phone Number"
-                      value={formData.phone || ""}
-                      onInput={(e) => validateField("phone", (e.target as HTMLInputElement).value)}
-                      onChange={(e) => {
-                        setFormData({ ...formData, phone: e.target.value });
-                        if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: "" });
-                      }}
-                      maxLength={10}
-                      icon={<Phone className="h-4 w-4 text-muted-foreground" />}
-                      className={fieldErrors.phone ? "border-destructive focus-visible:ring-destructive" : ""}
-                    />
-                    {fieldErrors.phone && (
-                      <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.phone}</p>
-                    )}
-                  </div> */}
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Academic Year
+                      </label>
+                      <Input
+                        placeholder="e.g. 2024-2025"
+                        value={formData.academic_year || ""}
+                        onChange={(e) => setFormData({ ...formData, academic_year: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Admission Date
+                      </label>
+                      <Input
+                        type="date"
+                        value={formData.admissionDate || formData.admission_date || ""}
+                        onChange={(e) => setFormData({ ...formData, admissionDate: e.target.value, admission_date: e.target.value })}
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Section 2: Class & Academic Assignment */}
-                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <GraduationCap className="h-3.5 w-3.5 text-primary" /> Academic Assignment
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label className="text-xs font-medium text-foreground mb-1 block">
                         Select Class <span className="text-destructive">*</span>
@@ -621,7 +581,7 @@ export function StudentsUI({
                     </div>
                     <div>
                       <label className="text-xs font-medium text-foreground mb-1 block">
-                        Division <span className="text-destructive">*</span>
+                        Division / Section <span className="text-destructive">*</span>
                       </label>
                       <select
                         value={formData.division_master_id || classes.find(c => String(c.id) === String(formData.class_id) || c.name === formData.class || c.name === formData.class_name)?.divisions?.find(d => d.name === formData.section)?.id || ""}
@@ -644,72 +604,56 @@ export function StudentsUI({
                         ))}
                       </select>
                     </div>
-                    {/* <div>
+                  </div>
+                </div>
+
+                {/* Section 2: Student Basic Information */}
+                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4.5 space-y-3.5 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" /> Student Personal Details
+                    </h4>
+                  </div>
+                  <div>
                     <label className="text-xs font-medium text-foreground mb-1 block">
-                      Roll Number
+                      Full Name of Student <span className="text-destructive">*</span>
                     </label>
                     <Input
-                      placeholder="Enter Roll Number"
-                      value={formData.rollNumber || formData.roll_no || ""}
-                      onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value, roll_no: e.target.value })}
-                      maxLength={5}
+                      placeholder="Enter Student Full Name"
+                      value={formData.name || ""}
+                      onInput={(e) => validateField("name", (e.target as HTMLInputElement).value)}
+                      onChange={(e) => {
+                        setFormData({ ...formData, name: e.target.value });
+                        if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: "" });
+                      }}
+                      icon={<User className="h-4 w-4 text-muted-foreground" />}
+                      className={fieldErrors.name ? "border-destructive focus-visible:ring-destructive" : ""}
                     />
-                  </div> */}
+                    {fieldErrors.name && (
+                      <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.name}</p>
+                    )}
                   </div>
-                </div>
-
-                {/* Section 3: Guardian Details */}
-                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5 text-primary" /> Parent / Guardian Information
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
                     <div>
                       <label className="text-xs font-medium text-foreground mb-1 block">
-                        Guardian Name <span className="text-destructive">*</span>
+                        Email Address <span className="text-muted-foreground font-normal">(Optional)</span>
                       </label>
                       <Input
-                        placeholder="Enter Guardian Name"
-                        value={formData.parentName || formData.parent_name || formData.guardian_name || ""}
-                        onChange={(e) => setFormData({ ...formData, parentName: e.target.value, parent_name: e.target.value, guardian_name: e.target.value })}
-                        icon={<User className="h-4 w-4 text-muted-foreground" />}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-foreground mb-1 block">
-                        Guardian Phone <span className="text-destructive">*</span>
-                      </label>
-                      <Input
-                        placeholder="Enter Guardian Phone Number"
-                        value={formData.parentPhone || formData.parent_phone || formData.guardian_phone || ""}
-                        onInput={(e) => validateField("parentPhone", (e.target as HTMLInputElement).value)}
+                        type="email"
+                        placeholder="Enter Email Address"
+                        value={formData.email || ""}
+                        onInput={(e) => validateField("email", (e.target as HTMLInputElement).value)}
                         onChange={(e) => {
-                          let value = e.target.value;
-                          if (value.length > 0) {
-                            if (!/^[6-9]/.test(value) || /[^0-9]/.test(value)) {
-                              value = value.slice(0, -1);
-                            }
-                          }
-                          setFormData({ ...formData, parentPhone: value, parent_phone: value, guardian_phone: value });
-                          if (fieldErrors.parentPhone) setFieldErrors({ ...fieldErrors, parentPhone: "" });
+                          setFormData({ ...formData, email: e.target.value });
+                          if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: "" });
                         }}
-                        icon={<Phone className="h-4 w-4 text-muted-foreground" />}
-                        className={fieldErrors.parentPhone ? "border-destructive focus-visible:ring-destructive" : ""}
-                        maxLength={10}
+                        icon={<Mail className="h-4 w-4 text-muted-foreground" />}
+                        className={fieldErrors.email ? "border-destructive focus-visible:ring-destructive" : ""}
                       />
-                      {fieldErrors.parentPhone && (
-                        <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.parentPhone}</p>
+                      {fieldErrors.email && (
+                        <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.email}</p>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Section 4: Personal Attributes */}
-                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-primary" /> Personal Attributes
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="text-xs font-medium text-foreground mb-1 block">
                         Date of Birth
@@ -734,24 +678,196 @@ export function StudentsUI({
                         <option value="other">Other</option>
                       </select>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Aadhar No.
+                      </label>
+                      <Input
+                        placeholder="12-digit Aadhar Number"
+                        value={formData.aadhar_no || ""}
+                        onChange={(e) => setFormData({ ...formData, aadhar_no: e.target.value })}
+                        maxLength={14}
+                      />
+                    </div>
                     <div>
                       <label className="text-xs font-medium text-foreground mb-1 block">
                         Blood Group
                       </label>
                       <Input
-                        placeholder="Enter Blood Group"
+                        placeholder="e.g. O+, A+, B+"
                         value={formData.bloodGroup || formData.blood_group || ""}
                         onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value, blood_group: e.target.value })}
                         icon={<Heart className="h-4 w-4 text-muted-foreground" />}
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* Section 3: Caste & Category Details */}
+                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4.5 space-y-3.5 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-primary" /> Caste & Category Info
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Caste Category
+                      </label>
+                      <select
+                        value={formData.caste_master_id || ""}
+                        onChange={(e) => {
+                          const val = e.target.value ? Number(e.target.value) : null;
+                          const selectedCaste = castes.find((c: any) => c.id === val);
+                          setFormData({
+                            ...formData,
+                            caste_master_id: val,
+                            caste_name: selectedCaste?.name || "",
+                            caste_code: selectedCaste?.code || "",
+                            caste_category: selectedCaste?.name || formData.caste_category || "",
+                          });
+                        }}
+                        className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition"
+                      >
+                        <option value="">Select Caste Category</option>
+                        {castes.map((c: any) => (
+                          <option key={c.id} value={c.id}>{c.name} ({c.code})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Sub-caste / Detail (Specify Caste)
+                      </label>
+                      <Input
+                        placeholder="e.g. Brahmin, Yadav, Kurmi, etc."
+                        value={formData.caste_category || ""}
+                        onChange={(e) => setFormData({ ...formData, caste_category: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 4: Parent & Guardian Information */}
+                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4.5 space-y-3.5 shadow-sm">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                    <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
+                      <User className="h-4 w-4 text-primary" /> Parent & Guardian Information
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Father's Name <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        placeholder="Enter Father's Name"
+                        value={formData.father_name || formData.parentName || formData.parent_name || formData.guardian_name || ""}
+                        onChange={(e) => setFormData({ ...formData, father_name: e.target.value, parentName: e.target.value, parent_name: e.target.value, guardian_name: e.target.value })}
+                        icon={<User className="h-4 w-4 text-muted-foreground" />}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Father's Occupation & Qualification
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Occupation"
+                          value={formData.father_occupation || ""}
+                          onChange={(e) => setFormData({ ...formData, father_occupation: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Qualification"
+                          value={formData.father_qualification || ""}
+                          onChange={(e) => setFormData({ ...formData, father_qualification: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Mother's Name
+                      </label>
+                      <Input
+                        placeholder="Enter Mother's Name"
+                        value={formData.mother_name || ""}
+                        onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
+                        icon={<User className="h-4 w-4 text-muted-foreground" />}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Mother's Occupation & Qualification
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Occupation"
+                          value={formData.mother_occupation || ""}
+                          onChange={(e) => setFormData({ ...formData, mother_occupation: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Qualification"
+                          value={formData.mother_qualification || ""}
+                          onChange={(e) => setFormData({ ...formData, mother_qualification: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Primary Mobile No. <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        placeholder="10-digit Mobile Number"
+                        value={formData.parentPhone || formData.parent_phone || formData.guardian_phone || ""}
+                        onInput={(e) => validateField("parentPhone", (e.target as HTMLInputElement).value)}
+                        onChange={(e) => {
+                          let value = e.target.value;
+                          if (value.length > 0) {
+                            if (!/^[6-9]/.test(value) || /[^0-9]/.test(value)) {
+                              value = value.slice(0, -1);
+                            }
+                          }
+                          setFormData({ ...formData, parentPhone: value, parent_phone: value, guardian_phone: value });
+                          if (fieldErrors.parentPhone) setFieldErrors({ ...fieldErrors, parentPhone: "" });
+                        }}
+                        icon={<Phone className="h-4 w-4 text-muted-foreground" />}
+                        className={fieldErrors.parentPhone ? "border-destructive focus-visible:ring-destructive" : ""}
+                        maxLength={10}
+                      />
+                      {fieldErrors.parentPhone && (
+                        <p className="text-[11px] text-destructive mt-1 font-medium">{fieldErrors.parentPhone}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-foreground mb-1 block">
+                        Whatsapp No.
+                      </label>
+                      <Input
+                        placeholder="Whatsapp Number"
+                        value={formData.whatsapp_no || ""}
+                        onChange={(e) => setFormData({ ...formData, whatsapp_no: e.target.value })}
+                        icon={<Phone className="h-4 w-4 text-muted-foreground" />}
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 5: Correspondence Address */}
+                <div className="bg-muted/15 border border-border/50 rounded-2xl p-4.5 space-y-3 shadow-sm">
+                  <h4 className="text-xs font-bold text-foreground flex items-center gap-2 border-b border-border/40 pb-2">
+                    <MapPin className="h-4 w-4 text-primary" /> Correspondence Address
+                  </h4>
                   <div>
-                    <label className="text-xs font-medium text-foreground mb-1 block">
-                      Residential Address
-                    </label>
                     <Input
-                      placeholder="Residential address details"
+                      placeholder="Full correspondence address details (House No, Street, Landmark, City)"
                       value={formData.address || ""}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       icon={<MapPin className="h-4 w-4 text-muted-foreground" />}
@@ -761,34 +877,40 @@ export function StudentsUI({
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/20">
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border/80 bg-muted/20">
                 <div className="text-[11px] text-muted-foreground">
-                  {!formData.name || !formData.email ? (
-                    <span className="text-amber-500 font-medium">* Fill required fields to save</span>
+                  {!formData.name ? (
+                    <span className="text-amber-500 font-semibold">* Enter student name to save</span>
                   ) : (
-                    <span className="text-emerald-500 font-medium">✓ Ready to save</span>
+                    <span className="text-emerald-500 font-semibold flex items-center gap-1">
+                      ✓ Ready to {editingStudent ? "update" : "save"} profile
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
-                    className="rounded-xl px-5 text-xs font-semibold"
+                    className="rounded-xl px-5 text-xs font-semibold hover:bg-muted/50"
                     onClick={() => setShowModal(false)}
                   >
                     Cancel
                   </Button>
                   <Button
-                    className="rounded-xl px-6 text-xs font-semibold flex items-center gap-2"
+                    className="rounded-xl px-6 text-xs font-semibold shadow-md flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                     disabled={
                       loading ||
                       !formData.name ||
-                      !formData.email ||
                       (!formData.class_id && !formData.division_master_id) ||
-                      (!formData.parent_phone && !formData.guardian_phone) ||
-                      (!formData.parent_name && !formData.guardian_name)
+                      (!formData.parent_phone && !formData.guardian_phone && !formData.parentPhone) ||
+                      (!formData.parent_name && !formData.guardian_name && !formData.father_name)
                     }
                     onClick={validateAndSave}
                   >
+                    {loading ? (
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <GraduationCap className="h-3.5 w-3.5" />
+                    )}
                     {editingStudent ? "Update Student" : "Save Student"}
                   </Button>
                 </div>
@@ -842,7 +964,7 @@ export function StudentsUI({
               </div>
 
               {/* Information Grid */}
-              <div className="p-6 space-y-3.5 text-xs text-muted-foreground">
+              <div className="p-6 space-y-3.5 text-xs text-muted-foreground max-h-[60vh] overflow-y-auto">
                 <div className="flex items-center justify-between py-2 border-b border-border/40">
                   <span className="font-medium text-foreground flex items-center gap-2">
                     <Mail className="h-3.5 w-3.5 text-primary" /> Email Address
@@ -852,24 +974,76 @@ export function StudentsUI({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between py-2 border-b border-border/40">
-                  <span className="font-medium text-foreground flex items-center gap-2">
-                    <Phone className="h-3.5 w-3.5 text-primary" /> Phone Number
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {showDetail.phone || "N/A"}
-                  </span>
-                </div>
+                {showDetail.registration_no && (
+                  <div className="flex items-center justify-between py-2 border-b border-border/40">
+                    <span className="font-medium text-foreground flex items-center gap-2">
+                      <GraduationCap className="h-3.5 w-3.5 text-primary" /> Adm. No
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {showDetail.registration_no}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between py-2 border-b border-border/40">
                   <span className="font-medium text-foreground flex items-center gap-2">
-                    <User className="h-3.5 w-3.5 text-primary" /> Guardian
+                    <Shield className="h-3.5 w-3.5 text-primary" /> Caste / Sub Caste
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {showDetail.caste_code || showDetail.caste_name || "N/A"}  {showDetail.caste_category ? `/ ${showDetail.caste_category}` : ""}
+                  </span>
+                </div>
+
+                {showDetail.aadhar_no && (
+                  <div className="flex items-center justify-between py-2 border-b border-border/40">
+                    <span className="font-medium text-foreground flex items-center gap-2">
+                      <Shield className="h-3.5 w-3.5 text-primary" /> Aadhar No.
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {showDetail.aadhar_no}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between py-2 border-b border-border/40">
+                  <span className="font-medium text-foreground flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-primary" /> Father's Name
                   </span>
                   <span className="font-semibold text-foreground text-right">
-                    {showDetail.parent_name || showDetail.guardian_name || showDetail.parentName || "N/A"}
-                    {(showDetail.parent_phone || showDetail.guardian_phone || showDetail.parentPhone) && (
+                    {showDetail.father_name || showDetail.guardian_name || showDetail.parent_name || "N/A"}
+                    {showDetail.father_occupation && (
                       <span className="block text-[11px] font-normal text-muted-foreground">
-                        {showDetail.parent_phone || showDetail.guardian_phone || showDetail.parentPhone}
+                        {showDetail.father_occupation} {showDetail.father_qualification ? `(${showDetail.father_qualification})` : ""}
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+                {showDetail.mother_name && (
+                  <div className="flex items-center justify-between py-2 border-b border-border/40">
+                    <span className="font-medium text-foreground flex items-center gap-2">
+                      <User className="h-3.5 w-3.5 text-primary" /> Mother's Name
+                    </span>
+                    <span className="font-semibold text-foreground text-right">
+                      {showDetail.mother_name}
+                      {showDetail.mother_occupation && (
+                        <span className="block text-[11px] font-normal text-muted-foreground">
+                          {showDetail.mother_occupation}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between py-2 border-b border-border/40">
+                  <span className="font-medium text-foreground flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 text-primary" /> Phone / Whatsapp
+                  </span>
+                  <span className="font-semibold text-foreground text-right">
+                    {showDetail.parent_phone || showDetail.guardian_phone || showDetail.phone || "N/A"}
+                    {showDetail.whatsapp_no && (
+                      <span className="block text-[11px] font-normal text-emerald-500">
+                        WA: {showDetail.whatsapp_no}
                       </span>
                     )}
                   </span>
@@ -877,10 +1051,15 @@ export function StudentsUI({
 
                 <div className="flex items-center justify-between py-2 border-b border-border/40">
                   <span className="font-medium text-foreground flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5 text-primary" /> Date of Birth
+                    <Calendar className="h-3.5 w-3.5 text-primary" /> Admission Date / DOB
                   </span>
-                  <span className="font-semibold text-foreground">
-                    {showDetail.dob || showDetail.dateOfBirth || "N/A"}
+                  <span className="font-semibold text-foreground text-right">
+                    {showDetail.admission_date || showDetail.admissionDate || "N/A"}
+                    {(showDetail.dob || showDetail.dateOfBirth) && (
+                      <span className="block text-[11px] font-normal text-muted-foreground">
+                        DOB: {showDetail.dob || showDetail.dateOfBirth}
+                      </span>
+                    )}
                   </span>
                 </div>
 
@@ -923,18 +1102,127 @@ export function StudentsUI({
           onClose={() => setShowBulkModal(false)}
           title="Bulk Import Students"
           templateHeaders={[
+            "registration_no",
+            "academic_year",
+            "admission_date",
             "name",
             "email",
             "class",
             "division",
-            "parentName",
+            "caste_category",
+            "sub_caste",
+            "father_name",
+            "father_occupation",
+            "father_qualification",
+            "mother_name",
+            "mother_occupation",
+            "mother_qualification",
             "parentPhone",
+            "whatsapp_no",
             "dateOfBirth",
             "gender",
+            "aadhar_no",
             "bloodGroup",
             "address",
           ]}
-          sampleRow={{}}
+          sampleRows={[
+            {
+              registration_no: "REG-2024-001",
+              academic_year: "2024-2025",
+              admission_date: "2024-04-10",
+              name: "Aarav Sharma",
+              email: "aarav.sharma@example.com",
+              class: "10th",
+              division: "A",
+              caste_category: "OBC",
+              sub_caste: "Yadav",
+              father_name: "Rajesh Sharma",
+              father_occupation: "Business",
+              father_qualification: "Graduate",
+              mother_name: "Sunita Sharma",
+              mother_occupation: "Homemaker",
+              mother_qualification: "Higher Secondary",
+              parentPhone: "9876543210",
+              whatsapp_no: "9876543210",
+              dateOfBirth: "2010-05-15",
+              gender: "male",
+              aadhar_no: "123456789012",
+              bloodGroup: "O+",
+              address: "123 Green Park, Civil Lines, Jaipur",
+            },
+            {
+              registration_no: "REG-2024-002",
+              academic_year: "2024-2025",
+              admission_date: "2024-04-12",
+              name: "Ananya Patel",
+              email: "ananya.patel@example.com",
+              class: "10th",
+              division: "B",
+              caste_category: "GEN",
+              sub_caste: "Patel",
+              father_name: "Ramesh Patel",
+              father_occupation: "Engineer",
+              father_qualification: "Post Graduate",
+              mother_name: "Meena Patel",
+              mother_occupation: "Teacher",
+              mother_qualification: "Graduate",
+              parentPhone: "9812345678",
+              whatsapp_no: "9812345678",
+              dateOfBirth: "2010-08-22",
+              gender: "female",
+              aadhar_no: "234567890123",
+              bloodGroup: "B+",
+              address: "45 Lotus Colony, M.G. Road, Indore",
+            },
+            {
+              registration_no: "REG-2024-003",
+              academic_year: "2024-2025",
+              admission_date: "2024-04-15",
+              name: "Rohan Verma",
+              email: "",
+              class: "9th",
+              division: "A",
+              caste_category: "SC",
+              sub_caste: "Verma",
+              father_name: "Suresh Verma",
+              father_occupation: "Govt Service",
+              father_qualification: "Graduate",
+              mother_name: "Kavita Verma",
+              mother_occupation: "Homemaker",
+              mother_qualification: "Matriculate",
+              parentPhone: "9765432109",
+              whatsapp_no: "9765432109",
+              dateOfBirth: "2011-03-10",
+              gender: "male",
+              aadhar_no: "345678901234",
+              bloodGroup: "A+",
+              address: "78 Vikas Nagar, Sector 4, Bhopal",
+            },
+            {
+              registration_no: "REG-2024-004",
+              academic_year: "2024-2025",
+              admission_date: "2024-04-18",
+              name: "Priya Singh",
+              email: "priya.singh@example.com",
+              class: "9th",
+              division: "B",
+              caste_category: "ST",
+              sub_caste: "Gond",
+              father_name: "Mahesh Singh",
+              father_occupation: "Farmer",
+              father_qualification: "Higher Secondary",
+              mother_name: "Anita Singh",
+              mother_occupation: "Homemaker",
+              mother_qualification: "Middle School",
+              parentPhone: "9654321098",
+              whatsapp_no: "9654321098",
+              dateOfBirth: "2011-11-05",
+              gender: "female",
+              aadhar_no: "456789012345",
+              bloodGroup: "AB+",
+              address: "12 Tribal Colony, Main Road, Ujjain",
+            },
+          ]}
           onUpload={async (data) => {
             return studentService.bulkCreateStudents(data);
           }}

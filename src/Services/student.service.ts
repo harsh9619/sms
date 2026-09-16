@@ -49,6 +49,10 @@ export const studentService = {
   bulkCreateStudents: async (students: any[]): Promise<any> => {
     return httpService.post("/api/students/bulk", { students });
   },
+
+  getCastes: async (): Promise<any[]> => {
+    return httpService.get("/api/castes");
+  },
 };
 
 export default studentService;

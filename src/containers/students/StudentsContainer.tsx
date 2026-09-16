@@ -54,9 +54,15 @@ function StudentsContainerContent(props: StudentsContainerProps) {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [formData, setFormData] = useState<Partial<Student>>({});
   const [formError, setFormError] = useState<any>({});
+  const [castes, setCastes] = useState<any[]>([]);
 
   useEffect(() => {
     fetchClassesRequest();
+    studentService.getCastes().then((res) => {
+      if (Array.isArray(res)) {
+        setCastes(res);
+      }
+    }).catch((err) => console.error("Error fetching castes:", err));
   }, [fetchClassesRequest, activeSchool, activeAcademicYear]);
 
   useEffect(() => {
@@ -118,32 +124,66 @@ function StudentsContainerContent(props: StudentsContainerProps) {
   };
 
   const handleSave = () => {
+    const parentNameVal = formData.father_name || formData.parentName || formData.guardian_name || formData.parent_name || "";
+    const parentPhoneVal = formData.parentPhone || formData.guardian_phone || formData.parent_phone || "";
+
     if (editingStudent) {
+      debugger;
       updateStudentRequest({
         id: editingStudent.id,
         name: formData.name,
-        email: formData.email,
+        email: formData.email !== undefined ? formData.email : undefined,
         phone: formData.phone,
         class_id: formData.class_id,
         division_master_id: formData.division_master_id,
-        class: formData.class_name,
-        section: formData.division_name,
-        rollNumber: formData.roll_no,
-        roll_no: formData.roll_no,
-        parentName: formData.guardian_name,
-        guardian_name: formData.guardian_name,
-        parentPhone: formData.guardian_phone,
-        guardian_phone: formData.guardian_phone,
+        class: formData.class_name || formData.class,
+        section: formData.division_name || formData.section,
+        rollNumber: formData.roll_no || formData.rollNumber,
+        roll_no: formData.roll_no || formData.rollNumber,
+        parentName: parentNameVal,
+        guardian_name: parentNameVal,
+        parentPhone: parentPhoneVal,
+        guardian_phone: parentPhoneVal,
         address: formData.address,
-        dateOfBirth: formData.dob,
-        dob: formData.dob,
+        dateOfBirth: formData.dob || formData.dateOfBirth,
+        dob: formData.dob || formData.dateOfBirth,
         gender: formData.gender || "male",
-        bloodGroup: formData.blood_group,
-        blood_group: formData.blood_group,
-        admissionDate: formData.admission_date,
-        admission_date: formData.admission_date,
+        bloodGroup: formData.blood_group || formData.bloodGroup,
+        blood_group: formData.blood_group || formData.bloodGroup,
+        admissionDate: formData.admission_date || formData.admissionDate,
+        admission_date: formData.admission_date || formData.admissionDate,
+
+        // New Admission Form & Caste Columns
+        caste_master_id: formData.caste_master_id,
+        casteMasterId: formData.caste_master_id,
+        caste_category: formData.caste_category,
+        casteCategory: formData.caste_category,
+        registration_no: formData.registration_no,
+        registrationNo: formData.registration_no,
+        academic_year: formData.academic_year,
+        academicYear: formData.academic_year,
+        aadhar_no: formData.aadhar_no,
+        aadharNo: formData.aadhar_no,
+        medium: formData.medium,
+        father_name: formData.father_name || parentNameVal,
+        fatherName: formData.father_name || parentNameVal,
+        father_occupation: formData.father_occupation,
+        fatherOccupation: formData.father_occupation,
+        father_qualification: formData.father_qualification,
+        fatherQualification: formData.father_qualification,
+        mother_name: formData.mother_name,
+        motherName: formData.mother_name,
+        mother_occupation: formData.mother_occupation,
+        motherOccupation: formData.mother_occupation,
+        mother_qualification: formData.mother_qualification,
+        motherQualification: formData.mother_qualification,
+        whatsapp_no: formData.whatsapp_no,
+        whatsappNo: formData.whatsapp_no,
+        scholar_no: formData.scholar_no,
+        scholarNo: formData.scholar_no,
       });
     } else {
+
       const newStudent: any = {
         name: formData.name || "",
         email: formData.email || "",
@@ -154,10 +194,10 @@ function StudentsContainerContent(props: StudentsContainerProps) {
         section: formData.section || formData.division_name || "",
         rollNumber: formData.rollNumber || formData.roll_no || `${Date.now()}`.slice(-4),
         roll_no: formData.rollNumber || formData.roll_no || `${Date.now()}`.slice(-4),
-        parentName: formData.parentName || formData.guardian_name || "",
-        guardian_name: formData.parentName || formData.guardian_name || "",
-        parentPhone: formData.parentPhone || formData.guardian_phone || "",
-        guardian_phone: formData.parentPhone || formData.guardian_phone || "",
+        parentName: parentNameVal,
+        guardian_name: parentNameVal,
+        parentPhone: parentPhoneVal,
+        guardian_phone: parentPhoneVal,
         address: formData.address || "",
         dateOfBirth: formData.dateOfBirth || formData.dob || "",
         dob: formData.dateOfBirth || formData.dob || "",
@@ -166,12 +206,38 @@ function StudentsContainerContent(props: StudentsContainerProps) {
         blood_group: formData.bloodGroup || formData.blood_group || "O+",
         admissionDate: formData.admissionDate || formData.admission_date || new Date().toISOString().split("T")[0],
         admission_date: formData.admissionDate || formData.admission_date || new Date().toISOString().split("T")[0],
+
+        // New Admission Form & Caste Columns
+        caste_master_id: formData.caste_master_id || null,
+        casteMasterId: formData.caste_master_id || null,
+        caste_category: formData.caste_category || "",
+        casteCategory: formData.caste_category || "",
+        registration_no: formData.registration_no || "",
+        registrationNo: formData.registration_no || "",
+        academic_year: formData.academic_year || "",
+        academicYear: formData.academic_year || "",
+        aadhar_no: formData.aadhar_no || "",
+        aadharNo: formData.aadhar_no || "",
+        medium: formData.medium || "English",
+        father_name: formData.father_name || parentNameVal,
+        fatherName: formData.father_name || parentNameVal,
+        father_occupation: formData.father_occupation || "",
+        fatherOccupation: formData.father_occupation || "",
+        father_qualification: formData.father_qualification || "",
+        fatherQualification: formData.father_qualification || "",
+        mother_name: formData.mother_name || "",
+        motherName: formData.mother_name || "",
+        mother_occupation: formData.mother_occupation || "",
+        motherOccupation: formData.mother_occupation || "",
+        mother_qualification: formData.mother_qualification || "",
+        motherQualification: formData.mother_qualification || "",
+        whatsapp_no: formData.whatsapp_no || "",
+        whatsappNo: formData.whatsapp_no || "",
+        scholar_no: formData.scholar_no || "",
+        scholarNo: formData.scholar_no || "",
       };
       createStudentRequest(newStudent);
     }
-    // setShowModal(false);
-    // setEditingStudent(null);
-    // setFormData({});
   };
 
   const handleDelete = (id: string) => {
@@ -240,6 +306,7 @@ function StudentsContainerContent(props: StudentsContainerProps) {
       limit={limit}
       setLimit={handleLimitChange}
       classes={classes}
+      castes={castes}
       showModal={showModal}
       setShowModal={setShowModal}
       showDetail={showDetail}

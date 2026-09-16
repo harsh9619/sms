@@ -7,7 +7,8 @@ interface BulkUploadModalProps {
   onClose: () => void;
   title: string;
   templateHeaders: string[];
-  sampleRow: Record<string, string>;
+  sampleRow?: Record<string, string>;
+  sampleRows?: Array<Record<string, string>>;
   onUpload: (data: any[]) => Promise<{ addedCount: number; skippedCount: number; errors: Array<{ email: string; reason: string }> }>;
   onSuccess?: () => void;
 }
@@ -17,7 +18,8 @@ export function BulkUploadModal({
   onClose,
   title,
   templateHeaders,
-  sampleRow,
+  sampleRow = {},
+  sampleRows,
   onUpload,
   onSuccess,
 }: BulkUploadModalProps) {
@@ -89,8 +91,14 @@ export function BulkUploadModal({
 
   const handleDownloadTemplate = () => {
     const headerLine = templateHeaders.join(",");
-    const sampleValues = templateHeaders.map((h) => sampleRow[h] || sampleRow[h.toLowerCase()] || "");
-    const csvContent = "data:text/csv;charset=utf-8," + [headerLine, sampleValues.join(",")].join("\n");
+    const rowsToExport = sampleRows && sampleRows.length > 0 ? sampleRows : [sampleRow];
+    const dataLines = rowsToExport.map((row) =>
+      templateHeaders.map((h) => {
+        const val = row[h] || row[h.toLowerCase()] || "";
+        return val.includes(",") || val.includes('"') ? `"${val.replace(/"/g, '""')}"` : val;
+      }).join(",")
+    );
+    const csvContent = "data:text/csv;charset=utf-8," + [headerLine, ...dataLines].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);

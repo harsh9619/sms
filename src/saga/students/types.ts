@@ -81,6 +81,8 @@ export interface StudentsContainerProps {
   handleOpenEditModal: (student: Student) => void;
 }
 
+import type { CasteMaster } from "../../types";
+
 export interface StudentsUIProps {
   students: Student[];
   meta: PaginationMeta;
@@ -97,6 +99,7 @@ export interface StudentsUIProps {
   limit: number;
   setLimit: (val: number) => void;
   classes: ClassInfo[];
+  castes?: CasteMaster[];
   showModal: boolean;
   setShowModal: (val: boolean) => void;
   showDetail: Student | null;
@@ -124,8 +127,24 @@ export interface Student {
   division_master_id: number | null;
   division_name: string;
   section: string;
+  caste_master_id?: number | null;
+  caste_name?: string;
+  caste_code?: string;
+  caste_category?: string;
+  registration_no?: string;
+  academic_year?: string;
+  aadhar_no?: string;
+  medium?: string;
+  father_name?: string;
+  father_occupation?: string;
+  father_qualification?: string;
+  mother_name?: string;
+  mother_occupation?: string;
+  mother_qualification?: string;
+  whatsapp_no?: string;
+  scholar_no?: string;
   roll_no: string;
-  dob: string,
+  dob: string;
   gender: string;
   blood_group: string;
   address: string;
@@ -135,6 +154,7 @@ export interface Student {
   parent_phone: string;
   admission_date: string;
   created_at: string;
+  updated_at?: string;
 }
 
 

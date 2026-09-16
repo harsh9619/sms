@@ -22,6 +22,14 @@ export interface User {
   parentPhone?: string;
 }
 
+// ==================== Master Types ====================
+export interface CasteMaster {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+}
+
 // ==================== Student Types ====================
 export interface Student {
   id: string;
@@ -35,8 +43,24 @@ export interface Student {
   division_master_id: number | null;
   division_name: string;
   section: string;
+  caste_master_id?: number | null;
+  caste_name?: string;
+  caste_code?: string;
+  caste_category?: string;
+  registration_no?: string;
+  academic_year?: string;
+  aadhar_no?: string;
+  medium?: string;
+  father_name?: string;
+  father_occupation?: string;
+  father_qualification?: string;
+  mother_name?: string;
+  mother_occupation?: string;
+  mother_qualification?: string;
+  whatsapp_no?: string;
+  scholar_no?: string;
   roll_no: string;
-  dob: string,
+  dob: string;
   gender: string;
   blood_group: string;
   address: string;
@@ -46,6 +70,7 @@ export interface Student {
   parent_phone: string;
   admission_date: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface RoleMaster {
