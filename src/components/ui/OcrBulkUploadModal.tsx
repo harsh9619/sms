@@ -66,6 +66,30 @@ export function OcrBulkUploadModal({
 
   if (!isOpen) return null;
 
+  const validateAndFixDate = (dateStr: string): string => {
+    if (!dateStr) return "";
+
+    const parts = dateStr.split(/[-/.:]/);
+    if (parts.length !== 3) return "";
+
+    const dayNum = parseInt(parts[0], 10);
+    const monthNum = parseInt(parts[1], 10);
+    let yearNum = parseInt(parts[2], 10);
+
+    // Validate ranges
+    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return "";
+    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) return "";
+    if (isNaN(yearNum)) return "";
+
+    // Fix year format
+    if (parts[2].length === 3) yearNum = 2000 + yearNum;
+    else if (parts[2].length === 2) yearNum = yearNum < 31 ? 2000 + yearNum : 1900 + yearNum;
+
+    if (yearNum < 1990 || yearNum > 2030) return "";
+
+    return `${dayNum.toString().padStart(2, '0')}-${monthNum.toString().padStart(2, '0')}-${yearNum}`;
+  };
+
   const mapHindiHeaderToEnglish = (headerText: string): string | null => {
     const text = headerText.toLowerCase().trim();
     if (text.includes("प्रवेश") && (text.includes("क्रमांक") || text.includes("सं"))) return "registration_no";
@@ -84,10 +108,21 @@ export function OcrBulkUploadModal({
   };
 
   const normalizeGender = (val: string): string => {
+    if (!val) return "Male";
     const lower = val.toLowerCase().trim();
-    if (lower.includes("पु") || lower.includes("m") || lower.includes("boy") || lower.includes("male")) return "Male";
-    if (lower.includes("स्त्री") || lower.includes("f") || lower.includes("girl") || lower.includes("female")) return "Female";
-    return val || "Male";
+
+    // Handle Hindi abbreviations properly
+    if (lower.includes("पु") || lower.includes("पुरुष") || lower.includes("male") ||
+      lower.includes("m") || lower.includes("boy")) {
+      return "Male";
+    }
+
+    if (lower.includes("स्त्री") || lower.includes("महिला") || lower.includes("female") ||
+      lower.includes("f") || lower.includes("girl") || lower.includes("hss")) {
+      return "Female";
+    }
+
+    return "Male";
   };
 
   const normalizeCategory = (val: string): string => {
@@ -98,55 +133,74 @@ export function OcrBulkUploadModal({
 
   const ununcorruptOcrPhoneToken = (token: string): string => {
     if (!token) return "";
+
     let clean = token.replace(/[\s\-_|.:,/()\\[\]{}]+/g, "").trim();
     if (/^[6-9]\d{9}$/.test(clean)) return clean;
 
+    // Map corrupted letters to digits
     const letterToDigit: Record<string, string> = {
-      'o': '0', 'O': '0',
+      'o': '0', 'O': '0', 'D': '0',
       'i': '1', 'I': '1', 'l': '1', 'L': '1', 't': '1', 'T': '1',
-      'z': '7', 'Z': '7',
+      'z': '2', 'Z': '2', 'R': '2',
+      'E': '3', 'e': '3',
+      'a': '4', 'A': '4',
       's': '5', 'S': '5',
       'b': '6', 'B': '6',
-      'g': '9', 'G': '9', 'q': '9', 'Q': '9',
-      'a': '4', 'A': '4',
-      'e': '6', 'E': '6',
-      'r': '8', 'R': '8'
+      'g': '9', 'G': '9', 'q': '9', 'Q': '9'
     };
 
     let mapped = "";
-    for (let i = 0; i < clean.length; i++) {
-      const ch = clean[i];
-      if (/\d/.test(ch)) {
-        mapped += ch;
-      } else if (letterToDigit[ch] !== undefined) {
-        mapped += letterToDigit[ch];
-      }
+    for (const ch of clean) {
+      mapped += /\d/.test(ch) ? ch : (letterToDigit[ch] || "");
     }
 
     const match = mapped.match(/[6-9]\d{9}/);
-    if (match) return match[0];
-    return token;
+    return match ? match[0] : "";
   };
+
+  const COMMON_OCR_GARBAGE = [
+    'Rie', 'rie', 'fom', 'shaft', 'awd', 'mem', 'YET', 'fram', 'fon',
+    'bee', 'oem', 'wh', 'oh', 'wf', 'oy', 'eh', 'pen', 'ts', 'IMR', 'mm',
+    'gq', 'ope', 'oase7es0le', 'sassrasets', 'osssrasons', 'sssersorz',
+    'hid', 'd0020is', 'ueaote', 'TER', 'wel', 'RE', 'FW', 'NO', 'SR', 'SL',
+    'OMAR', 'essere', 'wor0rs'
+  ];
 
   const cleanName = (rawName: string): string => {
     if (!rawName) return "";
-    let nameStr = rawName.replace(/[\d|[\](){}#*=._-]+/g, " ").replace(/\s+/g, " ").trim();
-    if (/[\u0900-\u097F]/.test(nameStr)) {
-      const words = nameStr.split(/\s+/).filter((w) => {
-        if (/[\u0900-\u097F]/.test(w)) return true;
-        if (/^[a-zA-Z]{4,}$/.test(w)) return true;
-        return false;
-      });
-      nameStr = words.join(" ").trim();
-    }
-    return nameStr;
+
+    // Remove all garbage words first
+    let cleaned = rawName;
+    COMMON_OCR_GARBAGE.forEach(garbage => {
+      cleaned = cleaned.replace(new RegExp(`\\b${garbage}\\b`, 'gi'), ' ');
+    });
+
+    // Remove OCR noise characters
+    cleaned = cleaned.replace(/[\d|[\](){}#*=._\-]+/g, " ");
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
+
+    // Filter words - keep only valid Hindi/English names
+    const words = cleaned.split(/\s+/).filter(w => {
+      if (!w || w.length < 2) return false;
+      if (/[\u0900-\u097F]/.test(w)) return w.length >= 2; // Hindi
+      if (/^[a-zA-Z]+$/.test(w)) return w.length >= 3;   // English
+      return false;
+    });
+
+    return words.join(" ").trim();
   };
 
-  const cleanAddress = (rawAddress: string, nameToStrip?: string, fatherToStrip?: string, motherToStrip?: string): string => {
+  const cleanAddress = (
+    rawAddress: string,
+    nameToStrip?: string,
+    fatherToStrip?: string,
+    motherToStrip?: string
+  ): string => {
     if (!rawAddress) return "";
+
     let str = rawAddress.trim();
 
-    // Strip student name, father name, and mother name from address if passed
+    // Remove known names
     if (nameToStrip && nameToStrip.length > 2) {
       str = str.replace(new RegExp(nameToStrip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi"), " ");
     }
@@ -157,26 +211,25 @@ export function OcrBulkUploadModal({
       str = str.replace(new RegExp(motherToStrip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi"), " ");
     }
 
-    str = str.replace(/[|।॥_~`^#=|\\]+/g, " ");
-    str = str.replace(/\b(\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4})\b/g, " ");
-    str = str.replace(/\b[6-9]\d{9}\b/g, " ");
-    str = str.replace(/\b\d{1,4}\b/g, " ");
-    str = str.replace(/सामान्य|सामन्य|समान्य|साम्य|साबान्य|जनरल|जनर|general|\bgen\b/gi, " ");
-    str = str.replace(/ओबीसी|ओ\.बी\.सी|ओ०बी०सी०|पिछड़ा|पिछडा|\bobc\b/gi, " ");
-    str = str.replace(/एससी|एस\.सी\.|एस०सी०|अजा|अ\.जा\.|अ०जा०|अनुसूचित जाति|\bsc\b/gi, " ");
-    str = str.replace(/एसटी|एस\.टी\.|एस०टी०|अजजा|अ\.ज\.जा\.|अ०ज०जा०|अनुसूचित जनजाति|\bst\b/gi, " ");
-    str = str.replace(/पु\.?|पुरुष|male|स्त्री\.?|महिला|female/gi, " ");
-    str = str.replace(/\b(wel|RE|FW|NO|SR|SL|S\.?N\.?|P\.?T\.?O\.?|OMAR|ope|gq|fom|shaft|awd|mem|YET|Rie|d0020is|sassrasets|oase7es0le|osssrasons|sssersorz|hid|ts|IMR|mm|pen|bee|oem|wh|oh|wf|oy|eh|essere|wor0rs)\b/gi, " ");
-    str = str.replace(/^[\s\-_|.:,/]+/g, "").trim();
+    // Remove OCR garbage words
+    COMMON_OCR_GARBAGE.forEach(garbage => {
+      str = str.replace(new RegExp(`\\b${garbage}\\b`, 'gi'), ' ');
+    });
 
-    const words = str.split(/\s+/).filter((w) => {
+    // Remove dates, phones, categories, genders
+    str = str.replace(/\b\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4}\b/g, " ");
+    str = str.replace(/\b[6-9]\d{9}\b/g, " ");
+    str = str.replace(/सामान्य|सामन्य|जनरल|general|\bgen\b/gi, " ");
+    str = str.replace(/ओबीसी|\bobc\b|एससी|\bsc\b|एसटी|\bst\b/gi, " ");
+    str = str.replace(/पु\.?|पुरुष|male|स्त्री\.?|महिला|female/gi, " ");
+
+    // Filter and return
+    const words = str.split(/\s+/).filter(w => {
       const cleanWord = w.trim();
-      if (!cleanWord) return false;
-      if (/^\(?\d{6,8}\)?$/.test(cleanWord)) return false;
-      if (/[\u0900-\u097F]/.test(cleanWord)) return cleanWord.length >= 2;
+      if (!cleanWord || cleanWord.length < 2) return false;
       if (/^\d+$/.test(cleanWord)) return false;
-      if (cleanWord.length >= 4) return true;
-      return false;
+      if (/[\u0900-\u097F]/.test(cleanWord)) return true;
+      return /^[a-zA-Z]+$/.test(cleanWord) && cleanWord.length >= 3;
     });
 
     return words.join(" ").trim();
@@ -339,12 +392,23 @@ export function OcrBulkUploadModal({
       }
     });
 
-    if (!obj.admission_date && dateMatches.length >= 1) {
-      obj.admission_date = dateMatches[0].text;
+
+    // When setting dates in parseRegisterLine:
+    if (dateMatches.length >= 1) {
+      const validated = validateAndFixDate(dateMatches[0].text);
+      if (validated) obj.admission_date = validated;
     }
-    if (!obj.dateOfBirth && dateMatches.length >= 2) {
-      obj.dateOfBirth = dateMatches[1].text;
+    if (dateMatches.length >= 2) {
+      const validated = validateAndFixDate(dateMatches[1].text);
+      if (validated) obj.dateOfBirth = validated;
     }
+
+    // if (!obj.admission_date && dateMatches.length >= 1) {
+    //   obj.admission_date = dateMatches[0].text;
+    // }
+    // if (!obj.dateOfBirth && dateMatches.length >= 2) {
+    //   obj.dateOfBirth = dateMatches[1].text;
+    // }
 
     if (recoveredPhone) {
       obj.parentPhone = recoveredPhone;
