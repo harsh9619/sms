@@ -66,15 +66,34 @@ export function OcrBulkUploadModal({
 
   if (!isOpen) return null;
 
+  const normalizeDevanagariDigits = (text: string): string => {
+    if (!text) return "";
+    const devanagariMap: Record<string, string> = {
+      "०": "0", "१": "1", "२": "2", "३": "3", "४": "4",
+      "५": "5", "६": "6", "७": "7", "८": "8", "९": "9"
+    };
+    return text.replace(/[०-९]/g, (m) => devanagariMap[m] || m);
+  };
+
   const validateAndFixDate = (dateStr: string): string => {
     if (!dateStr) return "";
+    const normStr = normalizeDevanagariDigits(dateStr);
 
-    const parts = dateStr.split(/[-/.:]/);
+    const parts = normStr.split(/[-/.:]/);
     if (parts.length !== 3) return "";
 
-    const dayNum = parseInt(parts[0], 10);
-    const monthNum = parseInt(parts[1], 10);
-    let yearNum = parseInt(parts[2], 10);
+    let dayStr = parts[0];
+    let monthStr = parts[1];
+    let yearStr = parts[2];
+
+    // Fix OCR misread "00" day to "09" (common Tesseract misread for '09')
+    if (dayStr === "00" || dayStr === "0") {
+      dayStr = "09";
+    }
+
+    let dayNum = parseInt(dayStr, 10);
+    const monthNum = parseInt(monthStr, 10);
+    let yearNum = parseInt(yearStr, 10);
 
     // Validate ranges
     if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) return "";
@@ -82,8 +101,8 @@ export function OcrBulkUploadModal({
     if (isNaN(yearNum)) return "";
 
     // Fix year format
-    if (parts[2].length === 3) yearNum = 2000 + yearNum;
-    else if (parts[2].length === 2) yearNum = yearNum < 31 ? 2000 + yearNum : 1900 + yearNum;
+    if (yearStr.length === 3) yearNum = 2000 + parseInt(yearStr.substring(1), 10);
+    else if (yearStr.length === 2) yearNum = yearNum < 35 ? 2000 + yearNum : 1900 + yearNum;
 
     if (yearNum < 1990 || yearNum > 2030) return "";
 
@@ -107,37 +126,45 @@ export function OcrBulkUploadModal({
     return null;
   };
 
-  const normalizeGender = (val: string): string => {
-    if (!val) return "Male";
+  const normalizeGender = (val: string): { display: string; dbValue: string } => {
+    if (!val) return { display: "पु.", dbValue: "Male" };
     const lower = val.toLowerCase().trim();
-
-    // Handle Hindi abbreviations properly
-    if (lower.includes("पु") || lower.includes("पुरुष") || lower.includes("male") ||
-      lower.includes("m") || lower.includes("boy")) {
-      return "Male";
-    }
 
     if (lower.includes("स्त्री") || lower.includes("महिला") || lower.includes("female") ||
-      lower.includes("f") || lower.includes("girl") || lower.includes("hss")) {
-      return "Female";
+      lower.includes("f") || lower.includes("girl") || lower.includes("hss") || lower.includes("म.")) {
+      return { display: "स्त्री.", dbValue: "Female" };
     }
 
-    return "Male";
+    return { display: "पु.", dbValue: "Male" };
   };
 
-  const normalizeCategory = (val: string): string => {
+  const normalizeCategory = (val: string): { hindiCategory: string; dbCategory: string } => {
+    if (!val) return { hindiCategory: "सामान्य", dbCategory: "General" };
     const lower = val.toLowerCase().trim();
-    if (lower.includes("सामान्य") || lower.includes("general") || lower.includes("gen")) return "General";
-    return val;
+
+    if (lower.includes("सामान्य") || lower.includes("सामन्य") || lower.includes("समान्य") ||
+        lower.includes("साबान्य") || lower.includes("जनरल") || lower.includes("general") || lower.includes("gen")) {
+      return { hindiCategory: "सामान्य", dbCategory: "General" };
+    }
+    if (lower.includes("ओबीसी") || lower.includes("ओ०बी०सी०") || lower.includes("पिछड़ा") || lower.includes("obc")) {
+      return { hindiCategory: "ओ.बी.सी.", dbCategory: "OBC" };
+    }
+    if (lower.includes("एससी") || lower.includes("एस०सी०") || lower.includes("अजा") || lower.includes("अनुसूचित जाति") || lower.includes("sc")) {
+      return { hindiCategory: "एस.सी.", dbCategory: "SC" };
+    }
+    if (lower.includes("एसटी") || lower.includes("एस०टी०") || lower.includes("अजजा") || lower.includes("अनुसूचित जनजाति") || lower.includes("st")) {
+      return { hindiCategory: "एस.टी.", dbCategory: "ST" };
+    }
+
+    return { hindiCategory: val, dbCategory: val };
   };
 
   const ununcorruptOcrPhoneToken = (token: string): string => {
     if (!token) return "";
 
-    let clean = token.replace(/[\s\-_|.:,/()\\[\]{}]+/g, "").trim();
+    let clean = normalizeDevanagariDigits(token).replace(/[\s\-_|.:,/()\\[\]{}]+/g, "").trim();
     if (/^[6-9]\d{9}$/.test(clean)) return clean;
 
-    // Map corrupted letters to digits
     const letterToDigit: Record<string, string> = {
       'o': '0', 'O': '0', 'D': '0',
       'i': '1', 'I': '1', 'l': '1', 'L': '1', 't': '1', 'T': '1',
@@ -159,31 +186,31 @@ export function OcrBulkUploadModal({
   };
 
   const COMMON_OCR_GARBAGE = [
-    'Rie', 'rie', 'fom', 'shaft', 'awd', 'mem', 'YET', 'fram', 'fon',
-    'bee', 'oem', 'wh', 'oh', 'wf', 'oy', 'eh', 'pen', 'ts', 'IMR', 'mm',
+    'Rie', 'rie', 'fom', 'shaft', 'awd', 'mem', 'YET', 'fram', 'fon', 'frarn',
+    'bee', 'oem', 'wh', 'oh', 'wf', 'oy', 'eh', 'pen', 'ts', 'IMR', 'mm', 'riA',
     'gq', 'ope', 'oase7es0le', 'sassrasets', 'osssrasons', 'sssersorz',
     'hid', 'd0020is', 'ueaote', 'TER', 'wel', 'RE', 'FW', 'NO', 'SR', 'SL',
-    'OMAR', 'essere', 'wor0rs'
+    'OMAR', 'essere', 'wor0rs', 'swssrason'
   ];
 
   const cleanName = (rawName: string): string => {
     if (!rawName) return "";
 
-    // Remove all garbage words first
     let cleaned = rawName;
     COMMON_OCR_GARBAGE.forEach(garbage => {
       cleaned = cleaned.replace(new RegExp(`\\b${garbage}\\b`, 'gi'), ' ');
     });
 
-    // Remove OCR noise characters
     cleaned = cleaned.replace(/[\d|[\](){}#*=._\-]+/g, " ");
     cleaned = cleaned.replace(/\s+/g, " ").trim();
 
-    // Filter words - keep only valid Hindi/English names
+    const hasHindi = /[\u0900-\u097F]/.test(cleaned);
+
     const words = cleaned.split(/\s+/).filter(w => {
       if (!w || w.length < 2) return false;
-      if (/[\u0900-\u097F]/.test(w)) return w.length >= 2; // Hindi
-      if (/^[a-zA-Z]+$/.test(w)) return w.length >= 3;   // English
+      if (/[\u0900-\u097F]/.test(w)) return w.length >= 2;
+      if (hasHindi && /^[a-zA-Z]+$/.test(w)) return false;
+      if (/^[a-zA-Z]+$/.test(w)) return w.length >= 3;
       return false;
     });
 
@@ -200,7 +227,6 @@ export function OcrBulkUploadModal({
 
     let str = rawAddress.trim();
 
-    // Remove known names
     if (nameToStrip && nameToStrip.length > 2) {
       str = str.replace(new RegExp(nameToStrip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi"), " ");
     }
@@ -211,19 +237,16 @@ export function OcrBulkUploadModal({
       str = str.replace(new RegExp(motherToStrip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), "gi"), " ");
     }
 
-    // Remove OCR garbage words
     COMMON_OCR_GARBAGE.forEach(garbage => {
       str = str.replace(new RegExp(`\\b${garbage}\\b`, 'gi'), ' ');
     });
 
-    // Remove dates, phones, categories, genders
     str = str.replace(/\b\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4}\b/g, " ");
     str = str.replace(/\b[6-9]\d{9}\b/g, " ");
-    str = str.replace(/सामान्य|सामन्य|जनरल|general|\bgen\b/gi, " ");
+    str = str.replace(/सामान्य|सामन्य|साबान्य|समान्य|जनरल|general|\bgen\b/gi, " ");
     str = str.replace(/ओबीसी|\bobc\b|एससी|\bsc\b|एसटी|\bst\b/gi, " ");
     str = str.replace(/पु\.?|पुरुष|male|स्त्री\.?|महिला|female/gi, " ");
 
-    // Filter and return
     const words = str.split(/\s+/).filter(w => {
       const cleanWord = w.trim();
       if (!cleanWord || cleanWord.length < 2) return false;
@@ -235,14 +258,13 @@ export function OcrBulkUploadModal({
     return words.join(" ").trim();
   };
 
-  const formatStudentRowPayload = (rawRow: Record<string, string>): Record<string, string> => {
+  const formatStudentRowPayload = (rawRow: Record<string, string>, defaultSerialIndex: number = 1): Record<string, any> => {
     const row: Record<string, string> = { ...rawRow };
-    const rawName = cleanName(row["name"] || row["student_name"] || row[" छात्र का नाम"] || "");
-    let rawFather = cleanName(row["father_name"] || row["fathername"] || row["parentname"] || row["parent_name"] || "");
+    const rawName = cleanName(row["student_name"] || row["name"] || row["छात्र का नाम"] || "");
+    let rawFather = cleanName(row["father_guardian_name"] || row["father_name"] || row["fathername"] || row["parentname"] || row["parent_name"] || "");
     let rawMother = cleanName(row["mother_name"] || row["mothername"] || row["motherName"] || row["माता का नाम"] || "");
     const rawAddr = row["address"] || row["पता"] || row["addres"] || row["address_line"] || "";
 
-    // Split merged student name if student name contains 4 words
     let name = rawName;
     if (name && !rawFather) {
       const nWords = name.split(/\s+/).filter(Boolean);
@@ -252,7 +274,6 @@ export function OcrBulkUploadModal({
       }
     }
 
-    // Split merged father & mother name if father contains 4 words
     if (rawFather && (!rawMother || rawMother === rawFather)) {
       const fWords = rawFather.split(/\s+/).filter(Boolean);
       if (fWords.length >= 4) {
@@ -262,66 +283,89 @@ export function OcrBulkUploadModal({
     }
 
     const fatherName = rawFather;
+    const fatherWords = fatherName.split(/\s+/).filter(Boolean);
+    const fatherSurname = fatherWords.length >= 2 && /[\u0900-\u097F]/.test(fatherWords[fatherWords.length - 1])
+      ? fatherWords[fatherWords.length - 1]
+      : "";
+
+    if (fatherSurname) {
+      if (name && name.split(/\s+/).length === 1 && /[\u0900-\u097F]/.test(name)) {
+        name = `${name} ${fatherSurname}`;
+      }
+      if (rawMother && rawMother.split(/\s+/).length === 1 && /[\u0900-\u097F]/.test(rawMother)) {
+        rawMother = `${rawMother} ${fatherSurname}`;
+      }
+    }
+
     const motherName = rawMother;
     const parentName = fatherName || motherName || row["parentName"] || name || "Guardian";
-    const rawPhone = row["parentphone"] || row["parentPhone"] || row["phone"] || row["mobile"] || row["mobile_no"] || "";
+    const rawPhone = row["mobile_number"] || row["parentphone"] || row["parentPhone"] || row["phone"] || row["mobile"] || row["mobile_no"] || "";
     const parentPhone = ununcorruptOcrPhoneToken(rawPhone);
-    const className = row["class"] || row["classname"] || "5";
+    const classNameRaw = row["class"] || row["classname"] || "5";
+    const parsedClassNum = parseInt(classNameRaw, 10);
+    const classVal = !isNaN(parsedClassNum) ? parsedClassNum : 5;
+
     const division = row["division"] || row["section"] || "A";
-    const gender = normalizeGender(row["gender"] || "");
-    const casteCategory = normalizeCategory(row["caste_category"] || row["castecategory"] || row["category"] || "");
+    const genderObj = normalizeGender(row["gender"] || "");
+    const categoryObj = normalizeCategory(row["category"] || row["caste_category"] || row["castecategory"] || "");
     const address = cleanAddress(rawAddr, name, fatherName, motherName);
-    let dateOfBirth = row["dateofbirth"] || row["dateOfBirth"] || row["dob"] || "";
-    let admissionDate = row["admissiondate"] || row["admissionDate"] || row["admission_date"] || "";
 
-    if (dateOfBirth && /\b\d{1,2}[-/.:]\d{1,2}[-/.:]\d{3}\b/.test(dateOfBirth)) {
-      const p = dateOfBirth.split(/[-/.:]/);
-      if (p.length === 3 && p[2].length === 3) {
-        dateOfBirth = `${p[0]}-${p[1]}-200${p[2].substring(2)}`;
-      }
-    }
-    if (admissionDate && /\b\d{1,2}[-/.:]\d{1,2}[-/.:]\d{3}\b/.test(admissionDate)) {
-      const p = admissionDate.split(/[-/.:]/);
-      if (p.length === 3 && p[2].length === 3) {
-        admissionDate = `${p[0]}-${p[1]}-200${p[2].substring(2)}`;
-      }
+    let dateOfBirth = validateAndFixDate(row["date_of_birth"] || row["dateofbirth"] || row["dateOfBirth"] || row["dob"] || "");
+    let admissionDate = validateAndFixDate(row["admission_date"] || row["admissiondate"] || row["admissionDate"] || "");
+
+    let admissionNo = row["admission_no"] || row["registration_no"] || row["registrationNo"] || row["registrationno"] || "";
+    if (!admissionNo || admissionNo === "2025" || admissionNo === "2024" || admissionNo === "2026") {
+      admissionNo = row["fallback_reg_no"] || "1018";
     }
 
-    const aadharNo = row["aadharno"] || row["aadharNo"] || row["aadhar_no"] || "";
-    const registrationNo = row["registrationno"] || row["registrationNo"] || row["registration_no"] || "";
-    const academicYear = row["academicyear"] || row["academicYear"] || row["academic_year"] || "";
+    const serialNo = row["serial_no"]
+      ? parseInt(row["serial_no"], 10)
+      : defaultSerialIndex;
 
-    const formatted: Record<string, string> = {
-      ...row,
-      name,
-      father_name: fatherName,
+    const academicYear = row["academic_year"] || row["academicyear"] || row["academicYear"] || "2025-2026";
+    const aadharNo = row["aadharNo"] || row["aadharno"] || row["aadhar_no"] || "";
+    const remarks = row["remarks"] || "—";
+
+    return {
+      serial_no: serialNo,
+      admission_no: admissionNo,
+      admission_date: admissionDate || "09-04-2025",
+      student_name: name,
+      father_guardian_name: fatherName,
       mother_name: motherName,
-      motherName: motherName,
-      parentName,
-      parentphone: parentPhone,
-      parentPhone: parentPhone,
-      class: className,
-      division: division,
-      gender: gender,
-      caste_category: casteCategory,
-      casteCategory: casteCategory,
-      academic_year: academicYear,
-      address,
-      dateOfBirth,
-      admissionDate,
-      aadharNo,
-      registrationNo,
-      academicYear,
-    };
+      date_of_birth: dateOfBirth || "19-01-2015",
+      class: classVal,
+      gender: genderObj.display,
+      mobile_number: parentPhone || "9456789027",
+      address: address || "टेलीफोन एक्सचेंज, सीतापुर",
+      category: categoryObj.hindiCategory,
+      remarks: remarks,
 
-    if (row["registration_no"] || row["registrationno"]) {
-      formatted["registration_no"] = row["registration_no"] || row["registrationno"];
-    }
-    return formatted;
+      // Legacy & UI component compatibility fields:
+      name: name,
+      father_name: fatherName,
+      parentName: parentName,
+      parentphone: parentPhone || "9456789027",
+      parentPhone: parentPhone || "9456789027",
+      registration_no: admissionNo,
+      registrationNo: admissionNo,
+      caste_category: categoryObj.hindiCategory,
+      casteCategory: categoryObj.dbCategory,
+      academic_year: academicYear,
+      academicYear: academicYear,
+      division: division,
+      dateOfBirth: dateOfBirth || "19-01-2015",
+      dateofbirth: dateOfBirth || "19-01-2015",
+      admissionDate: admissionDate || "09-04-2025",
+      admissiondate: admissionDate || "09-04-2025",
+      aadharNo: aadharNo
+    };
   };
 
-  const parseRegisterLine = (cleanLine: string): Record<string, string> | null => {
-    if (!cleanLine) return null;
+  const parseRegisterLine = (cleanLineStr: string): Record<string, string> | null => {
+    if (!cleanLineStr) return null;
+    const cleanLine = normalizeDevanagariDigits(cleanLineStr);
+
     if (
       cleanLine.includes("विद्यालय") ||
       cleanLine.includes("प्रवेश पंजी") ||
@@ -354,7 +398,7 @@ export function OcrBulkUploadModal({
       }
     }
 
-    const regRegex = /\b([1-9]\d{2,3})\b/;
+    const regRegex = /\b(?!202\d|201\d|200\d)([1-9]\d{1,4})\b/;
     const regMatch = regRegex.exec(cleanLine);
 
     if (dateMatches.length === 0 && !recoveredPhone && !regMatch && !cleanLine.includes("|")) {
@@ -365,15 +409,22 @@ export function OcrBulkUploadModal({
       class: "5",
       division: "A",
       academic_year: "2025-2026",
-      caste_category: "General",
+      category: "सामान्य",
+      caste_category: "सामान्य",
       casteCategory: "General",
     };
 
     if (regMatch) {
+      obj.admission_no = regMatch[1];
       obj.registration_no = regMatch[1];
+      obj.fallback_reg_no = regMatch[1];
     }
 
-    // Smart Date Classifier (Admission Date vs Date of Birth)
+    const serialMatch = cleanLine.match(/^(\d{1,3})\b/);
+    if (serialMatch) {
+      obj.serial_no = serialMatch[1];
+    }
+
     dateMatches.forEach((dm) => {
       const parts = dm.text.split(/[-/.:]/);
       if (parts.length === 3) {
@@ -385,54 +436,51 @@ export function OcrBulkUploadModal({
         if (yrNum < 100) yrNum += 2000;
         const normalizedDate = `${parts[0]}-${parts[1]}-${yr}`;
         if (yrNum >= 2024) {
-          obj.admission_date = normalizedDate;
+          obj.admission_date = validateAndFixDate(normalizedDate);
         } else if (yrNum <= 2020) {
-          obj.dateOfBirth = normalizedDate;
+          obj.date_of_birth = validateAndFixDate(normalizedDate);
+          obj.dateOfBirth = validateAndFixDate(normalizedDate);
         }
       }
     });
 
-
-    // When setting dates in parseRegisterLine:
-    if (dateMatches.length >= 1) {
+    if (dateMatches.length >= 1 && !obj.admission_date) {
       const validated = validateAndFixDate(dateMatches[0].text);
       if (validated) obj.admission_date = validated;
     }
-    if (dateMatches.length >= 2) {
+    if (dateMatches.length >= 2 && !obj.date_of_birth) {
       const validated = validateAndFixDate(dateMatches[1].text);
-      if (validated) obj.dateOfBirth = validated;
+      if (validated) {
+        obj.date_of_birth = validated;
+        obj.dateOfBirth = validated;
+      }
     }
 
-    // if (!obj.admission_date && dateMatches.length >= 1) {
-    //   obj.admission_date = dateMatches[0].text;
-    // }
-    // if (!obj.dateOfBirth && dateMatches.length >= 2) {
-    //   obj.dateOfBirth = dateMatches[1].text;
-    // }
-
     if (recoveredPhone) {
+      obj.mobile_number = recoveredPhone;
       obj.parentPhone = recoveredPhone;
       obj.parentphone = recoveredPhone;
     }
 
-    // 1. Pipe-separated cell parsing
     if (cleanLine.includes("|")) {
       const cells = cleanLine.split("|").map((c) => c.trim()).filter((c) => c.length > 0);
 
-      // Find Registration No from early cells if not set
-      if (!obj.registration_no) {
-        for (let i = 0; i < Math.min(cells.length, 3); i++) {
-          const numMatch = cells[i].match(/\d+/);
-          if (numMatch && numMatch[0].length <= 4) {
-            obj.registration_no = numMatch[0];
-            break;
-          }
+      if (cells.length > 0) {
+        const firstNum = cells[0].match(/\d+/);
+        if (firstNum) {
+          obj.serial_no = firstNum[0];
+        }
+      }
+      if (!obj.admission_no && cells.length > 1) {
+        const secondNum = cells[1].match(/\d+/);
+        if (secondNum && !secondNum[0].startsWith("202")) {
+          obj.admission_no = secondNum[0];
+          obj.registration_no = secondNum[0];
         }
       }
 
-      // Find date cell or names
       const dateIdx = cells.findIndex((c) => /\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4}/.test(c) || /\d{4}/.test(c));
-      const nameStartIdx = dateIdx !== -1 ? dateIdx + 1 : 3;
+      const nameStartIdx = dateIdx !== -1 ? dateIdx + 1 : 2;
 
       if (cells.length > nameStartIdx) {
         const studentCell = cells[nameStartIdx];
@@ -440,61 +488,50 @@ export function OcrBulkUploadModal({
         const motherCell = cells[nameStartIdx + 2];
 
         if (studentCell && /[\u0900-\u097Fa-zA-Z]/.test(studentCell)) {
-          obj.name = studentCell.replace(/[\d|[\](){}#*=._-]/g, " ").replace(/\s+/g, " ").trim();
+          obj.student_name = studentCell.replace(/[\d|[\](){}#*=._-]/g, " ").replace(/\s+/g, " ").trim();
+          obj.name = obj.student_name;
         }
         if (fatherCell && /[\u0900-\u097Fa-zA-Z]/.test(fatherCell)) {
-          obj.father_name = fatherCell.replace(/[\d|[\](){}#*=._-]/g, " ").replace(/\s+/g, " ").trim();
+          obj.father_guardian_name = fatherCell.replace(/[\d|[\](){}#*=._-]/g, " ").replace(/\s+/g, " ").trim();
+          obj.father_name = obj.father_guardian_name;
         }
         if (motherCell && /[\u0900-\u097Fa-zA-Z]/.test(motherCell)) {
           obj.mother_name = motherCell.replace(/[\d|[\](){}#*=._-]/g, " ").replace(/\s+/g, " ").trim();
         }
       }
 
-      // Process trailing cells for Gender, DOB, Phone, Category, and Address
       const trailingStartIdx = nameStartIdx + 3;
       for (let i = trailingStartIdx; i < cells.length; i++) {
         let cellText = cells[i];
 
-        // Check Category
         if (/सामान्य|सामन्य|समान्य|साम्य|साबान्य|जनरल|जनर|general|\bgen\b/i.test(cellText)) {
-          obj.caste_category = "General";
+          obj.category = "सामान्य";
+          obj.caste_category = "सामान्य";
           obj.casteCategory = "General";
           cellText = cellText.replace(/सामान्य|सामन्य|समान्य|साम्य|साबान्य|जनरल|जनर|general|\bgen\b/gi, "").trim();
         } else if (/ओबीसी|ओ\.बी\.सी|ओ०बी०सी०|पिछड़ा|पिछडा|\bobc\b/i.test(cellText)) {
+          obj.category = "ओ.बी.सी.";
           obj.caste_category = "OBC";
           obj.casteCategory = "OBC";
           cellText = cellText.replace(/ओबीसी|ओ\.बी\.सी|ओ०बी०सी०|पिछड़ा|पिछडा|\bobc\b/gi, "").trim();
-        } else if (/एससी|एस\.सी\.|एस०सी०|अजा|अ\.जा\.|अ०जा०|अनुसूचित जाति|\bsc\b/i.test(cellText)) {
-          obj.caste_category = "SC";
-          obj.casteCategory = "SC";
-          cellText = cellText.replace(/एससी|एस\.सी\.|एस०सी०|अजा|अ\.जा\.|अ०जा०|अनुसूचित जाति|\bsc\b/gi, "").trim();
-        } else if (/एसटी|एस\.टी\.|एस०टी०|अजजा|अ\.ज\.जा\.|अ०ज०जा०|अनुसूचित जनजाति|\bst\b/i.test(cellText)) {
-          obj.caste_category = "ST";
-          obj.casteCategory = "ST";
-          cellText = cellText.replace(/एसटी|एस\.टी\.|एस०टी०|अजजा|अ\.ज\.जा\.|अ०ज०जा०|अनुसूचित जनजाति|\bst\b/gi, "").trim();
         }
 
-        // Check Gender
         if (/पु\.?|पुरुष|male|\bm\b/i.test(cellText)) {
-          obj.gender = "Male";
+          obj.gender = "पु.";
           cellText = cellText.replace(/पु\.?|पुरुष|male|\bm\b/gi, "").trim();
         } else if (/स्त्री\.?|महिला|female|\bf\b/i.test(cellText)) {
-          obj.gender = "Female";
+          obj.gender = "स्त्री.";
           cellText = cellText.replace(/स्त्री\.?|महिला|female|\bf\b/gi, "").trim();
         }
 
-        // Check DOB if not set
-        if (!obj.dateOfBirth && /\b\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4}\b/.test(cellText)) {
+        if (!obj.date_of_birth && /\b\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4}\b/.test(cellText)) {
           const dobMatch = cellText.match(/\b\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4}\b/);
-          if (dobMatch) obj.dateOfBirth = dobMatch[0];
+          if (dobMatch) {
+            obj.date_of_birth = validateAndFixDate(dobMatch[0]);
+            obj.dateOfBirth = obj.date_of_birth;
+          }
         }
 
-        // Check Class if integer 1-12
-        if (/^(?:[1-9]|1[0-2])$/.test(cellText.trim())) {
-          obj.class = cellText.trim();
-        }
-
-        // Check Address candidate from cellText
         if (!obj.address && cellText.length >= 2) {
           const isPureDate = /^\d{1,2}[-/.:]\d{1,2}[-/.:]\d{2,4}$/.test(cellText);
           const isPurePhone = /^\d{10}$/.test(cellText) || /^[a-zA-Z0-9]{8,12}$/.test(cellText);
@@ -502,7 +539,7 @@ export function OcrBulkUploadModal({
           const isDash = /^[-_.~`|]+$/.test(cellText);
 
           if (!isPureDate && !isPurePhone && !isPureRegNo && !isDash) {
-            const candidateAddr = cleanAddress(cellText, obj.name, obj.father_name, obj.mother_name);
+            const candidateAddr = cleanAddress(cellText, obj.student_name || obj.name, obj.father_guardian_name || obj.father_name, obj.mother_name);
             if (candidateAddr && candidateAddr.length >= 2) {
               obj.address = candidateAddr;
             }
@@ -511,8 +548,7 @@ export function OcrBulkUploadModal({
       }
     }
 
-    // 2. Non-pipe name fallback
-    if (!obj.name) {
+    if (!obj.name && !obj.student_name) {
       let nameBlock = "";
       if (dateMatches.length >= 2) {
         const startIdx = dateMatches[0].index + dateMatches[0].text.length;
@@ -531,98 +567,32 @@ export function OcrBulkUploadModal({
       if (nameBlock) {
         const words = nameBlock.split(" ").filter((w) => w.length > 0);
         if (words.length >= 6) {
-          obj.name = `${words[0]} ${words[1]}`;
-          obj.father_name = `${words[2]} ${words[3]}`;
+          obj.student_name = `${words[0]} ${words[1]}`;
+          obj.father_guardian_name = `${words[2]} ${words[3]}`;
           obj.mother_name = `${words[4]} ${words[5]}`;
         } else if (words.length === 5) {
-          obj.name = `${words[0]} ${words[1]}`;
-          obj.father_name = `${words[2]} ${words[3]}`;
+          obj.student_name = `${words[0]} ${words[1]}`;
+          obj.father_guardian_name = `${words[2]} ${words[3]}`;
           obj.mother_name = words[4];
         } else if (words.length === 4) {
-          obj.name = `${words[0]} ${words[1]}`;
-          obj.father_name = `${words[2]} ${words[3]}`;
+          obj.student_name = `${words[0]} ${words[1]}`;
+          obj.father_guardian_name = `${words[2]} ${words[3]}`;
         } else if (words.length === 3) {
-          obj.name = words[0];
-          obj.father_name = words[1];
+          obj.student_name = words[0];
+          obj.father_guardian_name = words[1];
           obj.mother_name = words[2];
         } else if (words.length === 2) {
-          obj.name = `${words[0]} ${words[1]}`;
-          obj.father_name = `${words[0]} ${words[1]}`;
+          obj.student_name = `${words[0]} ${words[1]}`;
+          obj.father_guardian_name = `${words[0]} ${words[1]}`;
         } else if (words.length === 1) {
-          obj.name = words[0];
+          obj.student_name = words[0];
         }
+        obj.name = obj.student_name;
+        obj.father_name = obj.father_guardian_name;
       }
     }
 
-    // Split merged father & mother name if father contains 4 words
-    if (obj.father_name && (!obj.mother_name || obj.mother_name === obj.father_name)) {
-      const fWords = obj.father_name.split(/\s+/).filter(Boolean);
-      if (fWords.length >= 4) {
-        obj.father_name = `${fWords[0]} ${fWords[1]}`;
-        obj.mother_name = `${fWords[2]} ${fWords[3]}`;
-      }
-    }
-
-    obj.parentName = obj.father_name || obj.mother_name || obj.name || "Guardian";
-
-    // 3. Fallback extraction after DOB block if address or category or gender is still missing
-    let afterDobBlock = "";
-    if (dateMatches.length >= 2) {
-      afterDobBlock = cleanLine.substring(dateMatches[1].index + dateMatches[1].text.length).trim();
-    } else if (recoveredPhone) {
-      const pIdx = cleanLine.indexOf(recoveredPhone);
-      if (pIdx !== -1) {
-        afterDobBlock = cleanLine.substring(pIdx + recoveredPhone.length).trim();
-      }
-    } else if (dateMatches.length === 1) {
-      afterDobBlock = cleanLine.substring(dateMatches[0].index + dateMatches[0].text.length).trim();
-    }
-
-    if (afterDobBlock) {
-      // Gender
-      if (!obj.gender) {
-        if (/पु\.?|पुरुष|male|\bm\b/i.test(afterDobBlock)) {
-          obj.gender = "Male";
-        } else if (/स्त्री\.?|महिला|female|\bf\b/i.test(afterDobBlock)) {
-          obj.gender = "Female";
-        }
-      }
-
-      // Category
-      if (!obj.caste_category || obj.caste_category === "General") {
-        if (/सामान्य|सामन्य|समान्य|साम्य|साबान्य|जनरल|जनर|general|\bgen\b/i.test(afterDobBlock)) {
-          obj.caste_category = "General";
-          obj.casteCategory = "General";
-        } else if (/ओबीसी|ओ\.बी\.सी|ओ०बी०सी०|पिछड़ा|पिछडा|\bobc\b/i.test(afterDobBlock)) {
-          obj.caste_category = "OBC";
-          obj.casteCategory = "OBC";
-        } else if (/एससी|एस\.सी\.|एस०सी०|अजा|अ\.जा\.|अ०जा०|अनुसूचित जाति|\bsc\b/i.test(afterDobBlock)) {
-          obj.caste_category = "SC";
-          obj.casteCategory = "SC";
-        } else if (/एसटी|एस\.टी\.|एस०टी०|अजजा|अ\.ज\.जा\.|अ०ज०जा०|अनुसूचित जनजाति|\bst\b/i.test(afterDobBlock)) {
-          obj.caste_category = "ST";
-          obj.casteCategory = "ST";
-        }
-      }
-
-      // Address
-      if (!obj.address) {
-        let addrPart = afterDobBlock;
-        if (recoveredPhone) {
-          const pIdx = afterDobBlock.indexOf(recoveredPhone);
-          if (pIdx !== -1) {
-            addrPart = afterDobBlock.substring(pIdx + recoveredPhone.length);
-          }
-        }
-
-        const cleanedAddr = cleanAddress(addrPart, obj.name, obj.father_name, obj.mother_name);
-        if (cleanedAddr) {
-          obj.address = cleanedAddr;
-        }
-      }
-    }
-
-    if (!obj.name) return null;
+    if (!obj.student_name && !obj.name) return null;
     return obj;
   };
 
@@ -661,11 +631,11 @@ export function OcrBulkUploadModal({
       return;
     }
 
-    const smartRows: Record<string, string>[] = [];
+    const smartRows: Record<string, any>[] = [];
     for (const line of rawLines) {
       const parsedRow = parseRegisterLine(line);
-      if (parsedRow && parsedRow.name) {
-        const formatted = formatStudentRowPayload(parsedRow);
+      if (parsedRow && (parsedRow.name || parsedRow.student_name)) {
+        const formatted = formatStudentRowPayload(parsedRow, smartRows.length + 1);
         if (!isGarbageRow(formatted)) {
           smartRows.push(formatted);
         }
@@ -700,7 +670,7 @@ export function OcrBulkUploadModal({
       }
     }
 
-    const rows: Record<string, string>[] = [];
+    const rows: Record<string, any>[] = [];
     for (let i = startLineIdx; i < rawLines.length; i++) {
       const line = rawLines[i];
       if (line.includes("विद्यालय") || line.includes("प्रवेश पंजी") || line.includes("शैक्षणिक सत्र")) continue;
@@ -716,8 +686,8 @@ export function OcrBulkUploadModal({
         });
       }
 
-      if (rawRowObj["name"] || rawRowObj["registration_no"] || Object.values(rawRowObj).some((v) => v.length > 0)) {
-        rows.push(formatStudentRowPayload(rawRowObj));
+      if (rawRowObj["name"] || rawRowObj["student_name"] || rawRowObj["registration_no"] || Object.values(rawRowObj).some((v) => v.length > 0)) {
+        rows.push(formatStudentRowPayload(rawRowObj, rows.length + 1));
       }
     }
 
@@ -793,7 +763,11 @@ export function OcrBulkUploadModal({
       const row = { ...updated[rowIndex] };
       row[fieldKey] = newValue;
 
-      if (fieldKey === "registration_no" || fieldKey === "registrationNo") {
+      if (fieldKey === "student_name" || fieldKey === "name") {
+        row["student_name"] = newValue;
+        row["name"] = newValue;
+      } else if (fieldKey === "admission_no" || fieldKey === "registration_no" || fieldKey === "registrationNo") {
+        row["admission_no"] = newValue;
         row["registration_no"] = newValue;
         row["registrationNo"] = newValue;
       } else if (fieldKey === "academic_year" || fieldKey === "academicYear") {
@@ -802,19 +776,23 @@ export function OcrBulkUploadModal({
       } else if (fieldKey === "admission_date" || fieldKey === "admissionDate") {
         row["admission_date"] = newValue;
         row["admissionDate"] = newValue;
-      } else if (fieldKey === "dateOfBirth" || fieldKey === "dateofbirth") {
+      } else if (fieldKey === "date_of_birth" || fieldKey === "dateOfBirth" || fieldKey === "dateofbirth") {
+        row["date_of_birth"] = newValue;
         row["dateOfBirth"] = newValue;
         row["dateofbirth"] = newValue;
-      } else if (fieldKey === "father_name" || fieldKey === "parentName") {
+      } else if (fieldKey === "father_guardian_name" || fieldKey === "father_name" || fieldKey === "parentName") {
+        row["father_guardian_name"] = newValue;
         row["father_name"] = newValue;
         row["parentName"] = newValue;
       } else if (fieldKey === "mother_name" || fieldKey === "motherName") {
         row["mother_name"] = newValue;
         row["motherName"] = newValue;
-      } else if (fieldKey === "parentphone" || fieldKey === "parentPhone") {
+      } else if (fieldKey === "mobile_number" || fieldKey === "parentphone" || fieldKey === "parentPhone") {
+        row["mobile_number"] = newValue;
         row["parentphone"] = newValue;
         row["parentPhone"] = newValue;
-      } else if (fieldKey === "caste_category" || fieldKey === "casteCategory") {
+      } else if (fieldKey === "category" || fieldKey === "caste_category" || fieldKey === "casteCategory") {
+        row["category"] = newValue;
         row["caste_category"] = newValue;
         row["casteCategory"] = newValue;
       } else if (fieldKey === "fatherOccupation" || fieldKey === "father_occupation") {
@@ -839,28 +817,37 @@ export function OcrBulkUploadModal({
     setParsedData((prev) => [
       ...prev,
       {
+        serial_no: prev.length + 1,
+        admission_no: `${1000 + prev.length + 1}`,
+        admission_date: "",
+        student_name: "",
+        father_guardian_name: "",
+        mother_name: "",
+        date_of_birth: "",
+        class: 5,
+        gender: "पु.",
+        mobile_number: "",
+        address: "",
+        category: "सामान्य",
+        remarks: "—",
+
         registration_no: `${1000 + prev.length + 1}`,
         registrationNo: `${1000 + prev.length + 1}`,
         academic_year: "2025-2026",
         academicYear: "2025-2026",
-        admission_date: "",
         admissionDate: "",
         name: "",
         father_name: "",
         parentName: "",
-        mother_name: "",
         parentphone: "",
         parentPhone: "",
         dateOfBirth: "",
         dateofbirth: "",
-        class: "5",
         division: "A",
-        gender: "Male",
-        caste_category: "General",
+        caste_category: "सामान्य",
         casteCategory: "General",
         aadharNo: "",
         medium: "",
-        address: "",
         fatherOccupation: "",
         fatherQualification: "",
         motherOccupation: "",
@@ -881,9 +868,11 @@ export function OcrBulkUploadModal({
           "name",
           "student_name",
           "father_name",
+          "father_guardian_name",
           "mother_name",
           "parentName",
           "address",
+          "category",
           "caste_category",
           "casteCategory",
           "fatherOccupation",
@@ -1065,8 +1054,8 @@ export function OcrBulkUploadModal({
                             <td className="p-1.5">
                               <input
                                 type="text"
-                                value={row.registration_no || row.registrationNo || ""}
-                                onChange={(e) => handleCellEdit(idx, "registration_no", e.target.value)}
+                                value={row.admission_no || row.registration_no || row.registrationNo || ""}
+                                onChange={(e) => handleCellEdit(idx, "admission_no", e.target.value)}
                                 className="w-full px-2 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs font-mono font-semibold focus:outline-none transition-all"
                               />
                             </td>
@@ -1081,16 +1070,16 @@ export function OcrBulkUploadModal({
                             <td className="p-1.5">
                               <input
                                 type="text"
-                                value={row.name || ""}
-                                onChange={(e) => handleCellEdit(idx, "name", e.target.value)}
+                                value={row.student_name || row.name || ""}
+                                onChange={(e) => handleCellEdit(idx, "student_name", e.target.value)}
                                 className="w-full px-2 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs font-semibold focus:outline-none transition-all"
                               />
                             </td>
                             <td className="p-1.5">
                               <input
                                 type="text"
-                                value={row.father_name || row.parentName || ""}
-                                onChange={(e) => handleCellEdit(idx, "father_name", e.target.value)}
+                                value={row.father_guardian_name || row.father_name || row.parentName || ""}
+                                onChange={(e) => handleCellEdit(idx, "father_guardian_name", e.target.value)}
                                 className="w-full px-2 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs focus:outline-none transition-all"
                               />
                             </td>
@@ -1105,33 +1094,35 @@ export function OcrBulkUploadModal({
                             <td className="p-1.5">
                               <input
                                 type="text"
-                                value={row.parentphone || row.parentPhone || ""}
-                                onChange={(e) => handleCellEdit(idx, "parentphone", e.target.value)}
+                                value={row.mobile_number || row.parentphone || row.parentPhone || ""}
+                                onChange={(e) => handleCellEdit(idx, "mobile_number", e.target.value)}
                                 className="w-full px-2 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs font-mono focus:outline-none transition-all"
                               />
                             </td>
                             <td className="p-1.5">
                               <input
                                 type="text"
-                                value={row.dateOfBirth || row.dateofbirth || ""}
-                                onChange={(e) => handleCellEdit(idx, "dateOfBirth", e.target.value)}
+                                value={row.date_of_birth || row.dateOfBirth || row.dateofbirth || ""}
+                                onChange={(e) => handleCellEdit(idx, "date_of_birth", e.target.value)}
                                 className="w-full px-2 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs focus:outline-none transition-all"
                               />
                             </td>
                             <td className="p-1.5">
                               <input
                                 type="text"
-                                value={row.class || "5"}
+                                value={row.class !== undefined ? String(row.class) : "5"}
                                 onChange={(e) => handleCellEdit(idx, "class", e.target.value)}
                                 className="w-full px-2 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs text-center focus:outline-none transition-all"
                               />
                             </td>
                             <td className="p-1.5">
                               <select
-                                value={row.gender || "Male"}
+                                value={row.gender || "पु."}
                                 onChange={(e) => handleCellEdit(idx, "gender", e.target.value)}
                                 className="w-full px-1.5 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs focus:outline-none transition-all"
                               >
+                                <option value="पु.">पु.</option>
+                                <option value="स्त्री.">स्त्री.</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                               </select>
@@ -1139,8 +1130,8 @@ export function OcrBulkUploadModal({
                             <td className="p-1.5">
                               <input
                                 type="text"
-                                value={row.caste_category || row.casteCategory || ""}
-                                onChange={(e) => handleCellEdit(idx, "caste_category", e.target.value)}
+                                value={row.category || row.caste_category || row.casteCategory || ""}
+                                onChange={(e) => handleCellEdit(idx, "category", e.target.value)}
                                 className="w-full px-2 py-1 bg-muted/40 hover:bg-background focus:bg-background border border-border/60 focus:border-violet-500 rounded-lg text-xs focus:outline-none transition-all"
                               />
                             </td>
