@@ -28,8 +28,10 @@ import {
   RefreshCw,
   Download,
   Shield,
+  Image as ImageIcon,
 } from "lucide-react";
 import { BulkUploadModal } from "../../ui/BulkUploadModal";
+import { OcrBulkUploadModal } from "../../ui/OcrBulkUploadModal";
 import studentService from "../../../Services/student.service";
 
 
@@ -66,6 +68,7 @@ export function StudentsUI({
 }: StudentsUIProps) {
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [showOcrModal, setShowOcrModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<any | null>(null);
 
   useEffect(() => {
@@ -176,7 +179,14 @@ export function StudentsUI({
               variant="outline"
               onClick={() => setShowBulkModal(true)}
             >
-              <Upload className="h-4 w-4 mr-2 text-primary" /> Bulk Upload
+              <Upload className="h-4 w-4 mr-2 text-primary" /> Bulk Upload from Excel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowOcrModal(true)}
+              className="rounded-xl border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 font-semibold shadow-sm"
+            >
+              <ImageIcon className="h-4 w-4 mr-2 text-violet-500" /> Upload from Image
             </Button>
             <Button onClick={handleOpenAddModal}>
               <Plus className="h-4 w-4 mr-2" /> Add Student
@@ -1126,6 +1136,35 @@ export function StudentsUI({
             "address",
           ]}
           sampleRows={{}}
+          onUpload={async (data) => {
+            return studentService.bulkCreateStudents(data);
+          }}
+          onSuccess={() => {
+            if (handleRefresh) {
+              handleRefresh();
+            }
+          }}
+        />
+
+        {/* OCR Image Bulk Upload Modal */}
+        <OcrBulkUploadModal
+          isOpen={showOcrModal}
+          onClose={() => setShowOcrModal(false)}
+          title="Upload Students from Image (OCR)"
+          templateHeaders={[
+            "registration_no",
+            "academic_year",
+            "admission_date",
+            "name",
+            "email",
+            "class",
+            "division",
+            "caste_category",
+            "father_name",
+            "parentPhone",
+            "gender",
+            "address",
+          ]}
           onUpload={async (data) => {
             return studentService.bulkCreateStudents(data);
           }}

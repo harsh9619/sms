@@ -32,31 +32,31 @@ export function capitalizeWords(str: string): string {
 
 export function transliterateHindiToEnglish(text: string): string {
   if (!text) return "";
-  
+
   // Check if string contains Hindi characters. If not, return as is.
   const hasHindi = /[\u0900-\u097F]/.test(text);
   if (!hasHindi) return text;
 
   let result = "";
   const chars = Array.from(text);
-  
+
   for (let i = 0; i < chars.length; i++) {
     const char = chars[i];
     const nextChar = chars[i + 1];
-    
+
     // Check if vowel
     if (VOWELS[char] !== undefined) {
       result += VOWELS[char];
       continue;
     }
-    
+
     // Check if consonant
     if (CONSONANTS[char] !== undefined) {
       const engConsonant = CONSONANTS[char];
-      
+
       // Determine if we need inherent 'a'
       let inherentA = true;
-      
+
       if (nextChar === '्') {
         // Halant suppresses inherent 'a'
         inherentA = false;
@@ -67,35 +67,35 @@ export function transliterateHindiToEnglish(text: string): string {
         // End of word deletes schwa (no inherent 'a')
         inherentA = false;
       }
-      
+
       result += engConsonant + (inherentA ? 'a' : '');
       continue;
     }
-    
+
     // Check if matra
     if (MATRAS[char] !== undefined) {
       result += MATRAS[char];
       continue;
     }
-    
+
     // Check if other diacritic
     if (OTHERS[char] !== undefined) {
       result += OTHERS[char];
       continue;
     }
-    
+
     // Skip halant itself since it's already handled
     if (char === '्') {
       continue;
     }
-    
+
     // Keep other characters as is
     result += char;
   }
-  
+
   const capitalized = result
     .replace(/\s+/g, ' ')
     .trim();
-    
+
   return capitalizeWords(capitalized);
 }
