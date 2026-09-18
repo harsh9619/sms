@@ -29,9 +29,11 @@ import {
   Download,
   Shield,
   Image as ImageIcon,
+  FileSpreadsheet,
 } from "lucide-react";
 import { BulkUploadModal } from "../../ui/BulkUploadModal";
 import { OcrBulkUploadModal } from "../../ui/OcrBulkUploadModal";
+import { OcrCsvUploadModal } from "../../ui/OcrCsvUploadModal";
 import studentService from "../../../Services/student.service";
 
 
@@ -69,6 +71,7 @@ export function StudentsUI({
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
+  const [showOcrCsvModal, setShowOcrCsvModal] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<any | null>(null);
 
   useEffect(() => {
@@ -187,6 +190,13 @@ export function StudentsUI({
               className="rounded-xl border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 font-semibold shadow-sm"
             >
               <ImageIcon className="h-4 w-4 mr-2 text-violet-500" /> Upload from Image
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowOcrCsvModal(true)}
+              className="rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-sm"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" /> OCR to CSV
             </Button>
             <Button onClick={handleOpenAddModal}>
               <Plus className="h-4 w-4 mr-2" /> Add Student
@@ -1165,6 +1175,21 @@ export function StudentsUI({
             "gender",
             "address",
           ]}
+          onUpload={async (data) => {
+            return studentService.bulkCreateStudents(data);
+          }}
+          onSuccess={() => {
+            if (handleRefresh) {
+              handleRefresh();
+            }
+          }}
+        />
+
+        {/* OCR to CSV Modal */}
+        <OcrCsvUploadModal
+          isOpen={showOcrCsvModal}
+          onClose={() => setShowOcrCsvModal(false)}
+          title="OCR Register to CSV Converter"
           onUpload={async (data) => {
             return studentService.bulkCreateStudents(data);
           }}
