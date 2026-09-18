@@ -190,7 +190,7 @@ export function OcrBulkUploadModal({
     'bee', 'oem', 'wh', 'oh', 'wf', 'oy', 'eh', 'pen', 'ts', 'IMR', 'mm', 'riA',
     'gq', 'ope', 'oase7es0le', 'sassrasets', 'osssrasons', 'sssersorz',
     'hid', 'd0020is', 'ueaote', 'TER', 'wel', 'RE', 'FW', 'NO', 'SR', 'SL',
-    'OMAR', 'essere', 'wor0rs', 'swssrason'
+    'OMAR', 'essere', 'wor0rs', 'swssrason', 'owas', 'TEER', 'osc', 'लि के', 'जज'
   ];
 
   const cleanName = (rawName: string): string => {
