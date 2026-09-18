@@ -143,7 +143,7 @@ export function OcrBulkUploadModal({
     const lower = val.toLowerCase().trim();
 
     if (lower.includes("सामान्य") || lower.includes("सामन्य") || lower.includes("समान्य") ||
-        lower.includes("साबान्य") || lower.includes("जनरल") || lower.includes("general") || lower.includes("gen")) {
+      lower.includes("साबान्य") || lower.includes("जनरल") || lower.includes("general") || lower.includes("gen")) {
       return { hindiCategory: "सामान्य", dbCategory: "General" };
     }
     if (lower.includes("ओबीसी") || lower.includes("ओ०बी०सी०") || lower.includes("पिछड़ा") || lower.includes("obc")) {
@@ -318,26 +318,26 @@ export function OcrBulkUploadModal({
       admissionNo = row["fallback_reg_no"] || "1018";
     }
 
-    const serialNo = row["serial_no"]
+    const serialNo = row["serial_no"] && !isNaN(parseInt(row["serial_no"], 10))
       ? parseInt(row["serial_no"], 10)
       : defaultSerialIndex;
 
-    const academicYear = row["academic_year"] || row["academicyear"] || row["academicYear"] || "2025-2026";
+    const academicYear = row["academic_year"] || row["academicyear"] || row["academicYear"] || "";
     const aadharNo = row["aadharNo"] || row["aadharno"] || row["aadhar_no"] || "";
     const remarks = row["remarks"] || "—";
 
     return {
       serial_no: serialNo,
       admission_no: admissionNo,
-      admission_date: admissionDate || "09-04-2025",
+      admission_date: admissionDate || "",
       student_name: name,
       father_guardian_name: fatherName,
       mother_name: motherName,
-      date_of_birth: dateOfBirth || "19-01-2015",
+      date_of_birth: dateOfBirth || "",
       class: classVal,
       gender: genderObj.display,
-      mobile_number: parentPhone || "9456789027",
-      address: address || "टेलीफोन एक्सचेंज, सीतापुर",
+      mobile_number: parentPhone || "",
+      address: address || "",
       category: categoryObj.hindiCategory,
       remarks: remarks,
 
@@ -345,8 +345,8 @@ export function OcrBulkUploadModal({
       name: name,
       father_name: fatherName,
       parentName: parentName,
-      parentphone: parentPhone || "9456789027",
-      parentPhone: parentPhone || "9456789027",
+      parentphone: parentPhone || "",
+      parentPhone: parentPhone || "",
       registration_no: admissionNo,
       registrationNo: admissionNo,
       caste_category: categoryObj.hindiCategory,
@@ -354,10 +354,10 @@ export function OcrBulkUploadModal({
       academic_year: academicYear,
       academicYear: academicYear,
       division: division,
-      dateOfBirth: dateOfBirth || "19-01-2015",
-      dateofbirth: dateOfBirth || "19-01-2015",
-      admissionDate: admissionDate || "09-04-2025",
-      admissiondate: admissionDate || "09-04-2025",
+      dateOfBirth: dateOfBirth || "",
+      dateofbirth: dateOfBirth || "",
+      admissionDate: admissionDate || "",
+      admissiondate: admissionDate || "",
       aadharNo: aadharNo
     };
   };
@@ -818,7 +818,7 @@ export function OcrBulkUploadModal({
       ...prev,
       {
         serial_no: prev.length + 1,
-        admission_no: `${1000 + prev.length + 1}`,
+        admission_no: "",
         admission_date: "",
         student_name: "",
         father_guardian_name: "",
@@ -831,10 +831,10 @@ export function OcrBulkUploadModal({
         category: "सामान्य",
         remarks: "—",
 
-        registration_no: `${1000 + prev.length + 1}`,
-        registrationNo: `${1000 + prev.length + 1}`,
-        academic_year: "2025-2026",
-        academicYear: "2025-2026",
+        registration_no: "",
+        registrationNo: "",
+        academic_year: "",
+        academicYear: "",
         admissionDate: "",
         name: "",
         father_name: "",
