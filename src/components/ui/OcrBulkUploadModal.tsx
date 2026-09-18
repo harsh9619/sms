@@ -3,10 +3,14 @@ import { Button } from "./Button";
 import { X, Upload, CheckCircle2, AlertCircle, RefreshCw, Image as ImageIcon, ScanLine, Sparkles, Trash2, Plus, ArrowLeft } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { transliterateHindiToEnglish } from "../../lib/transliterate";
+// import {
+//   parseOcrTextToRows,
+//   createEmptyStudentRow,
+// } from "../../lib/OcrTableParser";
 import {
   parseOcrTextToRows,
   createEmptyStudentRow,
-} from "../../lib/OcrTableParser";
+} from "../../lib/OcrStudTableParser";
 
 interface OcrBulkUploadModalProps {
   isOpen: boolean;
@@ -132,6 +136,10 @@ export function OcrBulkUploadModal({
       }
 
       const extractedText = res?.data?.text || "";
+
+      console.log("Parsed students:", extractedText.students);
+      console.log("Missing rows:", extractedText.missingSerialNumbers);
+      console.log("Warnings:", extractedText.warnings);
       console.log(' extracted text', extractedText)
       parseOcrTextToData(extractedText);
     } catch (err: any) {
