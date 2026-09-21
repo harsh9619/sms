@@ -18,13 +18,37 @@ class HttpService {
     let finalUrl = url;
     if (schoolId && finalUrl.startsWith("/api/") && !finalUrl.startsWith("/api/schools")
       && !finalUrl.startsWith("/api/master-themes") && !finalUrl.startsWith("/api/castes")) {
-      finalUrl = finalUrl.replace(/^\/api\//, `/api/${schoolId}/`);
+      if (!/^\/api\/\d+(\/|$)/.test(finalUrl)) {
+        finalUrl = finalUrl.replace(/^\/api\//, `/api/${schoolId}/`);
+      }
     }
     return finalUrl;
   }
 
-  async get<T = any>(url: string, headers: Record<string, string> = {}): Promise<T> {
-    const res = await fetch(this.formatUrl(url), {
+  async get<T = any>(url: string, options: any = {}): Promise<T> {
+    let finalUrl = this.formatUrl(url);
+
+    // If options object contains a `params` field, serialize to query string
+    let headers: Record<string, string> = {};
+    if (options && typeof options === "object") {
+      if ("params" in options && options.params && typeof options.params === "object") {
+        const query = new URLSearchParams();
+        Object.entries(options.params).forEach(([key, val]) => {
+          if (val !== undefined && val !== null && val !== "") {
+            query.append(key, String(val));
+          }
+        });
+        const queryString = query.toString();
+        if (queryString) {
+          finalUrl += (finalUrl.includes("?") ? "&" : "?") + queryString;
+        }
+        headers = options.headers || {};
+      } else {
+        headers = options;
+      }
+    }
+
+    const res = await fetch(finalUrl, {
       method: "GET",
       headers: this.getHeaders(headers),
     });
