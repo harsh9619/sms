@@ -55,6 +55,32 @@ export const attendanceService = {
       `/api/attendance/student/${studentId}${queryString}`
     );
   },
+
+  getSampleTemplate: async (): Promise<any[]> => {
+    return await httpService.get<any[]>("/api/attendance/sample-template");
+  },
+
+  exportAttendanceSheet: async (params?: {
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    classId?: string;
+    divisionId?: string;
+    status?: string;
+    search?: string;
+  }): Promise<any[]> => {
+    const query = new URLSearchParams();
+    if (params?.date) query.append("date", params.date);
+    if (params?.startDate) query.append("startDate", params.startDate);
+    if (params?.endDate) query.append("endDate", params.endDate);
+    if (params?.classId && params.classId !== "all") query.append("classId", params.classId);
+    if (params?.divisionId && params.divisionId !== "all") query.append("divisionId", params.divisionId);
+    if (params?.status && params.status !== "all") query.append("status", params.status);
+    if (params?.search) query.append("search", params.search);
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return await httpService.get<any[]>(`/api/attendance/export${queryString}`);
+  },
 };
 
 export default attendanceService;

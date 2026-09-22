@@ -10,6 +10,7 @@ import type { AttendanceRecord } from "../../types";
 import { useSchool } from "../../context/SchoolContext";
 import { useAuth } from "../../context/AuthContext";
 import { AttendanceUI } from "../../components/modules/attendance/AttendanceUI";
+import attendanceService from "../../Services/attendance.service";
 
 const mapStateToProps = (state: AppState) => ({
   reduxAttendance: state.attendance.records,
@@ -116,32 +117,48 @@ function AttendanceContainerContent({
     statusFilter,
     searchQuery,
   ]);
+  // Export to Excel using Backend API call
+  const handleExportExcel = useCallback(async () => {
+    try {
+      const data = await attendanceService.exportAttendanceSheet({
+        date: datePreset === "today" || datePreset === "yesterday" ? filterDate : undefined,
+        startDate: datePreset !== "today" && datePreset !== "yesterday" ? startDate : undefined,
+        endDate: datePreset !== "today" && datePreset !== "yesterday" ? endDate : undefined,
+        classId: filterClass !== "all" ? filterClass : undefined,
+        divisionId: selectedDivision !== "all" ? selectedDivision : undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: searchQuery.trim() || undefined,
+      });
 
-  // Export to Excel
-  const handleExportExcel = useCallback(() => {
-    const filteredAttendance = attendance.filter((a: any) => {
-      const matchDate =
-        datePreset === "today" || datePreset === "yesterday"
-          ? a.date === filterDate
-          : a.date >= startDate && a.date <= endDate;
-      const matchClass = filterClass === "all" || a.class === filterClass || String(a.classId) === String(filterClass);
-      return matchDate && matchClass;
-    });
+      const exportData = Array.isArray(data) && data.length > 0 ? data : attendance.map((a: any) => ({
+        "Roll Number": a.rollNumber || a.roll_no || "",
+        "Student Name": a.studentName || a.name || "",
+        "Class": a.class || "",
+        "Status": a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : "",
+        "Date": a.date || filterDate,
+        "Marked By": a.markedByName || a.markedBy || "Manual Entry",
+      }));
 
-    const data = filteredAttendance.map((a: any) => ({
-      "Roll Number": a.rollNumber || a.roll_no || "",
-      "Student Name": a.studentName || a.name || "",
-      "Class": a.class || "",
-      "Status": a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : "",
-      "Date": a.date || filterDate,
-      "Marked By": user?.id || "Manual Entry",
-    }));
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(wb, ws, "Student Attendance");
-    XLSX.writeFile(wb, `Student_Attendance_${filterDate}.xlsx`);
-  }, [attendance, filterDate, startDate, endDate, datePreset, filterClass]);
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Student Attendance");
+      XLSX.writeFile(wb, `Student_Attendance_${filterDate || "export"}.xlsx`);
+    } catch (err) {
+      console.error("Export API error, falling back to local dataset:", err);
+      const data = attendance.map((a: any) => ({
+        "Roll Number": a.rollNumber || a.roll_no || "",
+        "Student Name": a.studentName || a.name || "",
+        "Class": a.class || "",
+        "Status": a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : "",
+        "Date": a.date || filterDate,
+        "Marked By": a.markedByName || a.markedBy || "Manual Entry",
+      }));
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, "Student Attendance");
+      XLSX.writeFile(wb, `Student_Attendance_${filterDate}.xlsx`);
+    }
+  }, [filterDate, startDate, endDate, datePreset, filterClass, selectedDivision, statusFilter, searchQuery, attendance]);
 
   // Save manual attendance
   const handleManualSave = (manualDate?: string) => {
