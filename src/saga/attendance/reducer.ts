@@ -50,13 +50,14 @@ export function attendanceReducer(
       const updatedRecords = [...state.records];
 
       newSavedRecords.forEach((newRec: any) => {
+        debugger
         const index = updatedRecords.findIndex(
           (r: any) =>
             (r.id && newRec.id && String(r.id) === String(newRec.id)) ||
             (String(r.studentId) === String(newRec.studentId) && r.date === newRec.date)
         );
         if (index >= 0) {
-          updatedRecords[index] = { ...updatedRecords[index], ...newRec };
+          updatedRecords[index].status = newRec.status;
         } else {
           updatedRecords.push(newRec);
         }

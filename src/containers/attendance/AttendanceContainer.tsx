@@ -46,6 +46,8 @@ function AttendanceContainerContent({
   const { activeSchool } = useSchool();
   const { user } = useAuth();
   const [extraRecords, setExtraRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceStudents, setAttendanceStudents] = useState<any[]>([]);
+
   const attendance = useMemo(() => {
     const recordMap = new Map<string, any>();
     extraRecords.forEach((r) => {
@@ -103,6 +105,22 @@ function AttendanceContainerContent({
     });
     fetchStudentsRequest();
     fetchClassesRequest();
+
+    attendanceService
+      .getAttendanceStudentList({
+        date: filterDate,
+        classId: filterClass !== "all" ? filterClass : undefined,
+        divisionId: selectedDivision !== "all" ? selectedDivision : undefined,
+        search: searchQuery.trim() || undefined,
+      })
+      .then((res) => {
+        if (Array.isArray(res)) {
+          setAttendanceStudents(res);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch attendance_student_list:", err);
+      });
   }, [
     fetchAttendanceRequest,
     fetchStudentsRequest,
@@ -117,6 +135,11 @@ function AttendanceContainerContent({
     statusFilter,
     searchQuery,
   ]);
+
+  const effectiveStudents = useMemo(() => {
+    return attendanceStudents.length > 0 ? attendanceStudents : students;
+  }, [attendanceStudents, students]);
+
   // Export to Excel using Backend API call
   const handleExportExcel = useCallback(async () => {
     try {
@@ -160,14 +183,50 @@ function AttendanceContainerContent({
     }
   }, [filterDate, startDate, endDate, datePreset, filterClass, selectedDivision, statusFilter, searchQuery, attendance]);
 
+  // Download Sample Template via backend API
+  const handleDownloadSampleTemplate = useCallback(async () => {
+    try {
+      const data = await attendanceService.getSampleTemplate({
+        date: datePreset === "today" || datePreset === "yesterday" ? filterDate : undefined,
+        classId: filterClass !== "all" ? filterClass : undefined,
+        divisionId: selectedDivision !== "all" ? selectedDivision : undefined,
+      });
+
+      const exportData = Array.isArray(data) && data.length > 0 ? data : [
+        {
+          "Registration No": "REG1001",
+          "Student Name": "Sample Student",
+          "Roll No": "101",
+          "Class": "Class 1",
+          "Division": "A",
+          "Date": filterDate || new Date().toISOString().split("T")[0],
+          "Status": "present",
+          "Remarks": "On time",
+        },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Sample Template");
+      XLSX.writeFile(wb, `attendance_sample_template_${filterDate || "today"}.xlsx`);
+    } catch (err) {
+      console.error("Failed to download sample template:", err);
+    }
+  }, [filterDate, datePreset, filterClass, selectedDivision]);
+
   // Save manual attendance
   const handleManualSave = (manualDate?: string) => {
     const targetDate = manualDate || filterDate || new Date().toISOString().split("T")[0];
     const payloadRecords = Object.entries(manualAttendance).map(([studentId, status]) => {
-      const student = students.find((s: any) => String(s.id) === String(studentId) || String(s.user_id) === String(studentId));
+      const student = effectiveStudents.find(
+        (s: any) =>
+          String(s.id) === String(studentId) ||
+          String(s.user_id) === String(studentId) ||
+          String(s.studentId) === String(studentId)
+      );
       return {
         studentId,
-        classId: student?.class_id ? String(student.class_id) : undefined,
+        classId: student?.class_id || student?.classId ? String(student.class_id || student.classId) : undefined,
         date: targetDate,
         status,
         markedBy: user?.id,
@@ -181,14 +240,19 @@ function AttendanceContainerContent({
 
     // Also add to local extraRecords for instant UI reflection
     const localNewRecords: AttendanceRecord[] = Object.entries(manualAttendance).map(([studentId, status]) => {
-      const student = students.find((s: any) => String(s.id) === String(studentId) || String(s.user_id) === String(studentId));
+      const student = effectiveStudents.find(
+        (s: any) =>
+          String(s.id) === String(studentId) ||
+          String(s.user_id) === String(studentId) ||
+          String(s.studentId) === String(studentId)
+      );
       return {
         id: `manual-${Date.now()}-${studentId}`,
         studentId,
-        studentName: student?.name || "Student",
+        studentName: student?.name || student?.studentName || "Student",
         rollNumber: student?.roll_no || student?.rollNumber || "",
         class: student?.class_name || student?.class || "",
-        section: student?.section || "",
+        section: student?.section || student?.division_name || "",
         date: targetDate,
         status,
         markedBy: "Manual Entry",
@@ -221,7 +285,7 @@ function AttendanceContainerContent({
     <>
       <AttendanceUI
         attendanceRecords={attendance}
-        students={students}
+        students={effectiveStudents}
         classes={classes}
         loading={loading}
         searchQuery={searchQuery}
@@ -246,6 +310,7 @@ function AttendanceContainerContent({
         setManualAttendance={setManualAttendance}
         handleManualSave={handleManualSave}
         handleExportExcel={handleExportExcel}
+        handleDownloadSampleTemplate={handleDownloadSampleTemplate}
         showBulkUpload={showBulkUpload}
         setShowBulkUpload={setShowBulkUpload}
         handleBulkImport={handleBulkImport}

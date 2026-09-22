@@ -27,6 +27,27 @@ export const attendanceService = {
     return await httpService.get<AttendanceRecord[]>(`/api/attendance${queryString}`);
   },
 
+  getAttendanceStudentList: async (params?: {
+    schoolId?: string;
+    date?: string;
+    classId?: string;
+    divisionId?: string;
+    sectionId?: string;
+    search?: string;
+    academicYear?: string;
+  }): Promise<any[]> => {
+    const query = new URLSearchParams();
+    if (params?.date) query.append("date", params.date);
+    if (params?.classId && params.classId !== "all") query.append("classId", params.classId);
+    if (params?.divisionId && params.divisionId !== "all") query.append("divisionId", params.divisionId);
+    if (params?.sectionId && params.sectionId !== "all") query.append("sectionId", params.sectionId);
+    if (params?.search) query.append("search", params.search);
+    if (params?.academicYear) query.append("academicYear", params.academicYear);
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return await httpService.get<any[]>(`/api/attendance/attendance_student_list${queryString}`);
+  },
+
   saveAttendance: async (
     schoolId: string,
     records: Array<{
@@ -56,8 +77,20 @@ export const attendanceService = {
     );
   },
 
-  getSampleTemplate: async (): Promise<any[]> => {
-    return await httpService.get<any[]>("/api/attendance/sample-template");
+  getSampleTemplate: async (params?: {
+    date?: string;
+    classId?: string;
+    divisionId?: string;
+    sectionId?: string;
+  }): Promise<any[]> => {
+    const query = new URLSearchParams();
+    if (params?.date) query.append("date", params.date);
+    if (params?.classId && params.classId !== "all") query.append("classId", params.classId);
+    if (params?.divisionId && params.divisionId !== "all") query.append("divisionId", params.divisionId);
+    if (params?.sectionId && params.sectionId !== "all") query.append("sectionId", params.sectionId);
+
+    const queryString = query.toString() ? `?${query.toString()}` : "";
+    return await httpService.get<any[]>(`/api/attendance/sample-template${queryString}`);
   },
 
   exportAttendanceSheet: async (params?: {

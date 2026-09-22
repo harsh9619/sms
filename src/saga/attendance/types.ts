@@ -127,6 +127,7 @@ export interface AttendanceUIProps {
   setManualAttendance: React.Dispatch<React.SetStateAction<Record<string, "present" | "absent" | "late">>>;
   handleManualSave: (manualDate?: string) => void;
   handleExportExcel: () => void;
+  handleDownloadSampleTemplate?: () => void;
   showBulkUpload: boolean;
   setShowBulkUpload: (show: boolean) => void;
   handleBulkImport: (records: AttendanceRecord[]) => void;

@@ -6,6 +6,7 @@ import { Badge } from "../../ui/Badge";
 import {
   Upload,
   Download,
+  FileSpreadsheet,
   CheckCircle2,
   CheckCircle,
   XCircle,
@@ -54,6 +55,7 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
   setManualAttendance,
   handleManualSave,
   handleExportExcel,
+  handleDownloadSampleTemplate,
   setShowBulkUpload,
   importStatus,
   setImportStatus,
@@ -273,6 +275,15 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
             <Button variant="outline" onClick={handleExportExcel} className="shadow-sm">
               <Download className="h-4 w-4 mr-2 text-primary" /> Export Excel
             </Button>
+            {handleDownloadSampleTemplate && (
+              <Button
+                variant="outline"
+                onClick={handleDownloadSampleTemplate}
+                className="shadow-sm border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950 font-semibold"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600 dark:text-emerald-400" /> Sample Template
+              </Button>
+            )}
             <Button
               onClick={() => setShowBulkUpload(true)}
               className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold"
