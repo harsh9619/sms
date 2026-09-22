@@ -8,6 +8,7 @@ import { fetchStudentsRequest } from "../../saga/students/actions";
 import { fetchClassesRequest } from "../../saga/classes/actions";
 import type { AttendanceRecord } from "../../types";
 import { useSchool } from "../../context/SchoolContext";
+import { useAuth } from "../../context/AuthContext";
 import { AttendanceUI } from "../../components/modules/attendance/AttendanceUI";
 
 const mapStateToProps = (state: AppState) => ({
@@ -42,8 +43,32 @@ function AttendanceContainerContent({
   saveAttendanceRequest,
 }: PropsFromRedux) {
   const { activeSchool } = useSchool();
+  const { user } = useAuth();
   const [extraRecords, setExtraRecords] = useState<AttendanceRecord[]>([]);
-  const attendance = useMemo(() => [...reduxAttendance, ...extraRecords], [reduxAttendance, extraRecords]);
+  const attendance = useMemo(() => {
+    const recordMap = new Map<string, any>();
+    extraRecords.forEach((r) => {
+      const key = `${r.studentId}-${r.date}`;
+      recordMap.set(key, r);
+    });
+    reduxAttendance.forEach((r) => {
+      const key = `${r.studentId}-${r.date}`;
+      const existing = recordMap.get(key);
+      if (existing) {
+        recordMap.set(key, {
+          ...existing,
+          ...r,
+          studentName: r.studentName || existing.studentName,
+          rollNumber: r.rollNumber || existing.rollNumber,
+          class: r.class || existing.class,
+          section: r.section || existing.section,
+        });
+      } else {
+        recordMap.set(key, r);
+      }
+    });
+    return Array.from(recordMap.values());
+  }, [reduxAttendance, extraRecords]);
 
   const todayStr = new Date().toISOString().split("T")[0];
   const [filterDate, setFilterDate] = useState(todayStr);
@@ -109,7 +134,7 @@ function AttendanceContainerContent({
       "Class": a.class || "",
       "Status": a.status ? a.status.charAt(0).toUpperCase() + a.status.slice(1) : "",
       "Date": a.date || filterDate,
-      "Marked By": a.markedBy || "Manual Entry",
+      "Marked By": user?.id || "Manual Entry",
     }));
 
     const wb = XLSX.utils.book_new();
@@ -119,15 +144,16 @@ function AttendanceContainerContent({
   }, [attendance, filterDate, startDate, endDate, datePreset, filterClass]);
 
   // Save manual attendance
-  const handleManualSave = () => {
+  const handleManualSave = (manualDate?: string) => {
+    const targetDate = manualDate || filterDate || new Date().toISOString().split("T")[0];
     const payloadRecords = Object.entries(manualAttendance).map(([studentId, status]) => {
       const student = students.find((s: any) => String(s.id) === String(studentId) || String(s.user_id) === String(studentId));
       return {
         studentId,
         classId: student?.class_id ? String(student.class_id) : undefined,
-        date: filterDate,
+        date: targetDate,
         status,
-        markedBy: "Teacher Manual Entry",
+        markedBy: user?.id,
       };
     });
 
@@ -146,7 +172,7 @@ function AttendanceContainerContent({
         rollNumber: student?.roll_no || student?.rollNumber || "",
         class: student?.class_name || student?.class || "",
         section: student?.section || "",
-        date: filterDate,
+        date: targetDate,
         status,
         markedBy: "Manual Entry",
         markedAt: new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
@@ -159,7 +185,7 @@ function AttendanceContainerContent({
     setImportStatus({
       visible: true,
       success: true,
-      message: `Saved attendance for ${localNewRecords.length} students.`,
+      message: `Saved attendance for ${localNewRecords.length} students on ${targetDate}.`,
     });
     setTimeout(() => setImportStatus((s) => ({ ...s, visible: false })), 4000);
   };

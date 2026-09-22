@@ -125,7 +125,7 @@ export interface AttendanceUIProps {
   setActiveTab: (tab: "records" | "manual") => void;
   manualAttendance: Record<string, "present" | "absent" | "late">;
   setManualAttendance: React.Dispatch<React.SetStateAction<Record<string, "present" | "absent" | "late">>>;
-  handleManualSave: () => void;
+  handleManualSave: (manualDate?: string) => void;
   handleExportExcel: () => void;
   showBulkUpload: boolean;
   setShowBulkUpload: (show: boolean) => void;

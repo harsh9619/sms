@@ -355,11 +355,10 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${
-                activeTab === tab.id
-                  ? "bg-background shadow-md text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 ${activeTab === tab.id
+                ? "bg-background shadow-md text-primary"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <tab.icon className="h-4 w-4" />
               {tab.label}
@@ -389,11 +388,10 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
                   <button
                     key={p.id}
                     onClick={() => handlePresetChange(p.id)}
-                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      datePreset === p.id
-                        ? "bg-primary text-primary-foreground shadow-sm font-bold"
-                        : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                    }`}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${datePreset === p.id
+                      ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                      : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                      }`}
                   >
                     {p.label}
                   </button>
@@ -531,27 +529,26 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
                   <Filter className="h-4 w-4 text-primary" />
                   Attendance Log
                 </CardTitle>
-                <CardDescription className="text-xs">
+                {/* <CardDescription className="text-xs">
                   Showing {filteredAttendance.length} attendance entry ({formattedDate})
-                </CardDescription>
+                </CardDescription> */}
               </div>
 
               {/* Status Pill Filters */}
-              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+              {/* <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
                 {(["all", "present", "absent", "late"] as const).map((st) => (
                   <button
                     key={st}
                     onClick={() => setStatusFilter(st)}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold capitalize transition-all ${
-                      statusFilter === st
-                        ? "bg-background shadow text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold capitalize transition-all ${statusFilter === st
+                      ? "bg-background shadow text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     {st}
                   </button>
                 ))}
-              </div>
+              </div> */}
             </CardHeader>
 
             <CardContent className="p-0">
@@ -565,51 +562,70 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs uppercase font-bold tracking-wider">
+                        <th className="px-6 py-4">Admission No.</th>
                         <th className="px-6 py-4">Student Name</th>
-                        <th className="px-6 py-4">Roll No</th>
-                        <th className="px-6 py-4">Class & Section</th>
-                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4">Class</th>
+                        <th className="px-6 py-4">Div</th>
                         <th className="px-6 py-4">Marked By</th>
-                        <th className="px-6 py-4">Date</th>
+                        <th className="px-6 py-4">Date & Time</th>
+                        <th className="px-6 py-4">Status</th>
+
+
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
-                      {filteredAttendance.map((record: any) => (
-                        <tr key={record.id} className="hover:bg-muted/30 transition-colors group">
-                          <td className="px-6 py-4">
-                            <p className="text-sm font-bold text-foreground">{record.studentName}</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <Badge variant="outline" className="font-mono text-xs font-semibold">
-                              {record.rollNumber || "N/A"}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 text-sm font-medium">{record.class || "N/A"}</td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              {statusIcon(record.status)}
-                              <Badge
-                                variant={
-                                  record.status === "present"
-                                    ? "success"
-                                    : record.status === "absent"
-                                    ? "destructive"
-                                    : "warning"
-                                }
-                                className="capitalize font-bold px-2.5 py-0.5"
-                              >
-                                {record.status}
-                              </Badge>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground font-medium">
-                            {record.markedBy || "System"}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground font-medium">
-                            {record.date} {record.markedAt ? `(${record.markedAt})` : ""}
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredAttendance.map((record: any, idx: number) => {
+                        const regNo =
+                          record.studentDetail?.registrationNo || "N/A";
+                        const timeStr =
+                          record.markedAt ||
+                          (record.createdAt
+                            ? new Date(record.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
+                            : "");
+
+                        return (
+                          <tr key={record.id || `att-${idx}`} className="hover:bg-muted/30 transition-colors group">
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-bold text-foreground">{regNo}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-bold text-foreground">{record.studentName || record.name || "Student"}</p>
+                            </td>
+                            <td className="px-6 py-4 text-sm font-medium">{record.class || "N/A"}</td>
+                            <td className="px-6 py-4 text-sm font-medium">{record.section || record.division || "N/A"}</td>
+
+                            <td className="px-6 py-4 text-sm text-muted-foreground font-medium">
+                              {record.markedByName || record.markedBy || "System"}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-muted-foreground font-medium">
+                              {record.date} {timeStr ? `(${timeStr})` : ""}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                {record.status === "present" ? (
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                ) : record.status === "absent" ? (
+                                  <XCircle className="h-4 w-4 text-rose-500" />
+                                ) : (
+                                  <Clock className="h-4 w-4 text-amber-500" />
+                                )}
+                                <Badge
+                                  variant={
+                                    record.status === "present"
+                                      ? "success"
+                                      : record.status === "absent"
+                                        ? "destructive"
+                                        : "warning"
+                                  }
+                                  className="capitalize font-bold px-2.5 py-0.5"
+                                >
+                                  {record.status}
+                                </Badge>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
 
@@ -774,15 +790,14 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
                 return (
                   <div
                     key={sId}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all duration-150 ${
-                      status === "present"
-                        ? "border-emerald-500/40 bg-emerald-50/30 dark:bg-emerald-950/20"
-                        : status === "absent"
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all duration-150 ${status === "present"
+                      ? "border-emerald-500/40 bg-emerald-50/30 dark:bg-emerald-950/20"
+                      : status === "absent"
                         ? "border-rose-500/40 bg-rose-50/30 dark:bg-rose-950/20"
                         : status === "late"
-                        ? "border-amber-500/40 bg-amber-50/30 dark:bg-amber-950/20"
-                        : "border-border hover:bg-muted/30"
-                    }`}
+                          ? "border-amber-500/40 bg-amber-50/30 dark:bg-amber-950/20"
+                          : "border-border hover:bg-muted/30"
+                      }`}
                   >
                     {/* Student Info */}
                     <div className="flex items-center gap-3 mb-3 sm:mb-0">
@@ -805,15 +820,14 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
                           key={st}
                           size="sm"
                           variant={status === st ? "default" : "outline"}
-                          className={`font-bold transition-all px-4 ${
-                            status === st
-                              ? st === "present"
-                                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                : st === "absent"
+                          className={`font-bold transition-all px-4 ${status === st
+                            ? st === "present"
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                              : st === "absent"
                                 ? "bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
                                 : "bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
-                              : "hover:bg-muted"
-                          }`}
+                            : "hover:bg-muted"
+                            }`}
                           onClick={() => setManualAttendance((prev) => ({ ...prev, [sId]: st }))}
                         >
                           {st === "present" ? (
@@ -854,7 +868,7 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
                     students marked for <span className="font-semibold text-primary">{manualFilterDate}</span>
                   </div>
                   <Button
-                    onClick={handleManualSave}
+                    onClick={() => handleManualSave(manualFilterDate)}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-6 shadow-md"
                   >
                     <Sparkles className="h-4 w-4 mr-2" /> Save Attendance Now

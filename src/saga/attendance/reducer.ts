@@ -45,14 +45,31 @@ export function attendanceReducer(
         myAttendance: action.payload,
       };
 
-    case types.SAVE_ATTENDANCE_SUCCESS:
+    case types.SAVE_ATTENDANCE_SUCCESS: {
+      const newSavedRecords = action.payload || [];
+      const updatedRecords = [...state.records];
+
+      newSavedRecords.forEach((newRec: any) => {
+        const index = updatedRecords.findIndex(
+          (r: any) =>
+            (r.id && newRec.id && String(r.id) === String(newRec.id)) ||
+            (String(r.studentId) === String(newRec.studentId) && r.date === newRec.date)
+        );
+        if (index >= 0) {
+          updatedRecords[index] = { ...updatedRecords[index], ...newRec };
+        } else {
+          updatedRecords.push(newRec);
+        }
+      });
+
       return {
         ...state,
         loading: false,
         saveSuccess: true,
         saveMsg: "Attendance saved successfully",
-        records: [...state.records, ...action.payload],
+        records: updatedRecords,
       };
+    }
 
     case types.FETCH_ATTENDANCE_FAILURE:
     case types.FETCH_MY_ATTENDANCE_FAILURE:
