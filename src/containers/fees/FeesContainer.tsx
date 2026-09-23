@@ -7,6 +7,7 @@ import { AppState } from "../../saga/rootReducer";
 import {
   fetchFeesRequest,
   fetchStudentsRequest,
+  fetchClassesRequest,
   createFeeRequest,
   updateFeeRequest,
   deleteFeeRequest,
@@ -21,13 +22,15 @@ import type { FeeRecord } from "../../types";
 const mapStateToProps = (state: AppState) => ({
   allFees: state.fees.fees,
   students: state.students.students,
+  classes: state.classes.classes,
   loading: state.fees.loading,
   error: state.fees.error,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch) => ({
   fetchFeesRequest: () => dispatch(fetchFeesRequest()),
-  fetchStudentsRequest: () => dispatch(fetchStudentsRequest()),
+  fetchStudentsRequest: (payload?: any) => dispatch(fetchStudentsRequest(payload)),
+  fetchClassesRequest: () => dispatch(fetchClassesRequest()),
   createFeeRequest: (fee: any) => dispatch(createFeeRequest(fee)),
   updateFeeRequest: (payload: { id: string; fee: any }) => dispatch(updateFeeRequest(payload)),
   deleteFeeRequest: (id: string) => dispatch(deleteFeeRequest(id)),
@@ -43,10 +46,12 @@ export interface FeesContainerProps extends PropsFromRedux {
 function FeesContainerContent({
   allFees,
   students,
+  classes,
   loading,
   error,
   fetchFeesRequest,
   fetchStudentsRequest,
+  fetchClassesRequest,
   createFeeRequest,
   updateFeeRequest,
   deleteFeeRequest,
@@ -99,8 +104,9 @@ function FeesContainerContent({
   useEffect(() => {
     fetchFeesRequest();
     fetchStudentsRequest();
+    fetchClassesRequest();
     fetchClassFeeStructures();
-  }, [fetchFeesRequest, fetchStudentsRequest, fetchClassFeeStructures]);
+  }, [fetchFeesRequest, fetchStudentsRequest, fetchClassesRequest, fetchClassFeeStructures]);
 
   const studentProfile = useMemo(() => {
     if (user?.role === "student") {
@@ -158,44 +164,192 @@ function FeesContainerContent({
   const handleOpenAddModal = useCallback(() => {
     setEditingFee(null);
     setFormData({
+      studentId: "",
       studentName: "",
       rollNumber: "",
+      class: "",
+      section: "",
       feeType: "tuition",
       amount: "",
       dueDate: new Date().toISOString().slice(0, 10),
       status: "pending",
       remarks: "",
+      isMultiFee: true,
+      selectedFeeItems: [
+        { feeType: "tuition", label: "Tuition Fee", amount: "", selected: true },
+        { feeType: "exam", label: "Exam Fee", amount: "", selected: false },
+        { feeType: "transport", label: "Transport Fee", amount: "", selected: false },
+        { feeType: "library", label: "Library Fee", amount: "", selected: false },
+        { feeType: "sports", label: "Sports Fee", amount: "", selected: false },
+        { feeType: "other", label: "Other Fee", amount: "", selected: false },
+      ],
     });
     setFormError(null);
     setShowAddEditModal(true);
   }, []);
 
   const handleOpenEditModal = useCallback((fee: FeeRecord) => {
+    const defaultFeeTypes = [
+      { id: "tuition", label: "Tuition Fee" },
+      { id: "exam", label: "Exam Fee" },
+      { id: "transport", label: "Transport Fee" },
+      { id: "library", label: "Library Fee" },
+      { id: "sports", label: "Sports Fee" },
+      { id: "other", label: "Other Fee" },
+    ];
+
+    const currentFeeType = (fee.feeType || "tuition").toLowerCase();
+    const currentAmount = fee.amount !== undefined && fee.amount !== null ? String(fee.amount) : "";
+
+    const feeTypes = [...defaultFeeTypes];
+    if (currentFeeType && !feeTypes.some((item) => item.id === currentFeeType)) {
+      feeTypes.push({
+        id: currentFeeType,
+        label: `${currentFeeType.charAt(0).toUpperCase() + currentFeeType.slice(1)} Fee`,
+      });
+    }
+
+    const initialSelectedFeeItems = feeTypes.map((item) => {
+      const isCurrent = item.id === currentFeeType;
+      return {
+        feeType: item.id,
+        label: item.label,
+        amount: isCurrent ? currentAmount : "",
+        selected: isCurrent,
+      };
+    });
+
+    const formatDateStr = (dateVal?: any) => {
+      if (!dateVal) return "";
+      const str = String(dateVal);
+      if (str.includes("T")) return str.slice(0, 10);
+      try {
+        const d = new Date(dateVal);
+        if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+      } catch {
+        // ignore
+      }
+      return str.slice(0, 10);
+    };
+
+    const formattedDueDate = formatDateStr(fee.dueDate) || new Date().toISOString().slice(0, 10);
+    const formattedPaidDate = formatDateStr(fee.paidDate) || (fee.status === "paid" ? new Date().toISOString().slice(0, 10) : "");
+
     setEditingFee(fee);
-    setFormData({ ...fee });
+    setFormData({
+      ...fee,
+      dueDate: formattedDueDate,
+      paidDate: formattedPaidDate,
+      feeType: currentFeeType,
+      amount: currentAmount,
+      selectedFeeItems: initialSelectedFeeItems,
+      isMultiFee: true,
+    });
     setFormError(null);
     setShowAddEditModal(true);
   }, []);
 
   const handleSaveFee = useCallback(() => {
     setFormError(null);
-    if (!formData.studentName || !formData.amount) {
-      setFormError("Student Name and Amount are required fields.");
+
+    if (!formData.studentId && !formData.studentName) {
+      setFormError("Please select a student from the dropdown list.");
+      return;
+    }
+
+    if (!formData.dueDate) {
+      setFormError("Due date is required.");
+      return;
+    }
+
+    // Editing mode: Update the single existing fee record
+    if (editingFee) {
+      let feeType = formData.feeType || "tuition";
+      let amount = Number(formData.amount || 0);
+
+      if (Array.isArray(formData.selectedFeeItems)) {
+        const activeItem =
+          formData.selectedFeeItems.find(
+            (item: any) => item.feeType === feeType && item.selected
+          ) || formData.selectedFeeItems.find((item: any) => item.selected);
+
+        if (activeItem) {
+          feeType = activeItem.feeType || feeType;
+          amount = Number(activeItem.amount || amount);
+        }
+      }
+
+      const payload = {
+        ...formData,
+        studentId: formData.studentId,
+        studentName: formData.studentName,
+        rollNumber: formData.rollNumber || "",
+        class: formData.class || "",
+        feeType: feeType,
+        amount: amount,
+        dueDate: formData.dueDate || new Date().toISOString().slice(0, 10),
+        status: formData.status || "pending",
+        paidDate: formData.status === "paid" ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : null,
+        remarks: formData.remarks || "",
+      };
+
+      updateFeeRequest({ id: editingFee.id, fee: payload });
+      toast.success("Fee record updated successfully");
+      setShowAddEditModal(false);
+      setEditingFee(null);
+      setFormData({});
+      return;
+    }
+
+    // Multi-Fee Bundle creation mode (When adding NEW fee records)
+    if (formData.isMultiFee && Array.isArray(formData.selectedFeeItems) && formData.selectedFeeItems.length > 0) {
+      const activeItems = formData.selectedFeeItems.filter((item: any) => item.selected && Number(item.amount) > 0);
+      if (activeItems.length === 0) {
+        setFormError("Please select at least one fee component with an amount > 0.");
+        return;
+      }
+
+      let count = 0;
+      activeItems.forEach((item: any) => {
+        const itemPayload = {
+          studentId: formData.studentId,
+          studentName: formData.studentName,
+          rollNumber: formData.rollNumber || "",
+          class: formData.class || "",
+          feeType: item.feeType || "tuition",
+          amount: Number(item.amount),
+          dueDate: formData.dueDate || new Date().toISOString().slice(0, 10),
+          status: formData.status || "pending",
+          paidDate: formData.status === "paid" ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : null,
+          remarks: item.remarks || formData.remarks || "",
+        };
+        createFeeRequest(itemPayload);
+        count++;
+      });
+
+      toast.success(`Successfully created ${count} fee records for ${formData.studentName}`);
+      setShowAddEditModal(false);
+      setEditingFee(null);
+      setFormData({});
       return;
     }
 
     const payload = {
       ...formData,
+      studentId: formData.studentId,
+      studentName: formData.studentName,
+      rollNumber: formData.rollNumber || "",
+      class: formData.class || "",
+      feeType: formData.feeType || "tuition",
       amount: Number(formData.amount || 0),
+      dueDate: formData.dueDate || new Date().toISOString().slice(0, 10),
+      status: formData.status || "pending",
+      paidDate: formData.status === "paid" ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : null,
+      remarks: formData.remarks || "",
     };
 
-    if (editingFee) {
-      updateFeeRequest({ id: editingFee.id, fee: payload });
-      toast.success("Fee record updated successfully");
-    } else {
-      createFeeRequest(payload);
-      toast.success("Fee record created successfully");
-    }
+    createFeeRequest(payload);
+    toast.success("Fee record created successfully");
 
     setShowAddEditModal(false);
     setEditingFee(null);
@@ -323,6 +477,8 @@ function FeesContainerContent({
   return (
     <FeesUI
       fees={fees}
+      students={students}
+      classes={classes}
       classFeeStructures={classFeeStructures}
       loading={loading}
       error={error}
