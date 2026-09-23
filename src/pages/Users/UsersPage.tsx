@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Badge } from "../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../components/ui/Avatar";
+import { USER_ROLES_NOT_TABLE } from "../../constants/common";
 import { connect, ConnectedProps } from "react-redux";
 import { Dispatch } from "redux";
 import { AppState } from "../../saga/rootReducer";
@@ -429,7 +430,7 @@ function UsersPageContent({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60 bg-card">
-                  {filteredUsers.map((user) => (
+                  {filteredUsers.filter((user) => !USER_ROLES_NOT_TABLE.includes(user?.role?.toUpperCase() as string)).map((user) => (
                     <tr key={user.id} className="hover:bg-muted/40 transition-colors group">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
