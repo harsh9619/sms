@@ -26,10 +26,14 @@ import { AttendanceRecord, Student } from "../../../types";
 interface BulkUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  students: Student[];
-  handleBulkImport: (records: AttendanceRecord[]) => void;
+  students?: Student[];
+  handleBulkImport?: (records: AttendanceRecord[]) => void;
+  onImport?: (records: AttendanceRecord[]) => void;
   handleDownloadSampleTemplate?: (manualDate?: string) => void;
   defaultDate?: string;
+  classes?: any[];
+  importStatus?: any;
+  setImportStatus?: any;
 }
 
 interface ParsedRecord {
@@ -50,12 +54,21 @@ interface ParsedRecord {
 export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
   isOpen,
   onClose,
-  students,
+  students = [],
   handleBulkImport,
+  onImport,
   handleDownloadSampleTemplate,
   defaultDate,
 }) => {
+  const importFn = handleBulkImport || onImport;
+  const [dateMode, setDateMode] = useState<"single" | "range">("single");
   const [selectedDate, setSelectedDate] = useState<string>(
+    defaultDate || new Date().toISOString().split("T")[0]
+  );
+  const [startDate, setStartDate] = useState<string>(
+    defaultDate || new Date().toISOString().split("T")[0]
+  );
+  const [endDate, setEndDate] = useState<string>(
     defaultDate || new Date().toISOString().split("T")[0]
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -338,7 +351,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
               <h2 className="text-lg font-extrabold text-foreground flex items-center gap-2">
                 Bulk Attendance Upload
                 <Badge variant="secondary" className="text-xs bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-mono">
-                  CSV / Excel / OCR
+                  CSV / Excel
                 </Badge>
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -358,41 +371,83 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* Top Configuration Controls */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl border border-border bg-card shadow-sm">
-            {/* Target Date Picker */}
+            {/* Target Date / Date Range Picker */}
             <div>
-              <label className="text-xs font-bold text-foreground block mb-1.5 flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-primary" /> Target Attendance Date
-              </label>
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value);
-                  if (parsedRecords.length > 0) {
-                    setParsedRecords((prev) =>
-                      prev.map((r) => ({ ...r, date: e.target.value }))
-                    );
-                  }
-                }}
-                className="font-medium"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-primary" /> Target Attendance Date
+                </label>
+                {/* <div className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                  <button
+                    type="button"
+                    onClick={() => setDateMode("single")}
+                    className={`px-2 py-0.5 rounded transition-all ${dateMode === "single" ? "bg-primary/10 text-primary font-bold" : "hover:text-foreground"}`}
+                  >
+                    Single Date
+                  </button>
+                  <span>|</span>
+                  <button
+                    type="button"
+                    onClick={() => setDateMode("range")}
+                    className={`px-2 py-0.5 rounded transition-all ${dateMode === "range" ? "bg-primary/10 text-primary font-bold" : "hover:text-foreground"}`}
+                  >
+                    Date Range
+                  </button>
+                </div> */}
+              </div>
+
+              {dateMode === "single" ? (
+                <Input
+                  type="date"
+                  max={new Date().toISOString().split("T")[0]}
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    if (parsedRecords.length > 0) {
+                      setParsedRecords((prev) =>
+                        prev.map((r) => ({ ...r, date: e.target.value }))
+                      );
+                    }
+                  }}
+                  className="font-medium h-10"
+                />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    max={new Date().toISOString().split("T")[0]}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="font-medium h-10 text-xs"
+                    title="Start Date"
+                  />
+                  <span className="text-xs text-muted-foreground font-semibold">to</span>
+                  <Input
+                    type="date"
+                    max={new Date().toISOString().split("T")[0]}
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="font-medium h-10 text-xs"
+                    title="End Date"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Download Sample Template */}
             <div className="flex flex-col justify-end">
               <label className="text-xs font-semibold text-muted-foreground block mb-1.5">
-                Need the correct format?
+                Need excel format template?
               </label>
-              {handleDownloadSampleTemplate && (
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownloadSampleTemplate(selectedDate)}
-                  className="w-full border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-semibold flex items-center justify-center gap-2"
-                >
-                  <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  Download Sample Template (.xlsx)
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleDownloadSampleTemplate && handleDownloadSampleTemplate(dateMode === "single" ? selectedDate : startDate)}
+                className="w-full h-10 border-emerald-500/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold flex items-center justify-center gap-2"
+              >
+                <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                Download Sample Template (.xlsx)
+              </Button>
             </div>
           </div>
 

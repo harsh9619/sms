@@ -153,8 +153,9 @@ export function DashboardLayout({ children }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {filteredNav.map((item) => {
+
             const linkPath = currentSchoolId ? `/school/${currentSchoolId}${item.path}` : item.path;
-            const isActive = location.pathname === linkPath || location.pathname.endsWith(item.path);
+            const isActive = location.pathname === linkPath;
             return (
               <NavLink
                 key={item.path}
