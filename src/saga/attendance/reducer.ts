@@ -21,6 +21,8 @@ export function attendanceReducer(
         ...state,
         loading: true,
         error: null,
+        saveMsg: null,
+        saveSuccess: null,
       };
 
     case types.SAVE_ATTENDANCE_REQUEST:
@@ -46,29 +48,11 @@ export function attendanceReducer(
       };
 
     case types.SAVE_ATTENDANCE_SUCCESS: {
-      const newSavedRecords = action.payload || [];
-      const updatedRecords = [...state.records];
-
-      newSavedRecords.forEach((newRec: any) => {
-        debugger
-        const index = updatedRecords.findIndex(
-          (r: any) =>
-            (r.id && newRec.id && String(r.id) === String(newRec.id)) ||
-            (String(r.studentId) === String(newRec.studentId) && r.date === newRec.date)
-        );
-        if (index >= 0) {
-          updatedRecords[index].status = newRec.status;
-        } else {
-          updatedRecords.push(newRec);
-        }
-      });
-
       return {
         ...state,
         loading: false,
         saveSuccess: true,
         saveMsg: "Attendance saved successfully",
-        records: updatedRecords,
       };
     }
 

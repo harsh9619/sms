@@ -128,7 +128,6 @@ function StudentsContainerContent(props: StudentsContainerProps) {
     const parentPhoneVal = formData.parentPhone || formData.guardian_phone || formData.parent_phone || "";
 
     if (editingStudent) {
-      debugger;
       updateStudentRequest({
         id: editingStudent.id,
         name: formData.name,

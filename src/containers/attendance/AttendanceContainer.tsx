@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { connect, ConnectedProps } from "react-redux";
+import { toast } from 'react-toastify';
 import { Dispatch } from "redux";
 import * as XLSX from "xlsx";
 import { AppState } from "../../saga/rootReducer";
@@ -136,6 +137,27 @@ function AttendanceContainerContent({
     searchQuery,
   ]);
 
+  useEffect(() => {
+    if (saveSuccess) {
+      toast.success(saveMsg || "Attendance saved successfully");
+      fetchAttendanceRequest({
+        schoolId: activeSchool?.id,
+        date: datePreset === "today" || datePreset === "yesterday" ? filterDate : undefined,
+        startDate: datePreset !== "today" && datePreset !== "yesterday" ? startDate : undefined,
+        endDate: datePreset !== "today" && datePreset !== "yesterday" ? endDate : undefined,
+        classId: filterClass !== "all" ? filterClass : undefined,
+        divisionId: selectedDivision !== "all" ? selectedDivision : undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        search: searchQuery.trim() || undefined,
+      });
+    }
+    else {
+      toast.error(saveMsg);
+    }
+
+
+  }, [saveSuccess, saveMsg]);
+
   const effectiveStudents = useMemo(() => {
     return attendanceStudents.length > 0 ? attendanceStudents : students;
   }, [attendanceStudents, students]);
@@ -184,14 +206,16 @@ function AttendanceContainerContent({
   }, [filterDate, startDate, endDate, datePreset, filterClass, selectedDivision, statusFilter, searchQuery, attendance]);
 
   // Download Sample Template via backend API
-  const handleDownloadSampleTemplate = useCallback(async () => {
+  const handleDownloadSampleTemplate = useCallback(async (manualDate?: string) => {
     try {
+      const validManualDate = typeof manualDate === "string" ? manualDate : undefined;
+      const targetDate = validManualDate || (datePreset === "today" || datePreset === "yesterday" ? filterDate : undefined) || filterDate || new Date().toISOString().split("T")[0];
       const data = await attendanceService.getSampleTemplate({
-        date: datePreset === "today" || datePreset === "yesterday" ? filterDate : undefined,
+        date: targetDate,
         classId: filterClass !== "all" ? filterClass : undefined,
         divisionId: selectedDivision !== "all" ? selectedDivision : undefined,
       });
-
+      debugger
       const exportData = Array.isArray(data) && data.length > 0 ? data : [
         {
           "Registration No": "REG1001",
@@ -199,7 +223,7 @@ function AttendanceContainerContent({
           "Roll No": "101",
           "Class": "Class 1",
           "Division": "A",
-          "Date": filterDate || new Date().toISOString().split("T")[0],
+          "Date": targetDate,
           "Status": "present",
           "Remarks": "On time",
         },
@@ -207,8 +231,25 @@ function AttendanceContainerContent({
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Hide classId and divisionId columns in Excel sheet layout view so they are visible only on file reading
+      if (exportData.length > 0) {
+        const firstRowKeys = Object.keys(exportData[0]);
+        ws["!cols"] = firstRowKeys.map((key) => {
+          const lowerKey = key.toLowerCase();
+          if (
+            lowerKey === "classid" ||
+            lowerKey === "divisionid" ||
+            lowerKey === "class_id" ||
+            lowerKey === "division_id"
+          ) {
+            return { hidden: true };
+          }
+          return { wch: 15 };
+        });
+      }
       XLSX.utils.book_append_sheet(wb, ws, "Sample Template");
-      XLSX.writeFile(wb, `attendance_sample_template_${filterDate || "today"}.xlsx`);
+      XLSX.writeFile(wb, `attendance_sample_template_${targetDate}.xlsx`);
     } catch (err) {
       console.error("Failed to download sample template:", err);
     }
@@ -272,6 +313,21 @@ function AttendanceContainerContent({
   };
 
   const handleBulkImport = (newRecords: AttendanceRecord[]) => {
+    const payloadRecords = newRecords.map((rec) => ({
+      studentId: rec.studentId,
+      classId: rec.class,
+      date: rec.date,
+      status: rec.status,
+      markedBy: user?.id,
+    }));
+
+    if (payloadRecords.length > 0) {
+      saveAttendanceRequest({
+        schoolId: activeSchool?.id || "1",
+        records: payloadRecords,
+      });
+    }
+
     setExtraRecords((prev) => [...prev, ...newRecords]);
     setImportStatus({
       visible: true,

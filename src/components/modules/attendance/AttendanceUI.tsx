@@ -27,6 +27,7 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { AttendanceUIProps } from "../../../saga/attendance/types";
+import { BulkUploadModal } from "./BulkUploadModal";
 
 export const AttendanceUI: React.FC<AttendanceUIProps> = ({
   attendanceRecords,
@@ -56,7 +57,9 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
   handleManualSave,
   handleExportExcel,
   handleDownloadSampleTemplate,
+  showBulkUpload,
   setShowBulkUpload,
+  handleBulkImport,
   importStatus,
   setImportStatus,
 }) => {
@@ -275,20 +278,11 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
             <Button variant="outline" onClick={handleExportExcel} className="shadow-sm">
               <Download className="h-4 w-4 mr-2 text-primary" /> Export Excel
             </Button>
-            {handleDownloadSampleTemplate && (
-              <Button
-                variant="outline"
-                onClick={handleDownloadSampleTemplate}
-                className="shadow-sm border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950 font-semibold"
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600 dark:text-emerald-400" /> Sample Template
-              </Button>
-            )}
             <Button
               onClick={() => setShowBulkUpload(true)}
               className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold"
             >
-              <Upload className="h-4 w-4 mr-2" /> OCR / Bulk Upload
+              <Upload className="h-4 w-4 mr-2" /> Upload from Excel
             </Button>
           </div>
         </div>
@@ -890,6 +884,16 @@ export const AttendanceUI: React.FC<AttendanceUIProps> = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Bulk Upload CSV / Excel & OCR Modal */}
+      <BulkUploadModal
+        isOpen={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        students={students}
+        handleBulkImport={handleBulkImport}
+        handleDownloadSampleTemplate={handleDownloadSampleTemplate}
+        defaultDate={filterDate}
+      />
 
       {/* Toast Notification */}
       {importStatus.visible && (
