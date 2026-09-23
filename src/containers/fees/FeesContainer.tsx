@@ -14,7 +14,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
 import { FeesUI } from "../../components/modules/fees/FeesUI";
-import { generateFeeReport, generateFeeSummaryReport } from "../../lib/reportUtils";
+import { generateFeeSummaryReport } from "../../lib/reportUtils";
+import feeService, { ClassFeeStructureItem } from "../../Services/fee.service";
 import type { FeeRecord } from "../../types";
 
 const mapStateToProps = (state: AppState) => ({
@@ -53,26 +54,53 @@ function FeesContainerContent({
 }: FeesContainerProps) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
+  const schoolId = activeSchool?.id || "1";
+
+  const [activeSubTab, setActiveSubTab] = useState<"invoices" | "structures">("invoices");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [feeTypeFilter, setFeeTypeFilter] = useState<string>("all");
 
-  // Payment modal state
+  // Class Fee Structures State
+  const [classFeeStructures, setClassFeeStructures] = useState<ClassFeeStructureItem[]>([]);
+  const [showStructModal, setShowStructModal] = useState(false);
+  const [editingStruct, setEditingStruct] = useState<ClassFeeStructureItem | null>(null);
+  const [structFormData, setStructFormData] = useState<any>({});
+
+  // Auto Generate Invoices State
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateClassId, setGenerateClassId] = useState("");
+  const [generateDueDate, setGenerateDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Payment checkout state
   const [payingFee, setPayingFee] = useState<FeeRecord | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("credit_card");
   const [processing, setProcessing] = useState(false);
 
-  // Add/Edit modal state
+  // Student Fee Entry Modal
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [editingFee, setEditingFee] = useState<FeeRecord | null>(null);
   const [formData, setFormData] = useState<any>({});
   const [formError, setFormError] = useState<string | null>(null);
 
+  const fetchClassFeeStructures = useCallback(async () => {
+    try {
+      const data = await feeService.getClassFeeStructures(schoolId);
+      if (Array.isArray(data)) {
+        setClassFeeStructures(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch class fee structures:", err);
+    }
+  }, [schoolId]);
+
   useEffect(() => {
     fetchFeesRequest();
     fetchStudentsRequest();
-  }, [fetchFeesRequest, fetchStudentsRequest, activeSchool]);
+    fetchClassFeeStructures();
+  }, [fetchFeesRequest, fetchStudentsRequest, fetchClassFeeStructures]);
 
   const studentProfile = useMemo(() => {
     if (user?.role === "student") {
@@ -126,7 +154,7 @@ function FeesContainerContent({
     }, 1200);
   }, [payingFee, paymentMethod, updateFeeRequest]);
 
-  // Add / Edit handlers
+  // Add / Edit Student Fee handlers
   const handleOpenAddModal = useCallback(() => {
     setEditingFee(null);
     setFormData({
@@ -184,6 +212,82 @@ function FeesContainerContent({
     [deleteFeeRequest]
   );
 
+  // Class Fee Structure Handlers
+  const handleOpenAddStructModal = useCallback(() => {
+    setEditingStruct(null);
+    setStructFormData({
+      classMasterId: "7",
+      feeName: "",
+      feeType: "tuition",
+      amount: "",
+      frequency: "monthly",
+      dueDay: 10,
+      isMandatory: true,
+      description: "",
+    });
+    setShowStructModal(true);
+  }, []);
+
+  const handleOpenEditStructModal = useCallback((item: ClassFeeStructureItem) => {
+    setEditingStruct(item);
+    setStructFormData({ ...item });
+    setShowStructModal(true);
+  }, []);
+
+  const handleSaveStruct = useCallback(async () => {
+    if (!structFormData.feeName || !structFormData.amount) {
+      toast.error("Fee Name and Amount are required!");
+      return;
+    }
+    try {
+      await feeService.saveClassFeeStructure(schoolId, {
+        ...structFormData,
+        id: editingStruct?.id,
+        amount: Number(structFormData.amount || 0),
+        dueDay: Number(structFormData.dueDay || 10),
+      });
+      toast.success(editingStruct ? "Class fee structure updated" : "Class fee structure saved");
+      setShowStructModal(false);
+      fetchClassFeeStructures();
+    } catch (err) {
+      toast.error("Failed to save class fee structure");
+    }
+  }, [schoolId, structFormData, editingStruct, fetchClassFeeStructures]);
+
+  const handleDeleteStruct = useCallback(
+    async (id: string) => {
+      if (window.confirm("Delete this class fee component?")) {
+        try {
+          await feeService.deleteClassFeeStructure(schoolId, id);
+          toast.info("Class fee structure component deleted");
+          fetchClassFeeStructures();
+        } catch (err) {
+          toast.error("Failed to delete component");
+        }
+      }
+    },
+    [schoolId, fetchClassFeeStructures]
+  );
+
+  // Auto Generate Invoices Handler
+  const handleGenerateInvoices = useCallback(async () => {
+    if (!generateClassId) {
+      toast.error("Please select a Class Grade first");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const res = await feeService.generateClassInvoices(schoolId, generateClassId, generateDueDate);
+      toast.success(res.message || "Generated invoices successfully!");
+      setShowGenerateModal(false);
+      fetchFeesRequest();
+    } catch (err) {
+      toast.error("Failed to generate class invoices");
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [schoolId, generateClassId, generateDueDate, fetchFeesRequest]);
+
   const handleExportExcel = useCallback(() => {
     try {
       const data = fees.map((f) => ({
@@ -219,6 +323,7 @@ function FeesContainerContent({
   return (
     <FeesUI
       fees={fees}
+      classFeeStructures={classFeeStructures}
       loading={loading}
       error={error}
       searchQuery={searchQuery}
@@ -246,6 +351,25 @@ function FeesContainerContent({
       handleOpenEditModal={handleOpenEditModal}
       handleExportExcel={handleExportExcel}
       handleExportSummary={handleExportSummary}
+      activeSubTab={activeSubTab}
+      setActiveSubTab={setActiveSubTab}
+      showStructModal={showStructModal}
+      setShowStructModal={setShowStructModal}
+      editingStruct={editingStruct}
+      structFormData={structFormData}
+      setStructFormData={setStructFormData}
+      handleSaveStruct={handleSaveStruct}
+      handleDeleteStruct={handleDeleteStruct}
+      handleOpenAddStructModal={handleOpenAddStructModal}
+      handleOpenEditStructModal={handleOpenEditStructModal}
+      showGenerateModal={showGenerateModal}
+      setShowGenerateModal={setShowGenerateModal}
+      generateClassId={generateClassId}
+      setGenerateClassId={setGenerateClassId}
+      generateDueDate={generateDueDate}
+      setGenerateDueDate={setGenerateDueDate}
+      handleGenerateInvoices={handleGenerateInvoices}
+      isGenerating={isGenerating}
     />
   );
 }

@@ -14,7 +14,8 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
 import { SalaryUI } from "../../components/modules/salary/SalaryUI";
-import { generateSalaryReport, generateSalarySummaryReport } from "../../lib/reportUtils";
+import { generateSalarySummaryReport } from "../../lib/reportUtils";
+import salaryService, { StaffSalaryStructureItem } from "../../Services/salary.service";
 import type { SalaryRecord } from "../../types";
 
 const mapStateToProps = (state: AppState) => ({
@@ -54,23 +55,50 @@ function SalaryContainerContent({
 }: SalaryContainerProps) {
   const { user } = useAuth();
   const { activeSchool } = useSchool();
+  const schoolId = activeSchool?.id || "1";
+
+  const [activeSubTab, setActiveSubTab] = useState<"registries" | "structures">("registries");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  // Staff Salary Structures State
+  const [salaryStructures, setSalaryStructures] = useState<StaffSalaryStructureItem[]>([]);
+  const [showStructModal, setShowStructModal] = useState(false);
+  const [editingStruct, setEditingStruct] = useState<StaffSalaryStructureItem | null>(null);
+  const [structFormData, setStructFormData] = useState<any>({});
+
+  // Generate Monthly Payroll State
+  const [showPayrollModal, setShowPayrollModal] = useState(false);
+  const [payrollMonth, setPayrollMonth] = useState(new Date().getMonth() + 1);
+  const [payrollYear, setPayrollYear] = useState(new Date().getFullYear());
+  const [isGenerating, setIsGenerating] = useState(false);
+
   // Payslip detail modal
   const [selectedPayslip, setSelectedPayslip] = useState<SalaryRecord | null>(null);
 
-  // Add/Edit modal state
+  // Add/Edit Salary Record Modal
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [editingSalary, setEditingSalary] = useState<SalaryRecord | null>(null);
   const [formData, setFormData] = useState<any>({});
   const [formError, setFormError] = useState<string | null>(null);
 
+  const fetchSalaryStructures = useCallback(async () => {
+    try {
+      const data = await salaryService.getSalaryStructures(schoolId);
+      if (Array.isArray(data)) {
+        setSalaryStructures(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch salary structures:", err);
+    }
+  }, [schoolId]);
+
   useEffect(() => {
     fetchSalariesRequest();
     fetchTeachersRequest();
-  }, [fetchSalariesRequest, fetchTeachersRequest, activeSchool]);
+    fetchSalaryStructures();
+  }, [fetchSalariesRequest, fetchTeachersRequest, fetchSalaryStructures]);
 
   // Role & search filtered salaries
   const salaries = useMemo(() => {
@@ -97,7 +125,7 @@ function SalaryContainerContent({
     });
   }, [allSalaries, isMySalary, user, searchQuery, statusFilter]);
 
-  // Add / Edit handlers
+  // Add / Edit Salary Record Handlers
   const handleOpenAddModal = useCallback(() => {
     const now = new Date();
     setEditingSalary(null);
@@ -160,6 +188,83 @@ function SalaryContainerContent({
     [deleteSalaryRequest]
   );
 
+  // Staff Salary Structure Handlers
+  const handleOpenAddStructModal = useCallback(() => {
+    setEditingStruct(null);
+    setStructFormData({
+      teacherId: "",
+      basicSalary: "",
+      hra: "",
+      da: "",
+      otherAllowance: "",
+      pfDeduction: "",
+      taxDeduction: "",
+      effectiveFrom: new Date().toISOString().slice(0, 10),
+      isActive: true,
+    });
+    setShowStructModal(true);
+  }, []);
+
+  const handleOpenEditStructModal = useCallback((item: StaffSalaryStructureItem) => {
+    setEditingStruct(item);
+    setStructFormData({ ...item });
+    setShowStructModal(true);
+  }, []);
+
+  const handleSaveStruct = useCallback(async () => {
+    if (!structFormData.teacherId || !structFormData.basicSalary) {
+      toast.error("Please select a Teacher and enter Basic Salary!");
+      return;
+    }
+    try {
+      await salaryService.saveSalaryStructure(schoolId, {
+        ...structFormData,
+        id: editingStruct?.id,
+        basicSalary: Number(structFormData.basicSalary || 0),
+        hra: Number(structFormData.hra || 0),
+        da: Number(structFormData.da || 0),
+        otherAllowance: Number(structFormData.otherAllowance || 0),
+        pfDeduction: Number(structFormData.pfDeduction || 0),
+        taxDeduction: Number(structFormData.taxDeduction || 0),
+      });
+      toast.success(editingStruct ? "Staff salary structure updated" : "Staff salary structure saved");
+      setShowStructModal(false);
+      fetchSalaryStructures();
+    } catch (err) {
+      toast.error("Failed to save staff salary structure");
+    }
+  }, [schoolId, structFormData, editingStruct, fetchSalaryStructures]);
+
+  const handleDeleteStruct = useCallback(
+    async (id: string) => {
+      if (window.confirm("Delete this staff salary structure setup?")) {
+        try {
+          await salaryService.deleteSalaryStructure(schoolId, id);
+          toast.info("Staff salary structure deleted");
+          fetchSalaryStructures();
+        } catch (err) {
+          toast.error("Failed to delete salary structure");
+        }
+      }
+    },
+    [schoolId, fetchSalaryStructures]
+  );
+
+  // Generate Monthly Payroll Handler
+  const handleGeneratePayroll = useCallback(async () => {
+    setIsGenerating(true);
+    try {
+      const res = await salaryService.generateMonthlyPayroll(schoolId, payrollMonth, payrollYear);
+      toast.success(res.message || "Monthly payroll generated successfully!");
+      setShowPayrollModal(false);
+      fetchSalariesRequest();
+    } catch (err) {
+      toast.error("Failed to generate monthly payroll");
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [schoolId, payrollMonth, payrollYear, fetchSalariesRequest]);
+
   const handleExportExcel = useCallback(() => {
     try {
       const data = salaries.map((s) => ({
@@ -195,6 +300,8 @@ function SalaryContainerContent({
   return (
     <SalaryUI
       salaries={salaries}
+      salaryStructures={salaryStructures}
+      teachers={teachers}
       loading={loading}
       error={error}
       searchQuery={searchQuery}
@@ -217,6 +324,25 @@ function SalaryContainerContent({
       handleExportExcel={handleExportExcel}
       handleExportSummary={handleExportSummary}
       userName={user?.name || "Faculty Member"}
+      activeSubTab={activeSubTab}
+      setActiveSubTab={setActiveSubTab}
+      showStructModal={showStructModal}
+      setShowStructModal={setShowStructModal}
+      editingStruct={editingStruct}
+      structFormData={structFormData}
+      setStructFormData={setStructFormData}
+      handleSaveStruct={handleSaveStruct}
+      handleDeleteStruct={handleDeleteStruct}
+      handleOpenAddStructModal={handleOpenAddStructModal}
+      handleOpenEditStructModal={handleOpenEditStructModal}
+      showPayrollModal={showPayrollModal}
+      setShowPayrollModal={setShowPayrollModal}
+      payrollMonth={payrollMonth}
+      setPayrollMonth={setPayrollMonth}
+      payrollYear={payrollYear}
+      setPayrollYear={setPayrollYear}
+      handleGeneratePayroll={handleGeneratePayroll}
+      isGenerating={isGenerating}
     />
   );
 }
