@@ -25,7 +25,7 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import type { SalaryRecord } from "../../../types";
-import type { StaffSalaryStructureItem } from "../../../Services/salary.service";
+import salaryService, { StaffSalaryStructureItem } from "../../../Services/salary.service";
 
 export interface SalaryUIProps {
   salaries: SalaryRecord[];
@@ -561,7 +561,16 @@ export function SalaryUI({
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex items-center justify-end gap-2">
-                                {setSelectedPayslip && (
+                                {s?.status?.toLowerCase() === "paid" && <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="hover:text-primary h-8 w-8"
+                                  onClick={() => salaryService.downloadSalarySlipPdf(s.id, s)}
+                                  title="Download Salary Slip PDF"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>}
+                                {/* {setSelectedPayslip && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -570,8 +579,8 @@ export function SalaryUI({
                                   >
                                     <Eye className="h-3.5 w-3.5 mr-1" /> View Payslip
                                   </Button>
-                                )}
-                                {!isMySalary && (
+                                )} */}
+                                {!isMySalary && s?.status?.toLowerCase() !== "paid" && (
                                   <>
                                     {handleOpenEditModal && (
                                       <Button

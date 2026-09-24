@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import type { FeeRecord } from "../../../types";
 import { formatOnlyDate } from "../../../lib/utils";
-import type { ClassFeeStructureItem } from "../../../Services/fee.service";
+import feeService, { ClassFeeStructureItem } from "../../../Services/fee.service";
 
 export interface FeesUIProps {
   fees: FeeRecord[];
@@ -795,6 +795,17 @@ export function FeesUI({
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              {fee?.status?.toLowerCase() === "paid"
+                                && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="hover:text-primary h-8 w-8"
+                                    onClick={() => feeService.downloadFeeReceiptPdf(fee.id, fee)}
+                                    title="Download Fee Receipt PDF"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>)}
                               {isMyFees && fee.status !== "paid" && setPayingFee && (
                                 <Button
                                   size="sm"
@@ -809,7 +820,7 @@ export function FeesUI({
                                   <CheckCircle2 className="h-4 w-4" /> Settled
                                 </span>
                               )}
-                              {!isMyFees && (
+                              {!isMyFees && fee?.status?.toLowerCase() !== "paid" && (
                                 <>
                                   {handleOpenEditModal && (
                                     <Button
