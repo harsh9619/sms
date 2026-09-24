@@ -15,6 +15,8 @@ import { SubjectTeacherConfigPage } from "./pages/Classes/SubjectTeacherConfigPa
 import { AttendancePage } from "./pages/Attendance/AttendancePage";
 import { MyAttendancePage } from "./pages/Attendance/MyAttendancePage";
 import { SettingsPage } from "./pages/Settings/SettingsPage";
+import { FeeReportPage } from "./pages/Reports/FeeReportPage";
+import { SalaryReportPage } from "./pages/Reports/SalaryReportPage";
 import { FeeSalaryReportPage } from "./pages/Reports/FeeSalaryReportPage";
 import { AttendanceReportPage } from "./pages/Reports/AttendanceReportPage";
 import { TimetablePage } from "./pages/Timetable/TimetablePage";
@@ -151,10 +153,26 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/school/:schoolId/reports/fees"
+          element={
+            <ProtectedRoute allowedRoles={getRolesForPath("/reports/fees")}>
+              <FeeReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/reports/salaries"
+          element={
+            <ProtectedRoute allowedRoles={getRolesForPath("/reports/salaries")}>
+              <SalaryReportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/school/:schoolId/reports/fee-salary"
           element={
-            <ProtectedRoute allowedRoles={getRolesForPath("/reports/fee-salary")}>
-              <FeeSalaryReportPage />
+            <ProtectedRoute allowedRoles={getRolesForPath("/reports/fees")}>
+              <FeeReportPage />
             </ProtectedRoute>
           }
         />
