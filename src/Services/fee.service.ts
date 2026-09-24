@@ -11,6 +11,7 @@ export interface ClassFeeStructureItem {
   amount: number;
   frequency: string;
   dueDay: number;
+  month?: string;
   isMandatory: boolean;
   description?: string;
 }
@@ -21,6 +22,7 @@ export interface FeeQueryParams {
   search?: string;
   status?: string;
   feeType?: string;
+  month?: string;
   studentId?: string;
   schoolId?: string;
 }
@@ -44,6 +46,7 @@ export const feeService = {
       if (params.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
       if (params.status && params.status !== "all") queryParts.push(`status=${encodeURIComponent(params.status)}`);
       if (params.feeType && params.feeType !== "all") queryParts.push(`feeType=${encodeURIComponent(params.feeType)}`);
+      if (params.month && params.month !== "all") queryParts.push(`month=${encodeURIComponent(params.month)}`);
       if (params.studentId) queryParts.push(`studentId=${encodeURIComponent(params.studentId)}`);
     }
 
@@ -78,11 +81,11 @@ export const feeService = {
     return httpService.delete(`/api/${schoolId}/fees/structures/${id}`);
   },
 
-  generateClassInvoices: async (schoolId = "1", classMasterId: string, dueDate?: string): Promise<any> => {
-    return httpService.post(`/api/${schoolId}/fees/generate-invoices`, { classMasterId, dueDate });
+  generateClassInvoices: async (schoolId = "1", classMasterId: string, dueDate?: string, month?: string): Promise<any> => {
+    return httpService.post(`/api/${schoolId}/fees/generate-invoices`, { classMasterId, dueDate, month });
   },
 
-  downloadFeeReceiptPdf: async (feeId: string, feeRecord?: any): Promise<void> => {
+  downloadFeeReceiptPdf: async (feeId: string, feeRecord?: any, allFeesList?: any[]): Promise<void> => {
     try {
       const response = await fetch(`/api/fees/${feeId}/download-pdf`);
       if (response.ok) {
@@ -100,13 +103,46 @@ export const feeService = {
     } catch (err) {
       console.warn("Backend PDF fetch failed, falling back to client jsPDF", err);
     }
-    await generateClientFeePdf(feeRecord || { id: feeId });
+
+    let monthFeeItems: any[] = [];
+    if (feeRecord && feeRecord.studentId && feeRecord.month && Array.isArray(allFeesList)) {
+      monthFeeItems = allFeesList.filter(
+        (f) => String(f.studentId) === String(feeRecord.studentId) && f.month === feeRecord.month
+      );
+    }
+
+    await generateClientFeePdf(feeRecord || { id: feeId }, monthFeeItems);
+  },
+
+  downloadMonthlyFeeReceiptPdf: async (studentId: string, month: string, feeItems?: any[]): Promise<void> => {
+    try {
+      const response = await fetch(`/api/fees/monthly-receipt-pdf?studentId=${studentId}&month=${month}`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `monthly-fee-receipt-${month}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+    } catch (err) {
+      console.warn("Backend PDF fetch failed, falling back to client jsPDF", err);
+    }
+    await generateClientFeePdf({ studentId, month }, feeItems);
   },
 };
 
-export const generateClientFeePdf = async (fee: any) => {
+export const generateClientFeePdf = async (feeInput: any, monthFeeItems?: any[]) => {
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
+
+  const items = Array.isArray(monthFeeItems) && monthFeeItems.length > 0 ? monthFeeItems : [feeInput];
+  const firstFee = items[0] || feeInput;
+  const totalAmt = items.reduce((sum, f) => sum + Number(f.amount || 0), 0);
 
   const doc = new jsPDF();
   doc.setFillColor(4, 120, 87);
@@ -117,15 +153,15 @@ export const generateClientFeePdf = async (fee: any) => {
   doc.text("SCHOOL MANAGEMENT SYSTEM", 20, 26);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("OFFICIAL FEE PAYMENT RECEIPT", 20, 34);
+  doc.text("OFFICIAL CONSOLIDATED MONTHLY FEE RECEIPT", 20, 34);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text(`Receipt: #REC-${fee.id || "N/A"}`, 140, 24);
+  doc.text(`Receipt: #REC-${firstFee.id || "N/A"}`, 140, 24);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`Due: ${fee.dueDate ? new Date(fee.dueDate).toLocaleDateString() : "N/A"}`, 140, 30);
-  doc.text(`Status: ${(fee.status || "pending").toUpperCase()}`, 140, 36);
+  doc.text(`Due: ${firstFee.dueDate ? new Date(firstFee.dueDate).toLocaleDateString() : "N/A"}`, 140, 30);
+  doc.text(`Status: ${(firstFee.status || "pending").toUpperCase()}`, 140, 36);
 
   doc.setDrawColor(187, 247, 208);
   doc.setFillColor(240, 253, 244);
@@ -138,23 +174,21 @@ export const generateClientFeePdf = async (fee: any) => {
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(9);
-  doc.text(`Student Name: ${fee.studentName || "N/A"}`, 20, 60);
-  doc.text(`Class & Div: ${fee.class || "N/A"}`, 20, 67);
-  doc.text(`Roll / ID: ${fee.rollNumber || fee.studentId || "N/A"}`, 110, 60);
-  doc.text(`Paid Date: ${fee.paidDate ? new Date(fee.paidDate).toLocaleDateString() : "Pending"}`, 110, 67);
+  doc.text(`Student Name: ${firstFee.studentName || "N/A"}`, 20, 60);
+  doc.text(`Class & Div: ${firstFee.class || "N/A"}`, 20, 67);
+  doc.text(`Roll / ID: ${firstFee.rollNumber || firstFee.studentId || "N/A"}`, 110, 60);
+  doc.text(`Billing Month: ${firstFee.month || "N/A"}`, 110, 67);
 
-  const amt = Number(fee.amount || 0);
+  const tableBody = items.map((f) => [
+    (f.type || f.feeType || "Tuition Fee").toUpperCase(),
+    f.remarks || `Standard Monthly Fee (${firstFee.month || "Current"})`,
+    `₹${Number(f.amount || 0).toLocaleString()}`,
+  ]);
 
   autoTable(doc, {
     startY: 82,
     head: [["Fee Type / Head", "Remarks / Note", "Amount (₹)"]],
-    body: [
-      [
-        (fee.type || fee.feeType || "Tuition Fee").toUpperCase(),
-        fee.remarks || "Standard Academic Fee Invoice",
-        `₹${amt.toLocaleString()}`,
-      ],
-    ],
+    body: tableBody,
     headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: "bold" },
     styles: { fontSize: 9 },
   });
@@ -166,16 +200,16 @@ export const generateClientFeePdf = async (fee: any) => {
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(4, 120, 87);
-  doc.text("TOTAL AMOUNT:", 20, finalY + 13);
+  doc.text("TOTAL MONTHLY AMOUNT:", 20, finalY + 13);
   doc.setTextColor(
-    fee.status === "paid" ? 22 : 217,
-    fee.status === "paid" ? 163 : 119,
-    fee.status === "paid" ? 74 : 6
+    firstFee.status === "paid" ? 22 : 217,
+    firstFee.status === "paid" ? 163 : 119,
+    firstFee.status === "paid" ? 74 : 6
   );
   doc.setFontSize(13);
-  doc.text(`₹${amt.toLocaleString()}`, 150, finalY + 13);
+  doc.text(`₹${totalAmt.toLocaleString()}`, 150, finalY + 13);
 
-  doc.save(`fee-receipt-${fee.id || "record"}.pdf`);
+  doc.save(`monthly-fee-receipt-${firstFee.studentName || "student"}-${firstFee.month || "month"}.pdf`);
 };
 
 export default feeService;

@@ -70,6 +70,7 @@ function FeesContainerContent({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [feeTypeFilter, setFeeTypeFilter] = useState<string>("all");
+  const [monthFilter, setMonthFilter] = useState<string>("all");
 
   // Class Fee Structures State
   const [classFeeStructures, setClassFeeStructures] = useState<ClassFeeStructureItem[]>([]);
@@ -81,6 +82,7 @@ function FeesContainerContent({
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateClassId, setGenerateClassId] = useState("");
   const [generateDueDate, setGenerateDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [generateMonth, setGenerateMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Payment checkout state
@@ -120,6 +122,7 @@ function FeesContainerContent({
       search: searchQuery || undefined,
       status: statusFilter !== "all" ? statusFilter : undefined,
       feeType: feeTypeFilter !== "all" ? feeTypeFilter : undefined,
+      month: monthFilter !== "all" ? monthFilter : undefined,
     };
     if (isMyFees || user?.role === "student") {
       if (studentProfile) {
@@ -127,7 +130,7 @@ function FeesContainerContent({
       }
     }
     fetchFeesRequest(params);
-  }, [fetchFeesRequest, schoolId, page, limit, searchQuery, statusFilter, feeTypeFilter, isMyFees, user, studentProfile]);
+  }, [fetchFeesRequest, schoolId, page, limit, searchQuery, statusFilter, feeTypeFilter, monthFilter, isMyFees, user, studentProfile]);
 
   useEffect(() => {
     fetchStudentsRequest();
@@ -307,6 +310,7 @@ function FeesContainerContent({
         class: formData.class || "",
         feeType: feeType,
         amount: amount,
+        month: formData.month || new Date().toISOString().slice(0, 7),
         dueDate: formData.dueDate || new Date().toISOString().slice(0, 10),
         status: formData.status || "pending",
         paidDate: formData.status === "paid" ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : null,
@@ -338,6 +342,7 @@ function FeesContainerContent({
           class: formData.class || "",
           feeType: item.feeType || "tuition",
           amount: Number(item.amount),
+          month: formData.month || new Date().toISOString().slice(0, 7),
           dueDate: formData.dueDate || new Date().toISOString().slice(0, 10),
           status: formData.status || "pending",
           paidDate: formData.status === "paid" ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : null,
@@ -362,6 +367,7 @@ function FeesContainerContent({
       class: formData.class || "",
       feeType: formData.feeType || "tuition",
       amount: Number(formData.amount || 0),
+      month: formData.month || new Date().toISOString().slice(0, 7),
       dueDate: formData.dueDate || new Date().toISOString().slice(0, 10),
       status: formData.status || "pending",
       paidDate: formData.status === "paid" ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : null,
@@ -390,12 +396,14 @@ function FeesContainerContent({
   const handleOpenAddStructModal = useCallback(() => {
     setEditingStruct(null);
     setStructFormData({
-      classMasterId: "7",
+      classMasterId: "3",
+      classMasterIds: ["3", "4"], // Default Class 1 and Class 2 selected
       feeName: "",
       feeType: "tuition",
       amount: "",
       frequency: "monthly",
       dueDay: 10,
+      month: "all",
       isMandatory: true,
       description: "",
     });
@@ -404,7 +412,10 @@ function FeesContainerContent({
 
   const handleOpenEditStructModal = useCallback((item: ClassFeeStructureItem) => {
     setEditingStruct(item);
-    setStructFormData({ ...item });
+    setStructFormData({
+      ...item,
+      classMasterIds: [String(item.classMasterId)],
+    });
     setShowStructModal(true);
   }, []);
 
@@ -413,14 +424,36 @@ function FeesContainerContent({
       toast.error("Fee Name and Amount are required!");
       return;
     }
+
+    const selectedIds = (structFormData.classMasterIds && structFormData.classMasterIds.length > 0)
+      ? structFormData.classMasterIds
+      : (structFormData.classMasterId ? [String(structFormData.classMasterId)] : []);
+
+    if (selectedIds.length === 0) {
+      toast.error("Please select at least one Class Grade!");
+      return;
+    }
+
     try {
-      await feeService.saveClassFeeStructure(schoolId, {
-        ...structFormData,
-        id: editingStruct?.id,
-        amount: Number(structFormData.amount || 0),
-        dueDay: Number(structFormData.dueDay || 10),
-      });
-      toast.success(editingStruct ? "Class fee structure updated" : "Class fee structure saved");
+      if (editingStruct) {
+        await feeService.saveClassFeeStructure(schoolId, {
+          ...structFormData,
+          id: editingStruct.id,
+          classMasterId: selectedIds[0],
+          amount: Number(structFormData.amount || 0),
+          dueDay: Number(structFormData.dueDay || 10),
+        });
+        toast.success("Class fee structure updated");
+      } else {
+        await feeService.saveClassFeeStructure(schoolId, {
+          ...structFormData,
+          classMasterIds: selectedIds.map(Number),
+          classMasterId: selectedIds[0],
+          amount: Number(structFormData.amount || 0),
+          dueDay: Number(structFormData.dueDay || 10),
+        });
+        toast.success(`Class fee structure created for ${selectedIds.length} class(es)`);
+      }
       setShowStructModal(false);
       fetchClassFeeStructures();
     } catch (err) {
@@ -451,7 +484,7 @@ function FeesContainerContent({
     }
     setIsGenerating(true);
     try {
-      const res = await feeService.generateClassInvoices(schoolId, generateClassId, generateDueDate);
+      const res = await feeService.generateClassInvoices(schoolId, generateClassId, generateDueDate, generateMonth);
       toast.success(res.message || "Generated invoices successfully!");
       setGenerateClassId("");
       setGenerateDueDate("");
@@ -462,7 +495,7 @@ function FeesContainerContent({
     } finally {
       setIsGenerating(false);
     }
-  }, [schoolId, generateClassId, generateDueDate, fetchFeesRequest]);
+  }, [schoolId, generateClassId, generateDueDate, generateMonth, fetchFeesRequest]);
 
   const handleExportExcel = useCallback(() => {
     try {
@@ -473,6 +506,7 @@ function FeesContainerContent({
         Section: f.section || "",
         "Fee Type": f.feeType || "",
         "Amount (₹)": f.amount || 0,
+        Month: f.month || "",
         "Due Date": f.dueDate || "",
         "Paid Date": f.paidDate || "-",
         Status: f.status || "",
@@ -515,6 +549,8 @@ function FeesContainerContent({
       setStatusFilter={setStatusFilter}
       feeTypeFilter={feeTypeFilter}
       setFeeTypeFilter={setFeeTypeFilter}
+      monthFilter={monthFilter}
+      setMonthFilter={setMonthFilter}
       isMyFees={isMyFees}
       payingFee={payingFee}
       setPayingFee={setPayingFee}
@@ -551,6 +587,8 @@ function FeesContainerContent({
       setGenerateClassId={setGenerateClassId}
       generateDueDate={generateDueDate}
       setGenerateDueDate={setGenerateDueDate}
+      generateMonth={generateMonth}
+      setGenerateMonth={setGenerateMonth}
       handleGenerateInvoices={handleGenerateInvoices}
       isGenerating={isGenerating}
     />

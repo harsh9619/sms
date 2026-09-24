@@ -180,9 +180,10 @@ export interface FeeRecord {
   rollNumber: string;
   class: string;
   section: string;
-  feeType: "tuition" | "transport" | "uniform" | "examination" | "other";
+  feeType: string;
   amount: number;
   dueDate: string;
+  month?: string;
   paidDate?: string;
   status: "pending" | "paid" | "overdue";
   remarks?: string;

@@ -28,10 +28,119 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Check,
+  Zap,
+  BookOpen,
+  Bus,
+  Laptop,
+  FlaskConical,
+  Trophy,
+  Building,
+  Shirt,
+  Info,
+  CalendarDays,
 } from "lucide-react";
 import type { FeeRecord } from "../../../types";
 import { formatOnlyDate } from "../../../lib/utils";
 import feeService, { ClassFeeStructureItem } from "../../../Services/fee.service";
+
+export const ALL_CLASS_OPTIONS = [
+  { id: "1", label: "LKG" },
+  { id: "2", label: "UKG" },
+  { id: "3", label: "Class 1" },
+  { id: "4", label: "Class 2" },
+  { id: "5", label: "Class 3" },
+  { id: "6", label: "Class 4" },
+  { id: "7", label: "Class 5" },
+  { id: "8", label: "Class 6" },
+  { id: "9", label: "Class 7" },
+  { id: "10", label: "Class 8" },
+  { id: "11", label: "Class 9" },
+  { id: "12", label: "Class 10" },
+  { id: "13", label: "Class 11" },
+  { id: "14", label: "Class 12" },
+];
+
+export const FEE_PRESET_TEMPLATES = [
+  {
+    name: "Monthly Tuition Fee",
+    feeType: "tuition",
+    amount: "3000",
+    frequency: "monthly",
+    month: "all",
+    description: "Standard monthly tuition fee component",
+    badge: "Popular",
+  },
+  {
+    name: "Term 1 Mid-Term Exam Fee",
+    feeType: "exam",
+    amount: "500",
+    frequency: "one_time",
+    month: "07",
+    description: "July term examination fee",
+    badge: "July Exam",
+  },
+  {
+    name: "Term 2 Mid-Term Exam Fee",
+    feeType: "exam",
+    amount: "500",
+    frequency: "one_time",
+    month: "11",
+    description: "November term examination fee",
+    badge: "November Exam",
+  },
+  {
+    name: "Bus Transport Fee",
+    feeType: "transport",
+    amount: "800",
+    frequency: "monthly",
+    month: "all",
+    description: "Optional monthly bus transport charge",
+    badge: "Monthly",
+  },
+  {
+    name: "Computer & IT Fee",
+    feeType: "computer",
+    amount: "400",
+    frequency: "monthly",
+    month: "all",
+    description: "Monthly CS lab access charge",
+    badge: "Lab Access",
+  },
+  {
+    name: "Annual Activity Fee",
+    feeType: "annual",
+    amount: "1000",
+    frequency: "annually",
+    month: "04",
+    description: "Annual academic activity and sports fee",
+    badge: "April Annual",
+  },
+  {
+    name: "Uniform Set Charge",
+    feeType: "uniforms",
+    amount: "1500",
+    frequency: "one_time",
+    month: "04",
+    description: "One-time uniform set charge",
+    badge: "One Time",
+  },
+];
+
+export const MONTH_GRID_ITEMS = [
+  { value: "04", label: "Apr", fullLabel: "April", badge: "Session Start" },
+  { value: "05", label: "May", fullLabel: "May", badge: "" },
+  { value: "06", label: "Jun", fullLabel: "June", badge: "Term 1 Exam" },
+  { value: "07", label: "Jul", fullLabel: "July", badge: "" },
+  { value: "08", label: "Aug", fullLabel: "August", badge: "" },
+  { value: "09", label: "Sep", fullLabel: "September", badge: "Mid Year" },
+  { value: "10", label: "Oct", fullLabel: "October", badge: "" },
+  { value: "11", label: "Nov", fullLabel: "November", badge: "Term 2 Exam" },
+  { value: "12", label: "Dec", fullLabel: "December", badge: "" },
+  { value: "01", label: "Jan", fullLabel: "January", badge: "" },
+  { value: "02", label: "Feb", fullLabel: "February", badge: "" },
+  { value: "03", label: "Mar", fullLabel: "March", badge: "Year End" },
+];
 
 export interface FeesUIProps {
   fees: FeeRecord[];
@@ -95,6 +204,10 @@ export interface FeesUIProps {
     totalPages: number;
   } | null;
 
+  // Month Filtering
+  monthFilter?: string;
+  setMonthFilter?: (val: string) => void;
+
   // Auto Generate Invoices Modal
   showGenerateModal?: boolean;
   setShowGenerateModal?: (show: boolean) => void;
@@ -102,6 +215,8 @@ export interface FeesUIProps {
   setGenerateClassId?: (val: string) => void;
   generateDueDate?: string;
   setGenerateDueDate?: (val: string) => void;
+  generateMonth?: string;
+  setGenerateMonth?: (val: string) => void;
   handleGenerateInvoices?: () => void;
   isGenerating?: boolean;
 }
@@ -119,6 +234,8 @@ export function FeesUI({
   setStatusFilter,
   feeTypeFilter = "all",
   setFeeTypeFilter,
+  monthFilter = "all",
+  setMonthFilter,
   isMyFees = false,
   payingFee = null,
   setPayingFee,
@@ -160,9 +277,96 @@ export function FeesUI({
   setGenerateClassId,
   generateDueDate = "",
   setGenerateDueDate,
+  generateMonth = new Date().toISOString().slice(0, 7),
+  setGenerateMonth,
   handleGenerateInvoices,
   isGenerating = false,
 }: FeesUIProps) {
+  // Multi-class selection state & helpers
+  const selectedClassIds: string[] = React.useMemo(() => {
+    if (Array.isArray(structFormData.classMasterIds)) {
+      return structFormData.classMasterIds.map(String);
+    }
+    if (structFormData.classMasterId) {
+      return [String(structFormData.classMasterId)];
+    }
+    return [];
+  }, [structFormData.classMasterIds, structFormData.classMasterId]);
+
+  const handleToggleClassId = (clsId: string) => {
+    if (!setStructFormData) return;
+    let nextIds: string[];
+    if (selectedClassIds.includes(clsId)) {
+      nextIds = selectedClassIds.filter((id) => id !== clsId);
+    } else {
+      nextIds = [...selectedClassIds, clsId];
+    }
+    setStructFormData({
+      ...structFormData,
+      classMasterIds: nextIds,
+      classMasterId: nextIds[0] || "",
+    });
+  };
+
+  const handleQuickSelectClasses = (type: "all" | "primary" | "secondary" | "senior" | "none") => {
+    if (!setStructFormData) return;
+    let nextIds: string[] = [];
+    if (type === "all") {
+      nextIds = ALL_CLASS_OPTIONS.map((c) => c.id);
+    } else if (type === "primary") {
+      nextIds = ["3", "4", "5", "6", "7"];
+    } else if (type === "secondary") {
+      nextIds = ["8", "9", "10", "11", "12"];
+    } else if (type === "senior") {
+      nextIds = ["13", "14"];
+    } else if (type === "none") {
+      nextIds = [];
+    }
+    setStructFormData({
+      ...structFormData,
+      classMasterIds: nextIds,
+      classMasterId: nextIds[0] || "",
+    });
+  };
+
+  const handleApplyPresetTemplate = (preset: typeof FEE_PRESET_TEMPLATES[0]) => {
+    if (!setStructFormData) return;
+    setStructFormData({
+      ...structFormData,
+      feeName: preset.name,
+      feeType: preset.feeType,
+      amount: preset.amount,
+      frequency: preset.frequency,
+      month: preset.month,
+      description: preset.description,
+    });
+  };
+
+  const summaryDetails = React.useMemo(() => {
+    const classCount = selectedClassIds.length;
+    const amountNum = Number(structFormData.amount || 0);
+    const monthVal = structFormData.month || "all";
+    const freqVal = structFormData.frequency || "monthly";
+
+    let timesPerYear = 1;
+    if (monthVal === "all") {
+      if (freqVal === "monthly") timesPerYear = 12;
+      else if (freqVal === "quarterly") timesPerYear = 4;
+      else timesPerYear = 1;
+    } else {
+      timesPerYear = 1;
+    }
+
+    const totalAnnualStudent = amountNum * timesPerYear;
+    return {
+      classCount,
+      amountNum,
+      monthVal,
+      freqVal,
+      totalAnnualStudent,
+    };
+  }, [selectedClassIds, structFormData]);
+
   // Stats calculations
   const stats = React.useMemo(() => {
     let totalAmount = 0;
@@ -376,6 +580,10 @@ export function FeesUI({
       { id: "transport", label: "Transport Fee", icon: CreditCard },
       { id: "library", label: "Library Fee", icon: Layers },
       { id: "sports", label: "Sports Fee", icon: Sparkles },
+      { id: "hostel", label: "Hostel Fee", icon: DollarSign },
+      { id: "lab", label: "Lab / Computer Fee", icon: DollarSign },
+      { id: "annual", label: "Annual Charges", icon: Sparkles },
+      { id: "uniforms", label: "Uniforms & Books", icon: Layers },
       { id: "other", label: "Other Fee", icon: DollarSign },
     ];
 
@@ -703,6 +911,28 @@ export function FeesUI({
                     <option value="overdue">Overdue</option>
                   </select>
 
+                  {setMonthFilter && (
+                    <select
+                      className="h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                      value={monthFilter}
+                      onChange={(e) => setMonthFilter(e.target.value)}
+                    >
+                      <option value="all">All Months</option>
+                      <option value="2026-01">January 2026</option>
+                      <option value="2026-02">February 2026</option>
+                      <option value="2026-03">March 2026</option>
+                      <option value="2026-04">April 2026</option>
+                      <option value="2026-05">May 2026</option>
+                      <option value="2026-06">June 2026</option>
+                      <option value="2026-07">July 2026</option>
+                      <option value="2026-08">August 2026</option>
+                      <option value="2026-09">September 2026</option>
+                      <option value="2026-10">October 2026</option>
+                      <option value="2026-11">November 2026</option>
+                      <option value="2026-12">December 2026</option>
+                    </select>
+                  )}
+
                   {setFeeTypeFilter && (
                     <select
                       className="h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
@@ -715,6 +945,11 @@ export function FeesUI({
                       <option value="exam">Exam Fee</option>
                       <option value="library">Library Fee</option>
                       <option value="sports">Sports Fee</option>
+                      <option value="hostel">Hostel Fee</option>
+                      <option value="lab">Lab / Computer Fee</option>
+                      <option value="annual">Annual Charges</option>
+                      <option value="uniforms">Uniforms & Books</option>
+                      <option value="other">Other Fee</option>
                     </select>
                   )}
                 </div>
@@ -744,6 +979,7 @@ export function FeesUI({
                         {!isMyFees && <th className="px-6 py-3.5 text-left">Student Name</th>}
                         {!isMyFees && <th className="px-6 py-3.5 text-left">Roll No</th>}
                         <th className="px-6 py-3.5 text-left">Fee Type</th>
+                        <th className="px-6 py-3.5 text-left">Billing Month</th>
                         <th className="px-6 py-3.5 text-left">Amount</th>
                         <th className="px-6 py-3.5 text-left">Due Date</th>
                         <th className="px-6 py-3.5 text-left">Payment Date</th>
@@ -777,6 +1013,15 @@ export function FeesUI({
                               </p>
                             )}
                           </td>
+                          <td className="px-6 py-4 text-xs font-semibold text-muted-foreground">
+                            {fee.month ? (
+                              <Badge variant="outline" className="font-bold text-primary border-primary/30 bg-primary/5">
+                                {fee.month}
+                              </Badge>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
                           <td className="px-6 py-4 font-bold">₹{Number(fee.amount).toLocaleString()}</td>
                           <td className="px-6 py-4 text-xs font-semibold text-muted-foreground">
                             {formatOnlyDate(fee.dueDate)}
@@ -801,8 +1046,8 @@ export function FeesUI({
                                     variant="ghost"
                                     size="icon"
                                     className="hover:text-primary h-8 w-8"
-                                    onClick={() => feeService.downloadFeeReceiptPdf(fee.id, fee)}
-                                    title="Download Fee Receipt PDF"
+                                    onClick={() => feeService.downloadFeeReceiptPdf(fee.id, fee, fees)}
+                                    title="Download Monthly Fee Receipt PDF (All Fee Heads)"
                                   >
                                     <Download className="h-4 w-4" />
                                   </Button>)}
@@ -978,6 +1223,7 @@ export function FeesUI({
                     <th className="px-6 py-3.5 text-left">Class Grade</th>
                     <th className="px-6 py-3.5 text-left">Fee Component Name</th>
                     <th className="px-6 py-3.5 text-left">Fee Type</th>
+                    <th className="px-6 py-3.5 text-left">Applicable Month</th>
                     <th className="px-6 py-3.5 text-left">Amount (₹)</th>
                     <th className="px-6 py-3.5 text-left">Frequency</th>
                     <th className="px-6 py-3.5 text-left">Due Day</th>
@@ -1001,6 +1247,11 @@ export function FeesUI({
                       </td>
                       <td className="px-6 py-4 capitalize">
                         <Badge variant="secondary">{struct.feeType}</Badge>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-semibold text-muted-foreground">
+                        <Badge variant="outline" className="capitalize font-bold text-primary border-primary/30">
+                          {struct.month === "all" || !struct.month ? "Every Month" : struct.month}
+                        </Badge>
                       </td>
                       <td className="px-6 py-4 font-black">₹{Number(struct.amount).toLocaleString()}</td>
                       <td className="px-6 py-4 capitalize text-xs font-semibold text-muted-foreground">
@@ -1500,17 +1751,30 @@ export function FeesUI({
                     </div>
                   </div>
 
-                  {/* Due Date Picker for Multi-Fee */}
-                  <div className="space-y-2 pt-1">
-                    <label className="text-xs font-extrabold text-foreground">
-                      Invoice Due Date for All Items <span className="text-destructive">*</span>
-                    </label>
-                    <Input
-                      type="date"
-                      disabled={!isSelectionComplete}
-                      value={formData.dueDate || ""}
-                      onChange={(e) => setFormData && setFormData({ ...formData, dueDate: e.target.value })}
-                    />
+                  {/* Billing Month & Due Date Picker for Fee Items */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-foreground">
+                        Billing Month / Period <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        type="month"
+                        disabled={!isSelectionComplete}
+                        value={formData.month || new Date().toISOString().slice(0, 7)}
+                        onChange={(e) => setFormData && setFormData({ ...formData, month: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-extrabold text-foreground">
+                        Invoice Due Date <span className="text-destructive">*</span>
+                      </label>
+                      <Input
+                        type="date"
+                        disabled={!isSelectionComplete}
+                        value={formData.dueDate || ""}
+                        onChange={(e) => setFormData && setFormData({ ...formData, dueDate: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1627,151 +1891,421 @@ export function FeesUI({
       {/* Add / Edit Class Fee Structure Modal */}
       {showStructModal && setShowStructModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4 overflow-y-auto"
           onClick={() => setShowStructModal(false)}
         >
           <div
-            className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-lg m-4 overflow-hidden animate-scale-in text-left"
+            className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl my-auto overflow-hidden animate-scale-in text-left flex flex-col max-h-[92vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <Layers className="h-5 w-5 text-primary" />
-                {editingStruct ? "Edit Class Fee Structure" : "Configure Class Fee Component"}
-              </h3>
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-foreground">
+                    {editingStruct ? "Edit Class Fee Component" : "Configure Class Fee Component"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Define reusable class billing rules and apply them to target classes in seconds.
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setShowStructModal(false)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Class Grade Level</label>
-                  <select
-                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
-                    value={structFormData.classMasterId || ""}
-                    onChange={(e) =>
-                      setStructFormData &&
-                      setStructFormData({ ...structFormData, classMasterId: e.target.value })
-                    }
-                  >
-                    <option value="">Select Class Grade</option>
-                    <option value="1">LKG</option>
-                    <option value="2">UKG</option>
-                    <option value="3">Class 1</option>
-                    <option value="4">Class 2</option>
-                    <option value="5">Class 3</option>
-                    <option value="6">Class 4</option>
-                    <option value="7">Class 5</option>
-                    <option value="8">Class 6</option>
-                    <option value="9">Class 7</option>
-                    <option value="10">Class 8</option>
-                    <option value="11">Class 9</option>
-                    <option value="12">Class 10</option>
-                    <option value="13">Class 11</option>
-                    <option value="14">Class 12</option>
-                  </select>
+            {/* Modal Body (Divided into Clear Steps) */}
+            <div className="p-5 space-y-6 text-sm overflow-y-auto flex-1">
+              {/* STEP 1: Select Target Class(es) */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-black inline-flex items-center justify-center">
+                      1
+                    </span>
+                    Target Class Grades
+                  </label>
+                  {!editingStruct && (
+                    <Badge variant="outline" className="text-[11px] font-semibold bg-primary/10 text-primary border-primary/20">
+                      {selectedClassIds.length} Class(es) Selected
+                    </Badge>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Component Name</label>
-                  <Input
-                    value={structFormData.feeName || ""}
-                    onChange={(e) =>
-                      setStructFormData &&
-                      setStructFormData({ ...structFormData, feeName: e.target.value })
-                    }
-                    placeholder="e.g. Monthly Tuition Fee"
-                  />
+                {editingStruct ? (
+                  <div className="space-y-1.5">
+                    <select
+                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                      value={structFormData.classMasterId || ""}
+                      onChange={(e) =>
+                        setStructFormData &&
+                        setStructFormData({
+                          ...structFormData,
+                          classMasterId: e.target.value,
+                          classMasterIds: [e.target.value],
+                        })
+                      }
+                    >
+                      <option value="">Select Class Grade</option>
+                      {ALL_CLASS_OPTIONS.map((cls) => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="bg-muted/20 p-3.5 rounded-xl border border-border/70 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground font-medium">
+                        Choose which classes receive this fee structure component:
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSelectClasses("all")}
+                          className="px-2.5 py-1 font-bold rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSelectClasses("primary")}
+                          className="px-2.5 py-1 font-medium rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors"
+                        >
+                          Class 1-5
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSelectClasses("secondary")}
+                          className="px-2.5 py-1 font-medium rounded-md bg-muted text-foreground hover:bg-muted/80 transition-colors"
+                        >
+                          Class 6-10
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickSelectClasses("none")}
+                          className="px-2.5 py-1 font-medium rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-1.5 pt-1">
+                      {ALL_CLASS_OPTIONS.map((cls) => {
+                        const isSelected = selectedClassIds.includes(cls.id);
+                        return (
+                          <button
+                            key={cls.id}
+                            type="button"
+                            onClick={() => handleToggleClassId(cls.id)}
+                            className={` items-center justify-between px-1.5 py-1 text-xs font-semibold rounded-lg border transition-all ${isSelected
+                              ? "bg-primary text-primary-foreground border-primary shadow-xs scale-102"
+                              : "bg-background text-muted-foreground border-input hover:border-primary/50 hover:text-foreground"
+                              }`}
+                          >
+
+                            <span>{cls.label}</span>
+
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* STEP 2: Component Details & Pricing */}
+              <div className="space-y-3 pt-2 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-black inline-flex items-center justify-center">
+                      2
+                    </span>
+                    Fee Details & Pricing
+                  </label>
+                  {!editingStruct && (
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <Zap className="h-3 w-3 text-amber-500 fill-amber-500" /> Click a preset below to auto-fill
+                    </span>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Fee Type</label>
-                  <select
-                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
-                    value={structFormData.feeType || "tuition"}
-                    onChange={(e) =>
-                      setStructFormData &&
-                      setStructFormData({ ...structFormData, feeType: e.target.value })
-                    }
-                  >
-                    <option value="tuition">Tuition Fee</option>
-                    <option value="transport">Transport Fee</option>
-                    <option value="exam">Exam Fee</option>
-                    <option value="library">Library Fee</option>
-                    <option value="sports">Sports Fee</option>
-                    <option value="other">Other Component</option>
-                  </select>
-                </div>
+                {/* Quick Presets Bar */}
+                {!editingStruct && (
+                  <div className="flex flex-wrap gap-1.5 pb-1">
+                    {FEE_PRESET_TEMPLATES.map((tpl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleApplyPresetTemplate(tpl)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 transition-all"
+                      >
+                        <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
+                        <span>{tpl.name}</span>
+                        <span className="text-[10px] font-bold opacity-80">₹{tpl.amount}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Amount (₹)</label>
-                  <Input
-                    type="number"
-                    value={structFormData.amount || ""}
-                    onChange={(e) =>
-                      setStructFormData &&
-                      setStructFormData({ ...structFormData, amount: e.target.value })
-                    }
-                    placeholder="e.g. 5000"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Component Name *</label>
+                    <Input
+                      value={structFormData.feeName || ""}
+                      onChange={(e) =>
+                        setStructFormData &&
+                        setStructFormData({ ...structFormData, feeName: e.target.value })
+                      }
+                      placeholder="e.g. Monthly Tuition Fee"
+                    />
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Billing Frequency</label>
-                  <select
-                    className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
-                    value={structFormData.frequency || "monthly"}
-                    onChange={(e) =>
-                      setStructFormData &&
-                      setStructFormData({ ...structFormData, frequency: e.target.value })
-                    }
-                  >
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="annually">Annually</option>
-                    <option value="one_time">One Time</option>
-                  </select>
-                </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Fee Category Type</label>
+                    <select
+                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                      value={structFormData.feeType || "tuition"}
+                      onChange={(e) =>
+                        setStructFormData &&
+                        setStructFormData({ ...structFormData, feeType: e.target.value })
+                      }
+                    >
+                      <option value="tuition">📚 Tuition Fee</option>
+                      <option value="transport">🚌 Transport Fee</option>
+                      <option value="exam">📝 Exam Fee</option>
+                      <option value="library">📖 Library Fee</option>
+                      <option value="lab">🔬 Science Lab Fee</option>
+                      <option value="sports">🏆 Sports Fee</option>
+                      <option value="hostel">🏢 Hostel Fee</option>
+                      <option value="annual">🎉 Annual Charge</option>
+                      <option value="computer">💻 Computer & IT Fee</option>
+                      <option value="uniforms">👔 Uniform Charge</option>
+                      <option value="other">📦 Other Component</option>
+                    </select>
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground">Due Day of Month</label>
-                  <Input
-                    type="number"
-                    value={structFormData.dueDay || 10}
-                    onChange={(e) =>
-                      setStructFormData &&
-                      setStructFormData({ ...structFormData, dueDay: e.target.value })
-                    }
-                    placeholder="Day (1-31)"
-                  />
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Amount (₹) *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-muted-foreground text-sm font-semibold">₹</span>
+                      <Input
+                        type="number"
+                        className="pl-7 font-bold text-foreground"
+                        value={structFormData.amount || ""}
+                        onChange={(e) =>
+                          setStructFormData &&
+                          setStructFormData({ ...structFormData, amount: e.target.value })
+                        }
+                        placeholder="e.g. 3000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Billing Frequency</label>
+                    <select
+                      className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none font-medium"
+                      value={structFormData.frequency || "monthly"}
+                      onChange={(e) =>
+                        setStructFormData &&
+                        setStructFormData({ ...structFormData, frequency: e.target.value })
+                      }
+                    >
+                      <option value="monthly">Monthly Recurring (12x / yr)</option>
+                      <option value="quarterly">Quarterly (4x / yr)</option>
+                      <option value="annually">Annually (1x / yr)</option>
+                      <option value="one_time">One Time Charge</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Description</label>
-                <Input
-                  value={structFormData.description || ""}
-                  onChange={(e) =>
-                    setStructFormData &&
-                    setStructFormData({ ...structFormData, description: e.target.value })
-                  }
-                  placeholder="Optional details"
-                />
+              {/* STEP 3: Billing Schedule & Month Rules */}
+              <div className="space-y-3 pt-2 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[11px] font-black inline-flex items-center justify-center">
+                      3
+                    </span>
+                    Billing Month Schedule
+                  </label>
+                  <span className="text-[11px] text-muted-foreground">
+                    When does this fee generate on student accounts?
+                  </span>
+                </div>
+
+                {/* Recurring vs Month-Specific Toggle Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setStructFormData && setStructFormData({ ...structFormData, month: "all" })}
+                    className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 ${structFormData.month === "all" || !structFormData.month
+                      ? "bg-primary/10 border-primary shadow-xs"
+                      : "bg-background border-input hover:border-primary/50"
+                      }`}
+                  >
+                    <div className={`p-1.5 rounded-lg mt-0.5 ${structFormData.month === "all" || !structFormData.month ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                      <RefreshCw className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-foreground">Every Month (Recurring)</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Generates in all monthly billing cycles (e.g. Tuition, Bus).
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setStructFormData &&
+                      setStructFormData({
+                        ...structFormData,
+                        month: structFormData.month && structFormData.month !== "all" ? structFormData.month : "06",
+                      })
+                    }
+                    className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 ${structFormData.month && structFormData.month !== "all"
+                      ? "bg-primary/10 border-primary shadow-xs"
+                      : "bg-background border-input hover:border-primary/50"
+                      }`}
+                  >
+                    <div className={`p-1.5 rounded-lg mt-0.5 ${structFormData.month && structFormData.month !== "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                      <CalendarDays className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-foreground">Specific Month Only</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
+                        Generates only in a target month (e.g. June Exam Fee).
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* 12-Month Grid if Specific Month selected */}
+                {structFormData.month && structFormData.month !== "all" && (
+                  <div className="space-y-1.5 bg-muted/20 p-3 rounded-xl border border-border">
+                    <label className="text-[11px] font-semibold text-muted-foreground">Select Target Month:</label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5">
+                      {MONTH_GRID_ITEMS.map((m) => {
+                        const isMonthSelected = structFormData.month === m.value;
+                        return (
+                          <button
+                            key={m.value}
+                            type="button"
+                            onClick={() => setStructFormData && setStructFormData({ ...structFormData, month: m.value })}
+                            className={`p-2 rounded-lg border text-center transition-all ${isMonthSelected
+                              ? "bg-primary text-primary-foreground border-primary font-bold shadow-xs"
+                              : "bg-background text-muted-foreground border-input hover:border-primary/50 hover:text-foreground"
+                              }`}
+                          >
+                            <div className="text-xs">{m.label}</div>
+                            {m.badge && (
+                              <div className={`text-[9px] mt-0.5 truncate ${isMonthSelected ? "text-primary-foreground/90 font-medium" : "text-primary"}`}>
+                                {m.badge}
+                              </div>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Due Day of Month</label>
+                    <Input
+                      type="number"
+                      value={structFormData.dueDay || 10}
+                      onChange={(e) =>
+                        setStructFormData &&
+                        setStructFormData({ ...structFormData, dueDay: e.target.value })
+                      }
+                      placeholder="Day (1-31)"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Description / Notes</label>
+                    <Input
+                      value={structFormData.description || ""}
+                      onChange={(e) =>
+                        setStructFormData &&
+                        setStructFormData({ ...structFormData, description: e.target.value })
+                      }
+                      placeholder="e.g. Session 2026-27"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* STEP 4: Realtime Live Summary Card */}
+              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-xl border border-primary/20 p-4 space-y-2">
+                <div className="flex items-center justify-between font-bold text-foreground">
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <Sparkles className="h-4 w-4 text-primary fill-primary/20" />
+                    Structure Component Summary
+                  </span>
+                  <span className="text-primary font-black text-base">
+                    ₹{Number(structFormData.amount || 0).toLocaleString("en-IN")}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {" "}/ {structFormData.frequency || "monthly"}
+                    </span>
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-muted-foreground text-xs pt-1.5 border-t border-primary/15">
+                  <div>
+                    🎓 <strong className="text-foreground">Classes:</strong>{" "}
+                    {selectedClassIds.length > 0
+                      ? `${selectedClassIds.length} Class(es) selected`
+                      : "No class selected"}
+                  </div>
+                  <div>
+                    🗓️ <strong className="text-foreground">Schedule:</strong>{" "}
+                    {structFormData.month === "all" || !structFormData.month
+                      ? "Every Month (12x/yr)"
+                      : `Specific Month (${structFormData.month})`}
+                  </div>
+                  <div>
+                    📅 <strong className="text-foreground">Due Day:</strong> Day {structFormData.dueDay || 10} of month
+                  </div>
+                  <div>
+                    💡 <strong className="text-foreground">Est. Annual Total:</strong> ₹
+                    {summaryDetails.totalAnnualStudent.toLocaleString("en-IN")} / student / year
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="p-5 border-t border-border flex justify-end gap-2.5">
-              <Button variant="outline" onClick={() => setShowStructModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSaveStruct}>
-                {editingStruct ? "Update Structure" : "Save Structure"}
-              </Button>
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-border bg-muted/20 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground font-medium">
+                {selectedClassIds.length > 0
+                  ? `Configuring component for ${selectedClassIds.length} class(es)`
+                  : "Select at least 1 class grade"}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setShowStructModal(false)} className="font-semibold">
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveStruct} className="font-bold px-5 shadow-sm">
+                  {editingStruct
+                    ? "Update Component"
+                    : selectedClassIds.length > 1
+                      ? `Create for ${selectedClassIds.length} Classes`
+                      : "Save Component"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1941,6 +2475,19 @@ export function FeesUI({
                   </div>
                 );
               })()}
+
+              {/* Target Billing Month Section */}
+              <div className="space-y-1.5 bg-muted/20 p-3.5 rounded-xl border border-border/50">
+                <label className="text-xs font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wide">
+                  <Calendar className="h-4 w-4 text-primary" /> Target Billing Month
+                </label>
+                <Input
+                  type="month"
+                  className="h-10 text-xs font-bold mt-1"
+                  value={generateMonth}
+                  onChange={(e) => setGenerateMonth && setGenerateMonth(e.target.value)}
+                />
+              </div>
 
               {/* Invoice Due Date Section with Quick Presets */}
               <div className="space-y-1.5 bg-muted/20 p-3.5 rounded-xl border border-border/50">
