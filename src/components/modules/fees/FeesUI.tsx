@@ -24,6 +24,10 @@ import {
   RefreshCw,
   Calendar,
   FileText,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import type { FeeRecord } from "../../../types";
 import { formatOnlyDate } from "../../../lib/utils";
@@ -79,6 +83,18 @@ export interface FeesUIProps {
   handleOpenAddStructModal?: () => void;
   handleOpenEditStructModal?: (item: ClassFeeStructureItem) => void;
 
+  // Server-side Pagination & Query Params
+  page?: number;
+  setPage?: (page: number) => void;
+  limit?: number;
+  setLimit?: (limit: number) => void;
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  } | null;
+
   // Auto Generate Invoices Modal
   showGenerateModal?: boolean;
   setShowGenerateModal?: (show: boolean) => void;
@@ -133,6 +149,11 @@ export function FeesUI({
   handleDeleteStruct,
   handleOpenAddStructModal,
   handleOpenEditStructModal,
+  page: propsPage,
+  setPage: setPropsPage,
+  limit: propsLimit,
+  setLimit: setPropsLimit,
+  meta,
   showGenerateModal = false,
   setShowGenerateModal,
   generateClassId = "",
@@ -172,12 +193,47 @@ export function FeesUI({
       paidAmount,
       pendingAmount,
       overdueAmount,
-      totalCount: fees.length,
+      totalCount: meta ? meta.total : fees.length,
       paidCount,
       pendingCount,
       overdueCount,
     };
-  }, [fees]);
+  }, [fees, meta]);
+
+  // Server or Client Pagination State for Invoices Table
+  const [localPage, setLocalPage] = React.useState(1);
+  const [localLimit, setLocalLimit] = React.useState(10);
+
+  const currentPage = propsPage ?? localPage;
+  const setCurrentPage = setPropsPage ?? setLocalPage;
+  const pageSize = propsLimit ?? localLimit;
+  const setPageSize = setPropsLimit ?? setLocalLimit;
+
+  // Reset page to 1 when search/filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, feeTypeFilter]);
+
+  const totalFeesCount = meta ? meta.total : fees.length;
+  const totalPages = meta ? meta.totalPages : Math.max(1, Math.ceil(totalFeesCount / pageSize));
+
+  const paginatedFees = React.useMemo(() => {
+    if (meta) return fees; // Data is already paginated by backend
+    const start = (currentPage - 1) * pageSize;
+    return fees.slice(start, start + pageSize);
+  }, [fees, currentPage, pageSize, meta]);
+
+  // Pagination State for Fee Structures Table
+  const [structPage, setStructPage] = React.useState(1);
+  const [structPageSize, setStructPageSize] = React.useState(10);
+
+  const totalStructsCount = classFeeStructures.length;
+  const totalStructPages = Math.max(1, Math.ceil(totalStructsCount / structPageSize));
+
+  const paginatedStructs = React.useMemo(() => {
+    const start = (structPage - 1) * structPageSize;
+    return classFeeStructures.slice(start, start + structPageSize);
+  }, [classFeeStructures, structPage, structPageSize]);
 
   // Class, Division, and Student selection logic for Add/Edit Fee Modal
   const [modalSelectedClass, setModalSelectedClass] = React.useState<string>("all");
@@ -690,7 +746,7 @@ export function FeesUI({
                       </tr>
                     </thead>
                     <tbody>
-                      {fees.map((fee) => (
+                      {paginatedFees.map((fee) => (
                         <tr key={fee.id} className="border-b hover:bg-muted/10 transition-colors">
                           {!isMyFees && (
                             <td className="px-6 py-4 font-bold text-foreground">
@@ -784,6 +840,100 @@ export function FeesUI({
                   )}
                 </div>
               )}
+
+              {/* Invoices Pagination Toolbar */}
+              {totalFeesCount > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-4 p-4 border-t border-border/60 bg-card rounded-b-xl">
+                  {/* <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                    <div>
+                      Showing <span className="font-semibold text-foreground">{Math.min((currentPage - 1) * pageSize + 1, totalFeesCount)}</span> to{" "}
+                      <span className="font-semibold text-foreground">{Math.min(currentPage * pageSize, totalFeesCount)}</span> of{" "}
+                      <span className="font-semibold text-foreground">{totalFeesCount}</span> records
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Rows per page:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className="h-8 rounded-md border border-input bg-background px-2 text-xs focus:ring-1 focus:ring-primary outline-none"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div> */}
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage(1)}
+                      title="First Page"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="h-4 w-4" /> Previous
+                    </Button>
+
+                    <div className="flex items-center gap-1 px-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                        .map((p, idx, arr) => {
+                          const prev = arr[idx - 1];
+                          const showEllipsis = prev && p - prev > 1;
+                          return (
+                            <React.Fragment key={p}>
+                              {showEllipsis && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                              <Button
+                                variant={currentPage === p ? "default" : "ghost"}
+                                size="sm"
+                                className="h-8 w-8 p-0 text-xs font-semibold"
+                                onClick={() => setCurrentPage(p)}
+                              >
+                                {p}
+                              </Button>
+                            </React.Fragment>
+                          );
+                        })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      Next <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage(totalPages)}
+                      title="Last Page"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </>
@@ -819,7 +969,7 @@ export function FeesUI({
                   </tr>
                 </thead>
                 <tbody>
-                  {classFeeStructures.map((struct) => (
+                  {paginatedStructs.map((struct) => (
                     <tr key={struct.id} className="border-b hover:bg-muted/10 transition-colors">
                       <td className="px-6 py-4 font-bold text-foreground">
                         {struct.className || `Class ${struct.classMasterId}`}
@@ -881,6 +1031,99 @@ export function FeesUI({
                 </div>
               )}
             </div>
+
+            {/* Fee Structures Pagination Toolbar */}
+            {totalStructsCount > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border-t border-border/60 bg-card rounded-b-xl">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                  <div>
+                    Showing <span className="font-semibold text-foreground">{Math.min((structPage - 1) * structPageSize + 1, totalStructsCount)}</span> to{" "}
+                    <span className="font-semibold text-foreground">{Math.min(structPage * structPageSize, totalStructsCount)}</span> of{" "}
+                    <span className="font-semibold text-foreground">{totalStructsCount}</span> components
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">Rows per page:</span>
+                    <select
+                      value={structPageSize}
+                      onChange={(e) => {
+                        setStructPageSize(Number(e.target.value));
+                        setStructPage(1);
+                      }}
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs focus:ring-1 focus:ring-primary outline-none"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2"
+                    disabled={structPage <= 1}
+                    onClick={() => setStructPage(1)}
+                    title="First Page"
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    disabled={structPage <= 1}
+                    onClick={() => setStructPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Previous
+                  </Button>
+
+                  <div className="flex items-center gap-1 px-1">
+                    {Array.from({ length: totalStructPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalStructPages || Math.abs(p - structPage) <= 1)
+                      .map((p, idx, arr) => {
+                        const prev = arr[idx - 1];
+                        const showEllipsis = prev && p - prev > 1;
+                        return (
+                          <React.Fragment key={p}>
+                            {showEllipsis && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                            <Button
+                              variant={structPage === p ? "default" : "ghost"}
+                              size="sm"
+                              className="h-8 w-8 p-0 text-xs font-semibold"
+                              onClick={() => setStructPage(p)}
+                            >
+                              {p}
+                            </Button>
+                          </React.Fragment>
+                        );
+                      })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    disabled={structPage >= totalStructPages}
+                    onClick={() => setStructPage((p) => Math.min(totalStructPages, p + 1))}
+                  >
+                    Next <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2"
+                    disabled={structPage >= totalStructPages}
+                    onClick={() => setStructPage(totalStructPages)}
+                    title="Last Page"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

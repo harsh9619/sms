@@ -19,9 +19,41 @@ export interface StaffSalaryStructureItem {
   isActive: boolean;
 }
 
+export interface SalaryQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  teacherId?: string;
+  schoolId?: string;
+  academicYear?: string;
+}
+
+export interface PaginatedSalaryResponse {
+  data: SalaryRecord[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export const salaryService = {
-  getSalaries: async (): Promise<SalaryRecord[]> => {
-    return httpService.get<SalaryRecord[]>("/api/salaries");
+  getSalaries: async (params?: SalaryQueryParams): Promise<SalaryRecord[] | PaginatedSalaryResponse> => {
+    const queryParts: string[] = [];
+    if (params) {
+      if (params.page !== undefined) queryParts.push(`page=${params.page}`);
+      if (params.limit !== undefined) queryParts.push(`limit=${params.limit}`);
+      if (params.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+      if (params.status && params.status !== "all") queryParts.push(`status=${encodeURIComponent(params.status)}`);
+      if (params.teacherId) queryParts.push(`teacherId=${encodeURIComponent(params.teacherId)}`);
+      if (params.academicYear) queryParts.push(`academicYear=${encodeURIComponent(params.academicYear)}`);
+    }
+
+    const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    const schoolId = params?.schoolId || "1";
+    return httpService.get<any>(`/api/${schoolId}/salaries${queryString}`);
   },
 
   createSalary: async (sal: any): Promise<SalaryRecord> => {

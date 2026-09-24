@@ -13,10 +13,10 @@ import {
 import feeService from "../../Services/fee.service";
 import type { FeeRecord } from "../../types";
 
-function* handleFetchFees(): Generator<any, void, any> {
+function* handleFetchFees(action: { type: string; payload?: any }): Generator<any, void, any> {
   try {
-    const fees: FeeRecord[] = yield call(feeService.getFees);
-    yield put(fetchFeesSuccess(fees));
+    const response: any = yield call(feeService.getFees, action.payload);
+    yield put(fetchFeesSuccess(response));
   } catch (error: any) {
     yield put(fetchFeesFailure(error.message || "Failed to fetch fees"));
   }

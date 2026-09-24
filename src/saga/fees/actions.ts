@@ -1,11 +1,12 @@
 import type { FeeRecord } from "../../types";
 import * as types from "./actionTypes";
 
-export const fetchFeesRequest = () => ({
+export const fetchFeesRequest = (payload?: any) => ({
   type: types.FETCH_FEES_REQUEST,
+  payload,
 });
 
-export const fetchFeesSuccess = (payload: FeeRecord[]) => ({
+export const fetchFeesSuccess = (payload: { fees: FeeRecord[]; meta?: any } | FeeRecord[]) => ({
   type: types.FETCH_FEES_SUCCESS,
   payload,
 });

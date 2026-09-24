@@ -17,6 +17,7 @@ import {
   Layers,
   Settings,
   LucideIcon,
+  IndianRupee,
 } from "lucide-react";
 
 export interface NavItem {
@@ -39,10 +40,10 @@ export const navItems: NavItem[] = [
   // { path: "/homework", icon: ClipboardList, label: "Homework", roles: ["admin", "teacher", "student", "principal"] },
   // { path: "/marks", icon: Award, label: "Exams & Marks", roles: ["admin", "teacher", "student", "principal"] },
   // { path: "/notices", icon: Megaphone, label: "Notices", roles: ["admin", "teacher", "student", "principal"] },
-  { path: "/my-fees", icon: CreditCard, label: "Fees", roles: ["student"] },
+  { path: "/my-fees", icon: IndianRupee, label: "Fees", roles: ["student"] },
   { path: "/my-salary", icon: Coins, label: "Salary", roles: ["teacher", "principal"] },
   // { path: "/reports/attendance", icon: BarChart3, label: "Reports", roles: ["admin", "teacher", "principal"] },
-  { path: "/reports/fee-salary", icon: DollarSign, label: "Finance", roles: ["admin"] },
+  { path: "/reports/fee-salary", icon: IndianRupee, label: "Finance", roles: ["admin"] },
   { path: "/schools/create", icon: PlusCircle, label: "New School", roles: ["admin"] },
   { path: "/class-subject-config", icon: Layers, label: "Class Subject Allocation", roles: ["admin"] },
   { path: "/settings", icon: Settings, label: "Settings", roles: ["admin"] },

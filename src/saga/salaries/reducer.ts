@@ -16,7 +16,15 @@ export function salariesReducer(state: SalariesState = initialState, action: any
       return { ...state, loading: true, error: null };
 
     case types.FETCH_SALARIES_SUCCESS:
-      return { ...state, loading: false, salaries: action.payload };
+      if (Array.isArray(action.payload)) {
+        return { ...state, loading: false, salaries: action.payload, meta: null };
+      }
+      return {
+        ...state,
+        loading: false,
+        salaries: action.payload.data || [],
+        meta: action.payload.meta || null,
+      };
 
     case types.CREATE_SALARY_SUCCESS:
       return { ...state, loading: false, salaries: [...state.salaries, action.payload] };

@@ -13,10 +13,10 @@ import {
 import salaryService from "../../Services/salary.service";
 import type { SalaryRecord } from "../../types";
 
-function* handleFetchSalaries(): Generator<any, void, any> {
+function* handleFetchSalaries(action: { type: string; payload?: any }): Generator<any, void, any> {
   try {
-    const salaries: SalaryRecord[] = yield call(salaryService.getSalaries);
-    yield put(fetchSalariesSuccess(salaries));
+    const response: any = yield call(salaryService.getSalaries, action.payload);
+    yield put(fetchSalariesSuccess(response));
   } catch (error: any) {
     yield put(fetchSalariesFailure(error.message || "Failed to fetch salaries"));
   }

@@ -1,11 +1,12 @@
 import type { SalaryRecord } from "../../types";
 import * as types from "./actionTypes";
 
-export const fetchSalariesRequest = () => ({
+export const fetchSalariesRequest = (payload?: any) => ({
   type: types.FETCH_SALARIES_REQUEST,
+  payload,
 });
 
-export const fetchSalariesSuccess = (payload: SalaryRecord[]) => ({
+export const fetchSalariesSuccess = (payload: { salaries: SalaryRecord[]; meta?: any } | SalaryRecord[]) => ({
   type: types.FETCH_SALARIES_SUCCESS,
   payload,
 });

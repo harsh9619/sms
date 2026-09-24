@@ -20,13 +20,14 @@ import type { SalaryRecord } from "../../types";
 
 const mapStateToProps = (state: AppState) => ({
   allSalaries: state.salaries.salaries,
+  meta: state.salaries.meta,
   teachers: state.teachers.teachers,
   loading: state.salaries.loading,
   error: state.salaries.error,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch) => ({
-  fetchSalariesRequest: () => dispatch(fetchSalariesRequest()),
+  fetchSalariesRequest: (payload?: any) => dispatch(fetchSalariesRequest(payload)),
   fetchTeachersRequest: () => dispatch(fetchTeachersRequest()),
   createSalaryRequest: (salary: any) => dispatch(createSalaryRequest(salary)),
   updateSalaryRequest: (payload: { id: string; salary?: any; sal?: any }) =>
@@ -43,6 +44,7 @@ export interface SalaryContainerProps extends PropsFromRedux {
 
 function SalaryContainerContent({
   allSalaries,
+  meta,
   teachers,
   loading,
   error,
@@ -59,6 +61,8 @@ function SalaryContainerContent({
 
   const [activeSubTab, setActiveSubTab] = useState<"registries" | "structures">("registries");
 
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -95,10 +99,23 @@ function SalaryContainerContent({
   }, [schoolId]);
 
   useEffect(() => {
-    fetchSalariesRequest();
+    const params: any = {
+      schoolId,
+      page,
+      limit,
+      search: searchQuery || undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+    };
+    if (isMySalary || user?.role === "teacher") {
+      params.teacherId = user?.id;
+    }
+    fetchSalariesRequest(params);
+  }, [fetchSalariesRequest, schoolId, page, limit, searchQuery, statusFilter, isMySalary, user]);
+
+  useEffect(() => {
     fetchTeachersRequest();
     fetchSalaryStructures();
-  }, [fetchSalariesRequest, fetchTeachersRequest, fetchSalaryStructures]);
+  }, [fetchTeachersRequest, fetchSalaryStructures]);
 
   // Role & search filtered salaries
   const salaries = useMemo(() => {
@@ -304,6 +321,11 @@ function SalaryContainerContent({
       teachers={teachers}
       loading={loading}
       error={error}
+      page={page}
+      setPage={setPage}
+      limit={limit}
+      setLimit={setLimit}
+      meta={meta}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
       statusFilter={statusFilter}

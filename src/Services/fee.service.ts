@@ -15,9 +15,41 @@ export interface ClassFeeStructureItem {
   description?: string;
 }
 
+export interface FeeQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  feeType?: string;
+  studentId?: string;
+  schoolId?: string;
+}
+
+export interface PaginatedFeeResponse {
+  data: FeeRecord[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 export const feeService = {
-  getFees: async (): Promise<FeeRecord[]> => {
-    return httpService.get<FeeRecord[]>("/api/fees");
+  getFees: async (params?: FeeQueryParams): Promise<FeeRecord[] | PaginatedFeeResponse> => {
+    const queryParts: string[] = [];
+    if (params) {
+      if (params.page !== undefined) queryParts.push(`page=${params.page}`);
+      if (params.limit !== undefined) queryParts.push(`limit=${params.limit}`);
+      if (params.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+      if (params.status && params.status !== "all") queryParts.push(`status=${encodeURIComponent(params.status)}`);
+      if (params.feeType && params.feeType !== "all") queryParts.push(`feeType=${encodeURIComponent(params.feeType)}`);
+      if (params.studentId) queryParts.push(`studentId=${encodeURIComponent(params.studentId)}`);
+    }
+
+    const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+    const schoolId = params?.schoolId || "1";
+    return httpService.get<any>(`/api/${schoolId}/fees${queryString}`);
   },
 
   createFee: async (fee: any): Promise<FeeRecord> => {

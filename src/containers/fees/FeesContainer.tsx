@@ -21,6 +21,7 @@ import type { FeeRecord } from "../../types";
 
 const mapStateToProps = (state: AppState) => ({
   allFees: state.fees.fees,
+  meta: state.fees.meta,
   students: state.students.students,
   classes: state.classes.classes,
   loading: state.fees.loading,
@@ -28,7 +29,7 @@ const mapStateToProps = (state: AppState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch) => ({
-  fetchFeesRequest: () => dispatch(fetchFeesRequest()),
+  fetchFeesRequest: (payload?: any) => dispatch(fetchFeesRequest(payload)),
   fetchStudentsRequest: (payload?: any) => dispatch(fetchStudentsRequest(payload)),
   fetchClassesRequest: () => dispatch(fetchClassesRequest()),
   createFeeRequest: (fee: any) => dispatch(createFeeRequest(fee)),
@@ -45,6 +46,7 @@ export interface FeesContainerProps extends PropsFromRedux {
 
 function FeesContainerContent({
   allFees,
+  meta,
   students,
   classes,
   loading,
@@ -63,6 +65,8 @@ function FeesContainerContent({
 
   const [activeSubTab, setActiveSubTab] = useState<"invoices" | "structures">("invoices");
 
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [feeTypeFilter, setFeeTypeFilter] = useState<string>("all");
@@ -101,19 +105,35 @@ function FeesContainerContent({
     }
   }, [schoolId]);
 
-  useEffect(() => {
-    fetchFeesRequest();
-    fetchStudentsRequest();
-    fetchClassesRequest();
-    fetchClassFeeStructures();
-  }, [fetchFeesRequest, fetchStudentsRequest, fetchClassesRequest, fetchClassFeeStructures]);
-
   const studentProfile = useMemo(() => {
     if (user?.role === "student") {
       return students.find((s: any) => s.email === user.email) || null;
     }
     return null;
   }, [students, user]);
+
+  useEffect(() => {
+    const params: any = {
+      schoolId,
+      page,
+      limit,
+      search: searchQuery || undefined,
+      status: statusFilter !== "all" ? statusFilter : undefined,
+      feeType: feeTypeFilter !== "all" ? feeTypeFilter : undefined,
+    };
+    if (isMyFees || user?.role === "student") {
+      if (studentProfile) {
+        params.studentId = studentProfile.id;
+      }
+    }
+    fetchFeesRequest(params);
+  }, [fetchFeesRequest, schoolId, page, limit, searchQuery, statusFilter, feeTypeFilter, isMyFees, user, studentProfile]);
+
+  useEffect(() => {
+    fetchStudentsRequest();
+    fetchClassesRequest();
+    fetchClassFeeStructures();
+  }, [fetchStudentsRequest, fetchClassesRequest, fetchClassFeeStructures]);
 
   // Role & search filtered fees
   const fees = useMemo(() => {
@@ -482,6 +502,11 @@ function FeesContainerContent({
       classFeeStructures={classFeeStructures}
       loading={loading}
       error={error}
+      page={page}
+      setPage={setPage}
+      limit={limit}
+      setLimit={setLimit}
+      meta={meta}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
       statusFilter={statusFilter}

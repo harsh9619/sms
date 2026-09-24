@@ -16,7 +16,15 @@ export function feesReducer(state: FeesState = initialState, action: any): FeesS
       return { ...state, loading: true, error: null };
 
     case types.FETCH_FEES_SUCCESS:
-      return { ...state, loading: false, fees: action.payload };
+      if (Array.isArray(action.payload)) {
+        return { ...state, loading: false, fees: action.payload, meta: null };
+      }
+      return {
+        ...state,
+        loading: false,
+        fees: action.payload.data || [],
+        meta: action.payload.meta || null,
+      };
 
     case types.CREATE_FEE_SUCCESS:
       return { ...state, loading: false, fees: [...state.fees, action.payload] };
