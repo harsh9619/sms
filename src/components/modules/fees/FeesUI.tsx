@@ -200,6 +200,12 @@ export function FeesUI({
     };
   }, [fees, meta]);
 
+  const handleCloseGenerateModal = React.useCallback(() => {
+    if (setGenerateClassId) setGenerateClassId("");
+    if (setGenerateDueDate) setGenerateDueDate("");
+    if (setShowGenerateModal) setShowGenerateModal(false);
+  }, [setGenerateClassId, setGenerateDueDate, setShowGenerateModal]);
+
   // Server or Client Pagination State for Invoices Table
   const [localPage, setLocalPage] = React.useState(1);
   const [localLimit, setLocalLimit] = React.useState(10);
@@ -1764,7 +1770,7 @@ export function FeesUI({
       {showGenerateModal && setShowGenerateModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
-          onClick={() => setShowGenerateModal(false)}
+          onClick={handleCloseGenerateModal}
         >
           <div
             className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md m-4 overflow-hidden animate-scale-in text-left"
@@ -1772,11 +1778,11 @@ export function FeesUI({
           >
             <div className="p-5 border-b border-border flex items-center justify-between">
               <h3 className="font-bold text-base flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary animate-spin" />
+                <Sparkles className="h-5 w-5 text-primary animate-pulse" />
                 Auto-Generate Class Fee Invoices
               </h3>
               <button
-                onClick={() => setShowGenerateModal(false)}
+                onClick={handleCloseGenerateModal}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
@@ -1784,39 +1790,183 @@ export function FeesUI({
             </div>
 
             <div className="p-5 space-y-4 text-sm">
-              <p className="text-xs text-muted-foreground">
-                Select a Class Grade. The system will look up all configured fee components for that class and generate fee invoices for every enrolled student.
-              </p>
+              {/* Select Class Grade Section */}
+              <div className="space-y-1.5 bg-muted/20 p-3.5 rounded-xl border border-border/50">
+                <label className="text-xs font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wide">
+                  <GraduationCap className="h-4 w-4 text-primary" /> Select Target Class Grade
+                </label>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Select Class Grade</label>
                 <select
-                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm font-semibold focus:ring-2 focus:ring-primary outline-none mt-1"
                   value={generateClassId}
                   onChange={(e) => setGenerateClassId && setGenerateClassId(e.target.value)}
                 >
-                  <option value="">Select Class Grade</option>
-                  <option value="1">LKG</option>
-                  <option value="2">UKG</option>
-                  <option value="3">Class 1</option>
-                  <option value="4">Class 2</option>
-                  <option value="5">Class 3</option>
-                  <option value="6">Class 4</option>
-                  <option value="7">Class 5</option>
-                  <option value="8">Class 6</option>
-                  <option value="9">Class 7</option>
-                  <option value="10">Class 8</option>
-                  <option value="11">Class 9</option>
-                  <option value="12">Class 10</option>
-                  <option value="13">Class 11</option>
-                  <option value="14">Class 12</option>
+                  <option value="">-- Choose Target Class Grade --</option>
+                  {classes.length > 0
+                    ? classes.map((c: any) => (
+                      <option key={c.id} value={c.classMasterId}>
+                        {c.name || c.className}
+                      </option>
+                    ))
+                    : [
+                      { id: "1", name: "LKG" },
+                      { id: "2", name: "UKG" },
+                      { id: "3", name: "Class 1" },
+                      { id: "4", name: "Class 2" },
+                      { id: "5", name: "Class 3" },
+                      { id: "6", name: "Class 4" },
+                      { id: "7", name: "Class 5" },
+                      { id: "8", name: "Class 6" },
+                      { id: "9", name: "Class 7" },
+                      { id: "10", name: "Class 8" },
+                      { id: "11", name: "Class 9" },
+                      { id: "12", name: "Class 10" },
+                      { id: "13", name: "Class 11" },
+                      { id: "14", name: "Class 12" },
+                    ].map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Invoice Due Date</label>
+              {/* Class Fee Structure & Enrolled Students Preview Card */}
+              {(() => {
+                if (!generateClassId) return null;
+                const cls = classes.find(
+                  (c) => String(c.classMasterId) === String(generateClassId) || c.name === generateClassId
+                );
+                const targetName = cls ? cls.name || cls.className : generateClassId;
+
+                const selectedClassFeeItems = classFeeStructures.filter(
+                  (s) =>
+                    String(s.classId) === String(generateClassId) ||
+                    (s.className &&
+                      targetName &&
+                      s.className.toLowerCase() === targetName.toLowerCase())
+                );
+
+                const totalClassFeePerStudent = selectedClassFeeItems.reduce(
+                  (sum, item) => sum + Number(item.amount || 0),
+                  0
+                );
+
+                const targetEnrolledStudents = students.filter(
+                  (s) =>
+                    String(s.class_id) === String(generateClassId) ||
+                    (s.class_name &&
+                      targetName &&
+                      s.class_name.toLowerCase() === targetName.toLowerCase()) ||
+                    (s.class && targetName && s.class.toLowerCase() === targetName.toLowerCase())
+                );
+
+                return (
+                  <div className="p-3.5 bg-card border border-primary/30 rounded-xl space-y-2 text-left shadow-sm animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Layers className="h-4 w-4 text-primary" /> Class Invoicing Preview
+                      </span>
+                      <Badge
+                        variant={selectedClassFeeItems.length > 0 ? "success" : "warning"}
+                        className="text-[10px] font-bold"
+                      >
+                        {selectedClassFeeItems.length} Fee Types Configured
+                      </Badge>
+                    </div>
+
+                    {selectedClassFeeItems.length > 0 ? (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex flex-wrap gap-1 text-[10px]">
+                          {selectedClassFeeItems.map((item, idx) => (
+                            <span
+                              key={idx}
+                              className="bg-primary/10 text-primary px-2 py-0.5 rounded font-semibold border border-primary/20"
+                            >
+                              {item.feeType?.toUpperCase()}: ₹{Number(item.amount).toLocaleString()}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-left pt-2 border-t border-border/40">
+                          <div className="p-2.5 bg-muted/40 rounded-lg">
+                            <span className="text-[10px] text-muted-foreground block font-medium">
+                              Per Student Total
+                            </span>
+                            <span className="text-sm font-black text-foreground">
+                              ₹{totalClassFeePerStudent.toLocaleString()}
+                            </span>
+                          </div>
+
+                          <div className="p-2.5 bg-muted/40 rounded-lg">
+                            <span className="text-[10px] text-muted-foreground block font-medium">
+                              Target Enrolled
+                            </span>
+                            <span className="text-sm font-black text-primary">
+                              {targetEnrolledStudents.length > 0
+                                ? `${targetEnrolledStudents.length} Students`
+                                : "All Class Students"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {targetEnrolledStudents.length > 0 && totalClassFeePerStudent > 0 && (
+                          <div className="flex items-center justify-between p-2.5 bg-success/10 border border-success/30 rounded-lg text-xs font-bold text-success mt-1">
+                            <span>Est. Batch Revenue:</span>
+                            <span className="text-sm font-black">
+                              ₹
+                              {(
+                                targetEnrolledStudents.length * totalClassFeePerStudent
+                              ).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded-lg font-medium">
+                        No specific fee components pre-configured for this class. Standard fee structure will be applied.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Invoice Due Date Section with Quick Presets */}
+              <div className="space-y-1.5 bg-muted/20 p-3.5 rounded-xl border border-border/50">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5 uppercase tracking-wide">
+                    <Calendar className="h-4 w-4 text-primary" /> Invoice Due Date
+                  </label>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date();
+                        d.setDate(d.getDate() + 15);
+                        setGenerateDueDate && setGenerateDueDate(d.toISOString().slice(0, 10));
+                      }}
+                      className="text-[10px] font-bold text-primary hover:underline bg-primary/10 px-1.5 py-0.5 rounded"
+                    >
+                      +15 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const d = new Date();
+                        const nextMonthLastDay = new Date(d.getFullYear(), d.getMonth() + 2, 0);
+                        setGenerateDueDate &&
+                          setGenerateDueDate(nextMonthLastDay.toISOString().slice(0, 10));
+                      }}
+                      className="text-[10px] font-bold text-primary hover:underline bg-primary/10 px-1.5 py-0.5 rounded"
+                    >
+                      Month End
+                    </button>
+                  </div>
+                </div>
+
                 <Input
                   type="date"
+                  className="h-10 text-xs font-bold mt-1"
                   value={generateDueDate}
                   onChange={(e) => setGenerateDueDate && setGenerateDueDate(e.target.value)}
                 />
@@ -1824,11 +1974,29 @@ export function FeesUI({
             </div>
 
             <div className="p-5 border-t border-border flex justify-end gap-2.5">
-              <Button variant="outline" onClick={() => setShowGenerateModal(false)} disabled={isGenerating}>
+              <Button
+                variant="outline"
+                onClick={handleCloseGenerateModal}
+                disabled={isGenerating}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleGenerateInvoices} disabled={isGenerating || !generateClassId}>
-                {isGenerating ? "Generating..." : "Generate Student Invoices"}
+              <Button
+                onClick={handleGenerateInvoices}
+                disabled={isGenerating || !generateClassId}
+                className="gap-2 font-bold"
+              >
+                {isGenerating ? (
+                  <>
+                    <Clock className="h-4 w-4 animate-spin text-primary-foreground" />
+                    Generating Invoices...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Generate Student Invoices
+                  </>
+                )}
               </Button>
             </div>
           </div>

@@ -1,13 +1,14 @@
-import { SalariesState } from "./types";
+import { SalariesState, SalaryActions } from "./types";
 import * as types from "./actionTypes";
 
 const initialState: SalariesState = {
   salaries: [],
+  meta: null,
   loading: false,
   error: null,
 };
 
-export function salariesReducer(state: SalariesState = initialState, action: any): SalariesState {
+export function salariesReducer(state: SalariesState = initialState, action: SalaryActions): SalariesState {
   switch (action.type) {
     case types.FETCH_SALARIES_REQUEST:
     case types.CREATE_SALARY_REQUEST:

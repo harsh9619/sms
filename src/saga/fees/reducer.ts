@@ -1,13 +1,14 @@
-import { FeesState } from "./types";
+import { FeesState, FeeActions } from "./types";
 import * as types from "./actionTypes";
 
 const initialState: FeesState = {
   fees: [],
+  meta: null,
   loading: false,
   error: null,
 };
 
-export function feesReducer(state: FeesState = initialState, action: any): FeesState {
+export function feesReducer(state: FeesState = initialState, action: FeeActions): FeesState {
   switch (action.type) {
     case types.FETCH_FEES_REQUEST:
     case types.CREATE_FEE_REQUEST:

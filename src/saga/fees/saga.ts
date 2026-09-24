@@ -10,10 +10,16 @@ import {
   deleteFeeSuccess,
   deleteFeeFailure,
 } from "./actions";
+import type {
+  FetchFeeRequestAction,
+  CreateFeeRequestAction,
+  UpdateFeeRequestAction,
+  DeleteFeeRequestAction,
+} from "./types";
 import feeService from "../../Services/fee.service";
 import type { FeeRecord } from "../../types";
 
-function* handleFetchFees(action: { type: string; payload?: any }): Generator<any, void, any> {
+function* handleFetchFees(action: FetchFeeRequestAction): Generator<any, void, any> {
   try {
     const response: any = yield call(feeService.getFees, action.payload);
     yield put(fetchFeesSuccess(response));
@@ -22,7 +28,7 @@ function* handleFetchFees(action: { type: string; payload?: any }): Generator<an
   }
 }
 
-function* handleCreateFee(action: { type: string; payload: any }): Generator<any, void, any> {
+function* handleCreateFee(action: CreateFeeRequestAction): Generator<any, void, any> {
   try {
     const fee: FeeRecord = yield call(feeService.createFee, action.payload);
     yield put(createFeeSuccess(fee));
@@ -31,7 +37,7 @@ function* handleCreateFee(action: { type: string; payload: any }): Generator<any
   }
 }
 
-function* handleUpdateFee(action: { type: string; payload: { id: string; fee: any } }): Generator<any, void, any> {
+function* handleUpdateFee(action: UpdateFeeRequestAction): Generator<any, void, any> {
   try {
     const fee: FeeRecord = yield call(feeService.updateFee, action.payload.id, action.payload.fee);
     yield put(updateFeeSuccess(fee));
@@ -40,7 +46,7 @@ function* handleUpdateFee(action: { type: string; payload: { id: string; fee: an
   }
 }
 
-function* handleDeleteFee(action: { type: string; payload: string }): Generator<any, void, any> {
+function* handleDeleteFee(action: DeleteFeeRequestAction): Generator<any, void, any> {
   try {
     yield call(feeService.deleteFee, action.payload);
     yield put(deleteFeeSuccess(action.payload));

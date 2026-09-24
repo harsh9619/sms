@@ -215,7 +215,7 @@ function AttendanceContainerContent({
         classId: filterClass !== "all" ? filterClass : undefined,
         divisionId: selectedDivision !== "all" ? selectedDivision : undefined,
       });
-      debugger
+
       const exportData = Array.isArray(data) && data.length > 0 ? data : [
         {
           "Registration No": "REG1001",

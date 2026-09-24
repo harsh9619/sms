@@ -7,6 +7,7 @@ export interface StaffSalaryStructureItem {
   teacherId: string;
   teacherName: string;
   email: string;
+  phone?: string;
   basicSalary: number;
   hra: number;
   da: number;

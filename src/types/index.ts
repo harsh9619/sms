@@ -193,6 +193,8 @@ export interface SalaryRecord {
   id: string;
   teacherId: string;
   teacherName: string;
+  teacherEmail?: string;
+  teacherPhone?: string;
   subject: string;
   baseSalary: number;
   allowances: number;

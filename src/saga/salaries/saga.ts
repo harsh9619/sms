@@ -10,10 +10,16 @@ import {
   deleteSalarySuccess,
   deleteSalaryFailure,
 } from "./actions";
+import type {
+  FetchSalaryRequestAction,
+  CreateSalaryRequestAction,
+  UpdateSalaryRequestAction,
+  DeleteSalaryRequestAction,
+} from "./types";
 import salaryService from "../../Services/salary.service";
 import type { SalaryRecord } from "../../types";
 
-function* handleFetchSalaries(action: { type: string; payload?: any }): Generator<any, void, any> {
+function* handleFetchSalaries(action: FetchSalaryRequestAction): Generator<any, void, any> {
   try {
     const response: any = yield call(salaryService.getSalaries, action.payload);
     yield put(fetchSalariesSuccess(response));
@@ -22,7 +28,7 @@ function* handleFetchSalaries(action: { type: string; payload?: any }): Generato
   }
 }
 
-function* handleCreateSalary(action: { type: string; payload: any }): Generator<any, void, any> {
+function* handleCreateSalary(action: CreateSalaryRequestAction): Generator<any, void, any> {
   try {
     const sal: SalaryRecord = yield call(salaryService.createSalary, action.payload);
     yield put(createSalarySuccess(sal));
@@ -31,16 +37,18 @@ function* handleCreateSalary(action: { type: string; payload: any }): Generator<
   }
 }
 
-function* handleUpdateSalary(action: { type: string; payload: { id: string; sal: any } }): Generator<any, void, any> {
+function* handleUpdateSalary(action: UpdateSalaryRequestAction): Generator<any, void, any> {
   try {
-    const sal: SalaryRecord = yield call(salaryService.updateSalary, action.payload.id, action.payload.sal);
+    const recordId = action.payload.id;
+    const recordPayload = action.payload.salary || action.payload.sal || action.payload;
+    const sal: SalaryRecord = yield call(salaryService.updateSalary, recordId, recordPayload);
     yield put(updateSalarySuccess(sal));
   } catch (error: any) {
     yield put(updateSalaryFailure(error.message || "Failed to update salary"));
   }
 }
 
-function* handleDeleteSalary(action: { type: string; payload: string }): Generator<any, void, any> {
+function* handleDeleteSalary(action: DeleteSalaryRequestAction): Generator<any, void, any> {
   try {
     yield call(salaryService.deleteSalary, action.payload);
     yield put(deleteSalarySuccess(action.payload));

@@ -273,6 +273,9 @@ function SalaryContainerContent({
     try {
       const res = await salaryService.generateMonthlyPayroll(schoolId, payrollMonth, payrollYear);
       toast.success(res.message || "Monthly payroll generated successfully!");
+      const now = new Date();
+      setPayrollMonth(now.getMonth() + 1);
+      setPayrollYear(now.getFullYear());
       setShowPayrollModal(false);
       fetchSalariesRequest();
     } catch (err) {

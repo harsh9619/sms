@@ -453,6 +453,8 @@ function FeesContainerContent({
     try {
       const res = await feeService.generateClassInvoices(schoolId, generateClassId, generateDueDate);
       toast.success(res.message || "Generated invoices successfully!");
+      setGenerateClassId("");
+      setGenerateDueDate("");
       setShowGenerateModal(false);
       fetchFeesRequest();
     } catch (err) {
