@@ -112,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getDemoCredentials = useCallback(() => {
     return [
-      { email: "admin@school.com", password: "admin123", role: "admin" as UserRole },
+      { email: "admin@greenwood.edu.in", password: "admin123", role: "admin" as UserRole },
       { email: "teacher@school.com", password: "admin123", role: "teacher" as UserRole },
       { email: "student@school.com", password: "admin123", role: "student" as UserRole },
     ];
