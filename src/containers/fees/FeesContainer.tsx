@@ -90,6 +90,9 @@ function FeesContainerContent({
   const [paymentMethod, setPaymentMethod] = useState("credit_card");
   const [processing, setProcessing] = useState(false);
 
+  // Active Receipt Modal state
+  const [activeReceipt, setActiveReceipt] = useState<any | null>(null);
+
   // Student Fee Entry Modal
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [editingFee, setEditingFee] = useState<FeeRecord | null>(null);
@@ -165,23 +168,89 @@ function FeesContainerContent({
   }, [allFees, isMyFees, user, studentProfile, searchQuery, statusFilter, feeTypeFilter]);
 
   // Payment checkout handler
-  const handlePay = useCallback(() => {
+  const handlePay = useCallback(async () => {
     if (!payingFee) return;
     setProcessing(true);
-    setTimeout(() => {
-      const payload = {
-        ...payingFee,
-        status: "paid",
-        paidDate: new Date().toISOString().slice(0, 10),
-        remarks: `Paid via Online Gateway (${paymentMethod})`,
-      };
+    try {
+      let itemsToPay: any[] = [];
+      if (Array.isArray((payingFee as any).feeIds) && (payingFee as any).feeIds.length > 0) {
+        itemsToPay = allFees.filter((f: any) => (payingFee as any).feeIds.map(String).includes(String(f.id)));
+      } else if (Array.isArray((payingFee as any).selectedMonths) && (payingFee as any).selectedMonths.length > 0) {
+        itemsToPay = allFees.filter(
+          (f: any) =>
+            String(f.studentId) === String(payingFee.studentId) &&
+            (payingFee as any).selectedMonths.includes(f.month) &&
+            f.status !== "paid"
+        );
+      } else if ((payingFee as any).payAllPendingMonths) {
+        itemsToPay = allFees.filter(
+          (f: any) =>
+            String(f.studentId) === String(payingFee.studentId) &&
+            f.status !== "paid"
+        );
+      } else {
+        const relatedFees = allFees.filter(
+          (f: any) =>
+            String(f.studentId) === String(payingFee.studentId) &&
+            (f.month === payingFee.month || !payingFee.month) &&
+            f.status !== "paid"
+        );
+        itemsToPay = relatedFees.length > 0 ? relatedFees : [payingFee];
+      }
 
-      updateFeeRequest({ id: payingFee.id, fee: payload });
-      toast.success(`Payment of ₹${payingFee.amount} processed successfully!`);
+      const feeIds = itemsToPay.map((item: any) => item.id);
+
+      const methodLabel =
+        paymentMethod === "credit_card"
+          ? "Credit / Debit Card"
+          : paymentMethod === "upi"
+            ? "UPI / QR Code"
+            : paymentMethod === "net_banking"
+              ? "Net Banking"
+              : "Mobile Wallet";
+
+      const res = await feeService.payStudentFeeBundle(schoolId, {
+        studentId: String(payingFee.studentId),
+        feeIds,
+        paymentMethod: methodLabel,
+        remarks: `Paid via Online Gateway (${methodLabel})`,
+      });
+
+      if (res && res.receiptNumber) {
+        toast.success(`Payment of ₹${res.totalAmount.toLocaleString()} processed! Receipt generated: ${res.receiptNumber}`);
+        fetchFeesRequest();
+        setProcessing(false);
+        setPayingFee(null);
+
+        const receiptDetails = await feeService.getReceiptByNumber(res.receiptNumber);
+        if (receiptDetails) {
+          setActiveReceipt({
+            receiptNo: receiptDetails.receiptNumber,
+            studentId: receiptDetails.studentId,
+            studentName: receiptDetails.studentName,
+            rollNumber: receiptDetails.rollNumber,
+            class: receiptDetails.class,
+            month: receiptDetails.monthsCovered,
+            paidDate: receiptDetails.paymentDate,
+            paymentMethod: methodLabel,
+            status: "paid",
+            items: (receiptDetails.fees || []).map((f: any) => ({
+              id: f.id,
+              feeType: f.feeType || "tuition",
+              label: `${(f.feeType || "tuition").toUpperCase()} FEE (${f.month || "N/A"})`,
+              amount: Number(f.amount || 0),
+              remarks: f.remarks || "",
+            })),
+            totalAmount: receiptDetails.totalAmount,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Pay bundle error", err);
+      toast.error("Failed to process fee payment.");
       setProcessing(false);
-      setPayingFee(null);
-    }, 1200);
-  }, [payingFee, paymentMethod, updateFeeRequest]);
+    }
+  }, [payingFee, paymentMethod, allFees, schoolId, fetchFeesRequest]);
 
   // Add / Edit Student Fee handlers
   const handleOpenAddModal = useCallback(() => {
@@ -272,7 +341,7 @@ function FeesContainerContent({
     setShowAddEditModal(true);
   }, []);
 
-  const handleSaveFee = useCallback(() => {
+  const handleSaveFee = useCallback(async () => {
     setFormError(null);
 
     if (!formData.studentId && !formData.studentName) {
@@ -325,7 +394,7 @@ function FeesContainerContent({
       return;
     }
 
-    // Multi-Fee Bundle creation mode (When adding NEW fee records)
+    // Multi-Fee and Multi-Month Bundle creation mode (When adding NEW fee records)
     if (formData.isMultiFee && Array.isArray(formData.selectedFeeItems) && formData.selectedFeeItems.length > 0) {
       const activeItems = formData.selectedFeeItems.filter((item: any) => item.selected && Number(item.amount) > 0);
       if (activeItems.length === 0) {
@@ -333,26 +402,61 @@ function FeesContainerContent({
         return;
       }
 
-      let count = 0;
-      activeItems.forEach((item: any) => {
-        const itemPayload = {
+      const monthsToProcess = (Array.isArray(formData.selectedMonths) && formData.selectedMonths.length > 0)
+        ? formData.selectedMonths
+        : [formData.month || new Date().toISOString().slice(0, 7)];
+
+      const isPaid = formData.status === "paid";
+      const paidDateStr = isPaid ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : undefined;
+
+      try {
+        const res = await feeService.createFee({
+          schoolId,
           studentId: formData.studentId,
           studentName: formData.studentName,
           rollNumber: formData.rollNumber || "",
           class: formData.class || "",
-          feeType: item.feeType || "tuition",
-          amount: Number(item.amount),
-          month: formData.month || new Date().toISOString().slice(0, 7),
           dueDate: formData.dueDate || new Date().toISOString().slice(0, 10),
           status: formData.status || "pending",
-          paidDate: formData.status === "paid" ? (formData.paidDate || new Date().toISOString().slice(0, 10)) : null,
-          remarks: item.remarks || formData.remarks || "",
-        };
-        createFeeRequest(itemPayload);
-        count++;
-      });
+          paidDate: paidDateStr,
+          remarks: formData.remarks || "",
+          paymentMethod: isPaid ? "Direct Cash / Settlement" : "Invoice Issued",
+          selectedFeeItems: activeItems,
+          selectedMonths: monthsToProcess,
+        });
 
-      toast.success(`Successfully created ${count} fee records for ${formData.studentName}`);
+        toast.success(`Created fee entries for ${formData.studentName} under receipt ${res.receiptNumber || 'generated'}`);
+        fetchFeesRequest();
+
+        if (res && res.receiptNumber) {
+          const receiptDetails = await feeService.getReceiptByNumber(res.receiptNumber);
+          if (receiptDetails) {
+            setActiveReceipt({
+              receiptNo: receiptDetails.receiptNumber,
+              studentId: receiptDetails.studentId,
+              studentName: receiptDetails.studentName,
+              rollNumber: receiptDetails.rollNumber,
+              class: receiptDetails.class,
+              month: receiptDetails.monthsCovered,
+              paidDate: receiptDetails.paymentDate,
+              paymentMethod: receiptDetails.paymentMethod,
+              status: formData.status || "pending",
+              items: (receiptDetails.fees || []).map((f: any) => ({
+                id: f.id,
+                feeType: f.feeType || "tuition",
+                label: `${(f.feeType || "tuition").toUpperCase()} FEE (${f.month || "N/A"})`,
+                amount: Number(f.amount || 0),
+                remarks: f.remarks || "",
+              })),
+              totalAmount: receiptDetails.totalAmount,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Create fee error", err);
+        toast.error("Failed to create fee entries.");
+      }
+
       setShowAddEditModal(false);
       setEditingFee(null);
       setFormData({});
@@ -381,6 +485,67 @@ function FeesContainerContent({
     setEditingFee(null);
     setFormData({});
   }, [formData, editingFee, createFeeRequest, updateFeeRequest]);
+
+  const handleViewReceipt = useCallback(async (fee: FeeRecord) => {
+    if (fee.receiptNumber) {
+      try {
+        const receiptData = await feeService.getReceiptByNumber(fee.receiptNumber);
+        if (receiptData) {
+          setActiveReceipt({
+            receiptNo: receiptData.receiptNumber,
+            studentId: receiptData.studentId,
+            studentName: receiptData.studentName,
+            rollNumber: receiptData.rollNumber,
+            class: receiptData.class,
+            month: receiptData.monthsCovered,
+            paidDate: receiptData.paymentDate,
+            paymentMethod: receiptData.paymentMethod,
+            status: "paid",
+            items: (receiptData.fees || []).map((f: any) => ({
+              id: f.id,
+              feeType: f.feeType || "tuition",
+              label: `${(f.feeType || "tuition").toUpperCase()} FEE (${f.month || "N/A"})`,
+              amount: Number(f.amount || 0),
+              remarks: f.remarks || "",
+            })),
+            totalAmount: receiptData.totalAmount,
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Could not fetch DB receipt by receipt number", err);
+      }
+    }
+
+    const matchingFees = allFees.filter(
+      (f: any) => String(f.studentId) === String(fee.studentId) && f.month === fee.month
+    );
+    const items = matchingFees.length > 0 ? matchingFees : [fee];
+    const totalAmount = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const isPaid = items.every((item) => item.status === "paid");
+    const anyPaid = items.some((item) => item.status === "paid");
+
+    setActiveReceipt({
+      receiptNo: fee.receiptNumber || `REC-${new Date().getFullYear()}-${fee.id}`,
+      studentId: fee.studentId,
+      studentName: fee.studentName || "Student",
+      rollNumber: fee.rollNumber || "",
+      class: fee.class || "",
+      month: fee.month || new Date().toISOString().slice(0, 7),
+      dueDate: fee.dueDate,
+      paidDate: fee.paidDate || undefined,
+      paymentMethod: fee.remarks || "Online Gateway / Settlement",
+      status: isPaid ? "paid" : anyPaid ? "partially_paid" : "pending",
+      items: items.map((f) => ({
+        id: f.id,
+        feeType: f.feeType || f.type || "tuition",
+        label: (f.feeType || f.type || "tuition").toUpperCase() + " FEE",
+        amount: Number(f.amount || 0),
+        remarks: f.remarks || "",
+      })),
+      totalAmount,
+    });
+  }, [allFees]);
 
   const handleDeleteFee = useCallback(
     (id: string) => {
@@ -558,6 +723,9 @@ function FeesContainerContent({
       setPaymentMethod={setPaymentMethod}
       processing={processing}
       handlePay={handlePay}
+      activeReceipt={activeReceipt}
+      setActiveReceipt={setActiveReceipt}
+      handleViewReceipt={handleViewReceipt}
       showAddEditModal={showAddEditModal}
       setShowAddEditModal={setShowAddEditModal}
       editingFee={editingFee}

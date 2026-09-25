@@ -85,8 +85,45 @@ export const feeService = {
     return httpService.post(`/api/${schoolId}/fees/generate-invoices`, { classMasterId, dueDate, month });
   },
 
+  payStudentFeeBundle: async (schoolId = "1", payload: {
+    studentId: string;
+    feeIds: (string | number)[];
+    paymentMethod?: string;
+    remarks?: string;
+    paidDate?: string;
+  }): Promise<{ success: boolean; receiptNumber: string; totalAmount: number; monthsCovered: string }> => {
+    return httpService.post(`/api/${schoolId}/fees/pay-bundle`, payload);
+  },
+
+  getReceiptByNumber: async (receiptNumber: string): Promise<any> => {
+    return httpService.get(`/api/fees/receipts/${receiptNumber}`);
+  },
+
+  downloadReceiptPdfByNumber: async (receiptNumber: string): Promise<void> => {
+    try {
+      const response = await fetch(`/api/fees/receipts/${receiptNumber}/pdf`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `fee-receipt-${receiptNumber}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        return;
+      }
+    } catch (err) {
+      console.warn("Backend PDF fetch failed by receipt number", err);
+    }
+  },
+
   downloadFeeReceiptPdf: async (feeId: string, feeRecord?: any, allFeesList?: any[]): Promise<void> => {
     try {
+      if (feeRecord?.receiptNumber) {
+        return await feeService.downloadReceiptPdfByNumber(feeRecord.receiptNumber);
+      }
       const response = await fetch(`/api/fees/${feeId}/download-pdf`);
       if (response.ok) {
         const blob = await response.blob();
@@ -140,8 +177,27 @@ export const generateClientFeePdf = async (feeInput: any, monthFeeItems?: any[])
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
-  const items = Array.isArray(monthFeeItems) && monthFeeItems.length > 0 ? monthFeeItems : [feeInput];
+  let items: any[] = [];
+  if (Array.isArray(monthFeeItems) && monthFeeItems.length > 0) {
+    items = monthFeeItems;
+  } else if (feeInput && Array.isArray(feeInput.items) && feeInput.items.length > 0) {
+    items = feeInput.items;
+  } else if (Array.isArray(feeInput)) {
+    items = feeInput;
+  } else {
+    items = [feeInput];
+  }
+
   const firstFee = items[0] || feeInput;
+  const studentName = feeInput.studentName || firstFee.studentName || "Student";
+  const rollNumber = feeInput.rollNumber || firstFee.rollNumber || firstFee.studentId || "N/A";
+  const className = feeInput.class || firstFee.class || "N/A";
+  const billingMonth = feeInput.month || firstFee.month || "Current";
+  const receiptNo = feeInput.receiptNo || (firstFee.id ? `REC-${firstFee.id}` : "REC-OFFICIAL");
+  const dueDateStr = feeInput.dueDate || firstFee.dueDate;
+  const statusStr = (feeInput.status || firstFee.status || "pending").toUpperCase();
+  const paymentMethodStr = feeInput.paymentMethod || "Online Gateway / Settlement";
+
   const totalAmt = items.reduce((sum, f) => sum + Number(f.amount || 0), 0);
 
   const doc = new jsPDF();
@@ -153,63 +209,72 @@ export const generateClientFeePdf = async (feeInput: any, monthFeeItems?: any[])
   doc.text("SCHOOL MANAGEMENT SYSTEM", 20, 26);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("OFFICIAL CONSOLIDATED MONTHLY FEE RECEIPT", 20, 34);
+  doc.text("OFFICIAL CONSOLIDATED FEE RECEIPT / INVOICE", 20, 34);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text(`Receipt: #REC-${firstFee.id || "N/A"}`, 140, 24);
+  doc.text(`Receipt: #${receiptNo}`, 135, 24);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text(`Due: ${firstFee.dueDate ? new Date(firstFee.dueDate).toLocaleDateString() : "N/A"}`, 140, 30);
-  doc.text(`Status: ${(firstFee.status || "pending").toUpperCase()}`, 140, 36);
+  doc.text(`Due: ${dueDateStr ? new Date(dueDateStr).toLocaleDateString() : "N/A"}`, 135, 30);
+  doc.text(`Status: ${statusStr}`, 135, 36);
 
   doc.setDrawColor(187, 247, 208);
   doc.setFillColor(240, 253, 244);
-  doc.roundedRect(14, 44, 182, 32, 2, 2, "FD");
+  doc.roundedRect(14, 44, 182, 34, 2, 2, "FD");
 
   doc.setTextColor(4, 120, 87);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("STUDENT INFORMATION", 20, 52);
+  doc.text("STUDENT & PAYMENT INFORMATION", 20, 52);
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(9);
-  doc.text(`Student Name: ${firstFee.studentName || "N/A"}`, 20, 60);
-  doc.text(`Class & Div: ${firstFee.class || "N/A"}`, 20, 67);
-  doc.text(`Roll / ID: ${firstFee.rollNumber || firstFee.studentId || "N/A"}`, 110, 60);
-  doc.text(`Billing Month: ${firstFee.month || "N/A"}`, 110, 67);
+  doc.text(`Student Name: ${studentName}`, 20, 60);
+  doc.text(`Class & Div: ${className}`, 20, 67);
+  doc.text(`Payment Mode: ${paymentMethodStr}`, 20, 74);
 
-  const tableBody = items.map((f) => [
-    (f.type || f.feeType || "Tuition Fee").toUpperCase(),
-    f.remarks || `Standard Monthly Fee (${firstFee.month || "Current"})`,
-    `₹${Number(f.amount || 0).toLocaleString()}`,
+  doc.text(`Roll / ID: ${rollNumber}`, 110, 60);
+  doc.text(`Billing Period: ${billingMonth}`, 110, 67);
+
+  const tableBody = items.map((f, idx) => [
+    idx + 1,
+    (f.label || f.type || f.feeType || "Tuition Fee").toUpperCase(),
+    f.remarks || `Selected Fee Component (${billingMonth})`,
+    `₹${Number(f.amount || 0).toLocaleString("en-IN")}`,
   ]);
 
   autoTable(doc, {
-    startY: 82,
-    head: [["Fee Type / Head", "Remarks / Note", "Amount (₹)"]],
+    startY: 84,
+    head: [["#", "Selected Fee Type / Category", "Remarks / Description", "Amount (₹)"]],
     body: tableBody,
     headStyles: { fillColor: [4, 120, 87], textColor: [255, 255, 255], fontStyle: "bold" },
     styles: { fontSize: 9 },
+    columnStyles: {
+      0: { cellWidth: 15 },
+      1: { cellWidth: 55, fontStyle: "bold" },
+      2: { cellWidth: 70 },
+      3: { cellWidth: 42, halign: "right", fontStyle: "bold" },
+    },
   });
 
-  const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : 130;
+  const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : 140;
 
   doc.setFillColor(248, 250, 252);
-  doc.rect(14, finalY, 182, 20, "F");
+  doc.rect(14, finalY, 182, 22, "F");
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(4, 120, 87);
-  doc.text("TOTAL MONTHLY AMOUNT:", 20, finalY + 13);
+  doc.text("TOTAL AMOUNT PAID / SETTLED:", 20, finalY + 14);
   doc.setTextColor(
-    firstFee.status === "paid" ? 22 : 217,
-    firstFee.status === "paid" ? 163 : 119,
-    firstFee.status === "paid" ? 74 : 6
+    statusStr === "PAID" ? 22 : 217,
+    statusStr === "PAID" ? 163 : 119,
+    statusStr === "PAID" ? 74 : 6
   );
-  doc.setFontSize(13);
-  doc.text(`₹${totalAmt.toLocaleString()}`, 150, finalY + 13);
+  doc.setFontSize(14);
+  doc.text(`₹${totalAmt.toLocaleString("en-IN")}`, 145, finalY + 14);
 
-  doc.save(`monthly-fee-receipt-${firstFee.studentName || "student"}-${firstFee.month || "month"}.pdf`);
+  doc.save(`fee-receipt-${studentName.replace(/\s+/g, "_")}-${billingMonth}.pdf`);
 };
 
 export default feeService;

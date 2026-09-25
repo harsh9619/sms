@@ -208,6 +208,11 @@ export interface FeesUIProps {
   monthFilter?: string;
   setMonthFilter?: (val: string) => void;
 
+  // Active Receipt View Modal
+  activeReceipt?: any;
+  setActiveReceipt?: (receipt: any) => void;
+  handleViewReceipt?: (fee: FeeRecord) => void;
+
   // Auto Generate Invoices Modal
   showGenerateModal?: boolean;
   setShowGenerateModal?: (show: boolean) => void;
@@ -243,6 +248,9 @@ export function FeesUI({
   setPaymentMethod,
   processing = false,
   handlePay,
+  activeReceipt = null,
+  setActiveReceipt,
+  handleViewReceipt,
   showAddEditModal = false,
   setShowAddEditModal,
   editingFee = null,
@@ -279,9 +287,42 @@ export function FeesUI({
   setGenerateDueDate,
   generateMonth = new Date().toISOString().slice(0, 7),
   setGenerateMonth,
-  handleGenerateInvoices,
   isGenerating = false,
 }: FeesUIProps) {
+  // Compute all fee items to be paid together for checkout modal
+  const payingFeeItems = React.useMemo(() => {
+    if (!payingFee) return [];
+    if (Array.isArray((payingFee as any).feeIds) && (payingFee as any).feeIds.length > 0) {
+      return fees.filter((f) => (payingFee as any).feeIds.map(String).includes(String(f.id)));
+    }
+    if (Array.isArray((payingFee as any).selectedMonths) && (payingFee as any).selectedMonths.length > 0) {
+      return fees.filter(
+        (f) =>
+          String(f.studentId) === String(payingFee.studentId) &&
+          (payingFee as any).selectedMonths.includes(f.month) &&
+          f.status !== "paid"
+      );
+    }
+    if ((payingFee as any).payAllPendingMonths) {
+      return fees.filter(
+        (f) =>
+          String(f.studentId) === String(payingFee.studentId) &&
+          f.status !== "paid"
+      );
+    }
+    const matches = fees.filter(
+      (f) =>
+        String(f.studentId) === String(payingFee.studentId) &&
+        (f.month === payingFee.month || !payingFee.month) &&
+        f.status !== "paid"
+    );
+    return matches.length > 0 ? matches : [payingFee];
+  }, [payingFee, fees]);
+
+  const checkoutTotalAmount = React.useMemo(() => {
+    return payingFeeItems.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  }, [payingFeeItems]);
+
   // Multi-class selection state & helpers
   const selectedClassIds: string[] = React.useMemo(() => {
     if (Array.isArray(structFormData.classMasterIds)) {
@@ -737,13 +778,19 @@ export function FeesUI({
 
   const multiFeeTotalSum = React.useMemo(() => {
     if (!formData.selectedFeeItems || !Array.isArray(formData.selectedFeeItems)) return 0;
-    return formData.selectedFeeItems.reduce((sum: number, item: any) => {
+    const baseSum = formData.selectedFeeItems.reduce((sum: number, item: any) => {
       if (item.selected && item.amount) {
         return sum + Number(item.amount || 0);
       }
       return sum;
     }, 0);
-  }, [formData.selectedFeeItems]);
+
+    const monthMultiplier = (Array.isArray(formData.selectedMonths) && formData.selectedMonths.length > 0)
+      ? formData.selectedMonths.length
+      : 1;
+
+    return baseSum * monthMultiplier;
+  }, [formData.selectedFeeItems, formData.selectedMonths]);
 
   const getStatusIcon = (status: string) => {
     if (status === "paid") return <CheckCircle2 className="h-4 w-4 text-success" />;
@@ -1040,17 +1087,26 @@ export function FeesUI({
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              {fee?.status?.toLowerCase() === "paid"
-                                && (
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="hover:text-primary h-8 w-8"
-                                    onClick={() => feeService.downloadFeeReceiptPdf(fee.id, fee, fees)}
-                                    title="Download Monthly Fee Receipt PDF (All Fee Heads)"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>)}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="hover:text-primary h-8 w-8"
+                                onClick={() => handleViewReceipt ? handleViewReceipt(fee) : feeService.downloadFeeReceiptPdf(fee.id, fee, fees)}
+                                title="View Interactive Fee Receipt (All Selected Fee Types)"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              {fee?.status?.toLowerCase() === "paid" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="hover:text-primary h-8 w-8"
+                                  onClick={() => feeService.downloadFeeReceiptPdf(fee.id, fee, fees)}
+                                  title="Download Monthly Fee Receipt PDF (All Fee Heads)"
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              )}
                               {isMyFees && fee.status !== "paid" && setPayingFee && (
                                 <Button
                                   size="sm"
@@ -1399,69 +1455,123 @@ export function FeesUI({
       {/* Mock Payment Gateway Modal Dialog */}
       {payingFee && setPayingFee && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in"
           onClick={() => !processing && setPayingFee(null)}
         >
           <div
-            className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm m-4 overflow-hidden animate-scale-in text-left"
+            className="bg-card border border-border rounded-3xl shadow-2xl w-full max-w-md m-4 overflow-hidden animate-scale-in text-left"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <h3 className="font-bold text-base flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Mock Payment Checkout
-              </h3>
+            <div className="p-5 border-b border-border flex items-center justify-between bg-primary/5">
+              <div>
+                <h3 className="font-extrabold text-base flex items-center gap-2 text-foreground">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                  Fee Payment Gateway Checkout
+                </h3>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                  Authorize & process payment for all selected fee heads
+                </p>
+              </div>
               {!processing && (
                 <button
                   onClick={() => setPayingFee(null)}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground w-8 h-8 rounded-full bg-muted/80 flex items-center justify-center"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
-            <div className="p-5 space-y-4">
-              <div className="p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-1">
-                <p className="text-xs text-muted-foreground font-semibold">Payment For</p>
-                <p className="text-sm font-bold capitalize">{payingFee.feeType} Fee</p>
-                <p className="text-xl font-black text-primary mt-1">
-                  ₹{Number(payingFee.amount).toLocaleString()}
-                </p>
+
+            <div className="p-5 space-y-4 text-xs">
+              {/* Student & Billing Month Banner */}
+              <div className="p-3 bg-muted/40 rounded-2xl border border-border flex items-center justify-between">
+                <div>
+                  <p className="font-extrabold text-sm text-foreground">{payingFee.studentName || "Student"}</p>
+                  <p className="text-[11px] text-muted-foreground font-medium">
+                    {payingFee.class ? `Class: ${payingFee.class}` : ""} {payingFee.rollNumber ? `| Roll: ${payingFee.rollNumber}` : ""}
+                  </p>
+                </div>
+                <Badge variant="outline" className="font-bold text-primary border-primary/40 bg-primary/5">
+                  {payingFee.month || "Current Month"}
+                </Badge>
               </div>
 
+              {/* Itemized List of Selected Fee Heads */}
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-muted-foreground tracking-wider">
+                  Fee Components Breakdown ({payingFeeItems.length} heads selected)
+                </label>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {payingFeeItems.map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="p-2.5 rounded-xl border border-border/70 bg-card flex items-center justify-between shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-bold text-[10px] flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <p className="font-extrabold capitalize text-foreground">{item.feeType || item.type} Fee</p>
+                          {item.remarks && <p className="text-[10px] text-muted-foreground truncate">{item.remarks}</p>}
+                        </div>
+                      </div>
+                      <span className="font-black text-foreground text-xs">
+                        ₹{Number(item.amount || 0).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Grand Total Highlight Box */}
+              <div className="p-3.5 bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                    Total Amount to Pay
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-medium">All selected fee heads included</p>
+                </div>
+                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                  ₹{checkoutTotalAmount.toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              {/* Payment Method Dropdown */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">
-                  Select Payment Method
+                <label className="text-xs font-extrabold text-foreground">
+                  Select Payment Gateway Method
                 </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod && setPaymentMethod(e.target.value)}
-                  className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-xs font-bold focus:ring-2 focus:ring-primary outline-none"
                 >
                   <option value="credit_card">Credit / Debit Card</option>
+                  <option value="upi">UPI / QR Code (Instant)</option>
                   <option value="net_banking">Net Banking</option>
-                  <option value="upi">UPI / QR Code</option>
                   <option value="wallet">Mobile Wallet</option>
                 </select>
               </div>
 
-              <div className="p-3 bg-muted/50 rounded-xl text-[10px] text-muted-foreground leading-relaxed">
-                🚨 This is a mock sandbox integration. No actual currency will be debited or
-                processed.
+              <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-[10px] text-amber-700 dark:text-amber-400 leading-relaxed font-medium">
+                🔒 Sandbox Payment Simulation: Click Authorize to process payment and generate official receipt.
               </div>
             </div>
-            <div className="p-5 border-t border-border flex justify-end gap-2.5">
+
+            <div className="p-4 border-t border-border flex justify-end gap-2.5 bg-muted/20">
               <Button
                 variant="outline"
                 onClick={() => setPayingFee(null)}
                 disabled={processing}
+                className="font-bold text-xs"
               >
                 Cancel
               </Button>
-              <Button onClick={handlePay} disabled={processing}>
+              <Button onClick={handlePay} disabled={processing} className="font-extrabold text-xs px-5 shadow-md">
                 {processing
-                  ? "Processing..."
-                  : `Authorize ₹${Number(payingFee.amount).toLocaleString()}`}
+                  ? "Processing Payment..."
+                  : `Authorize ₹${checkoutTotalAmount.toLocaleString("en-IN")}`}
               </Button>
             </div>
           </div>
@@ -1751,29 +1861,120 @@ export function FeesUI({
                     </div>
                   </div>
 
-                  {/* Billing Month & Due Date Picker for Fee Items */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-extrabold text-foreground">
-                        Billing Month / Period <span className="text-destructive">*</span>
+                  {/* Multi-Month Billing Period Selection */}
+                  <div className="space-y-3 pt-2 border-t border-border/60">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <label className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+                        <Calendar className="h-4 w-4 text-primary" /> Billing Months Selection <span className="text-destructive">*</span>
                       </label>
-                      <Input
-                        type="month"
-                        disabled={!isSelectionComplete}
-                        value={formData.month || new Date().toISOString().slice(0, 7)}
-                        onChange={(e) => setFormData && setFormData({ ...formData, month: e.target.value })}
-                      />
+
+                      {/* Presets: Q1, Q2, Q3, Q4 */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] text-muted-foreground font-semibold">Presets:</span>
+                        <button
+                          type="button"
+                          disabled={!isSelectionComplete}
+                          onClick={() => {
+                            const yr = new Date().getFullYear();
+                            setFormData && setFormData({ ...formData, selectedMonths: [`${yr}-04`, `${yr}-05`, `${yr}-06`], month: `${yr}-04` });
+                          }}
+                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          Q1 (Apr-Jun)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isSelectionComplete}
+                          onClick={() => {
+                            const yr = new Date().getFullYear();
+                            setFormData && setFormData({ ...formData, selectedMonths: [`${yr}-07`, `${yr}-08`, `${yr}-09`], month: `${yr}-07` });
+                          }}
+                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          Q2 (Jul-Sep)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isSelectionComplete}
+                          onClick={() => {
+                            const yr = new Date().getFullYear();
+                            setFormData && setFormData({ ...formData, selectedMonths: [`${yr}-10`, `${yr}-11`, `${yr}-12`], month: `${yr}-10` });
+                          }}
+                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          Q3 (Oct-Dec)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!isSelectionComplete}
+                          onClick={() => {
+                            const yr = new Date().getFullYear() + 1;
+                            setFormData && setFormData({ ...formData, selectedMonths: [`${yr}-01`, `${yr}-02`, `${yr}-03`], month: `${yr}-01` });
+                          }}
+                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          Q4 (Jan-Mar)
+                        </button>
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-extrabold text-foreground">
-                        Invoice Due Date <span className="text-destructive">*</span>
-                      </label>
-                      <Input
-                        type="date"
-                        disabled={!isSelectionComplete}
-                        value={formData.dueDate || ""}
-                        onChange={(e) => setFormData && setFormData({ ...formData, dueDate: e.target.value })}
-                      />
+
+                    {/* Interactive Month Selection Grid */}
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 p-2.5 bg-muted/30 border border-border/80 rounded-2xl">
+                      {MONTH_GRID_ITEMS.map((m) => {
+                        const baseYear = new Date().getFullYear();
+                        const isJanFebMar = ["01", "02", "03"].includes(m.value);
+                        const monthYear = isJanFebMar ? baseYear + 1 : baseYear;
+                        const fullMonthStr = `${monthYear}-${m.value}`;
+
+                        const selectedMonthsArr: string[] = formData.selectedMonths || [formData.month || new Date().toISOString().slice(0, 7)];
+                        const isSelected = selectedMonthsArr.includes(fullMonthStr);
+
+                        return (
+                          <button
+                            key={m.value}
+                            type="button"
+                            disabled={!isSelectionComplete}
+                            onClick={() => {
+                              if (!setFormData) return;
+                              let nextMonths: string[];
+                              if (isSelected) {
+                                nextMonths = selectedMonthsArr.filter((item) => item !== fullMonthStr);
+                                if (nextMonths.length === 0) nextMonths = [fullMonthStr];
+                              } else {
+                                nextMonths = [...selectedMonthsArr, fullMonthStr];
+                              }
+                              setFormData({
+                                ...formData,
+                                selectedMonths: nextMonths,
+                                month: nextMonths[0],
+                              });
+                            }}
+                            className={`py-2 px-1 rounded-xl text-xs font-black flex flex-col items-center justify-center transition-all ${isSelected
+                              ? "bg-primary text-primary-foreground shadow-md scale-[1.02]"
+                              : "bg-background text-muted-foreground hover:bg-muted/80 border border-border/60"
+                              }`}
+                          >
+                            <span>{m.label}</span>
+                            <span className="text-[9px] font-normal opacity-80">{monthYear}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs pt-1">
+                      <span className="text-muted-foreground font-semibold">
+                        Selected: <strong className="text-primary font-bold">{formData.selectedMonths?.length || 1} Month(s)</strong>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] font-extrabold text-foreground shrink-0">Due Date:</label>
+                        <Input
+                          type="date"
+                          disabled={!isSelectionComplete}
+                          value={formData.dueDate || ""}
+                          onChange={(e) => setFormData && setFormData({ ...formData, dueDate: e.target.value })}
+                          className="h-8 text-xs font-bold w-36"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2555,6 +2756,165 @@ export function FeesUI({
                     Generate Student Invoices
                   </>
                 )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Interactive Receipt Viewer Modal */}
+      {activeReceipt && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md animate-fade-in p-4 overflow-y-auto"
+          onClick={() => setActiveReceipt && setActiveReceipt(null)}
+        >
+          <div
+            className="bg-card border-2 border-primary/30 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale-in text-left my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-primary" />
+                <h3 className="font-black text-base text-foreground">Official Fee Payment Receipt</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-bold gap-1"
+                  onClick={() => window.print()}
+                >
+                  <FileText className="h-3.5 w-3.5" /> Print
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8 text-xs font-bold gap-1"
+                  onClick={() => feeService.downloadFeeReceiptPdf(activeReceipt.items?.[0]?.id || "1", activeReceipt, fees)}
+                >
+                  <Download className="h-3.5 w-3.5" /> Download PDF
+                </Button>
+                <button
+                  onClick={() => setActiveReceipt && setActiveReceipt(null)}
+                  className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors ml-1"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Receipt Body Container */}
+            <div className="p-6 space-y-6 text-sm bg-background">
+              {/* Receipt Branding Band */}
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-800 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-black tracking-tight uppercase">School Management System</h2>
+                  <p className="text-xs font-medium opacity-90">Official Consolidated Monthly Fee Receipt</p>
+                </div>
+                <div className="text-left sm:text-right">
+                  <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-lg backdrop-blur-xs block sm:inline-block">
+                    #{activeReceipt.receiptNo || "REC-OFFICIAL"}
+                  </span>
+                  <p className="text-[11px] opacity-80 mt-1">
+                    Issued: {activeReceipt.paidDate || new Date().toISOString().slice(0, 10)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Student & Billing Info */}
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">Student Details</p>
+                  <p className="font-extrabold text-sm text-foreground mt-0.5">{activeReceipt.studentName || "N/A"}</p>
+                  <p className="text-muted-foreground font-semibold">
+                    Class: <strong className="text-foreground">{activeReceipt.class || "N/A"}</strong> | Roll No: <strong className="text-foreground">{activeReceipt.rollNumber || "N/A"}</strong>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">Payment Information</p>
+                  <p className="font-extrabold text-sm text-foreground mt-0.5">
+                    Billing Period: <span className="text-primary">{activeReceipt.month || "Current"}</span>
+                  </p>
+                  <p className="text-muted-foreground font-semibold">
+                    Payment Mode: <strong className="text-foreground">{activeReceipt.paymentMethod || "Direct Settlement"}</strong>
+                  </p>
+                </div>
+              </div>
+
+              {/* Selected Fee Types Breakdown Table */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-xs uppercase tracking-wider text-muted-foreground">
+                    Selected Fee Components ({activeReceipt.items?.length || 0} heads)
+                  </h4>
+                  <Badge variant={activeReceipt.status === "paid" ? "success" : "warning"} className="font-bold text-xs uppercase">
+                    {activeReceipt.status || "PAID"}
+                  </Badge>
+                </div>
+
+                <div className="border border-border rounded-2xl overflow-hidden shadow-xs">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="bg-muted/60 border-b border-border text-muted-foreground font-bold">
+                        <th className="px-4 py-3 text-center w-12">#</th>
+                        <th className="px-4 py-3">Fee Type / Category</th>
+                        <th className="px-4 py-3">Description / Note</th>
+                        <th className="px-4 py-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {activeReceipt.items?.map((item: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-muted/10 font-semibold">
+                          <td className="px-4 py-3 text-center text-muted-foreground font-mono">{idx + 1}</td>
+                          <td className="px-4 py-3 font-bold capitalize text-foreground">
+                            {item.label || `${item.feeType || "Tuition"} Fee`}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground text-[11px]">
+                            {item.remarks || `Billing charge for ${activeReceipt.month || "month"}`}
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-foreground">
+                            ₹{Number(item.amount || 0).toLocaleString("en-IN")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Grand Total Summary Box */}
+              <div className="p-4 rounded-2xl bg-muted/40 border border-border flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-black text-primary uppercase tracking-wider">Total Amount Settled</p>
+                  <p className="text-[11px] text-muted-foreground font-medium">All selected fee items included in receipt</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    ₹{Number(activeReceipt.totalAmount || 0).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Authorization Stamp Footer */}
+              <div className="pt-4 border-t border-border/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-muted-foreground">
+                <p className="font-medium">
+                  Official computer-generated receipt. Valid without signature.
+                </p>
+                <div className="text-center sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-border">
+                  <p className="font-black text-foreground">Authorized Cashier / Principal</p>
+                  <p className="text-[10px] opacity-75">School Management System</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-border flex justify-end bg-muted/30">
+              <Button
+                variant="outline"
+                onClick={() => setActiveReceipt && setActiveReceipt(null)}
+                className="font-bold text-xs"
+              >
+                Close Receipt
               </Button>
             </div>
           </div>
