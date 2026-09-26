@@ -327,7 +327,9 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
 
     console.log('formattedRecords', formattedRecords);
 
-    handleBulkImport(formattedRecords);
+    if (handleBulkImport) {
+      handleBulkImport(formattedRecords);
+    }
     handleClose();
   };
 

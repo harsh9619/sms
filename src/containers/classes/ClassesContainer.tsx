@@ -158,7 +158,7 @@ export function ClassesContainer() {
       let matchesClass = true;
       if (selectedClassId) {
         matchesClass = false;
-        if (String(r.id) === String(selectedClassId) || String(r.schoolClassId) === String(selectedClassId)) {
+        if (String(r.id) === String(selectedClassId) || String((r as any).schoolClassId) === String(selectedClassId)) {
           matchesClass = true;
         } else if (selectedClassObj) {
           const classNameLower = String(selectedClassObj.name).trim().toLowerCase();

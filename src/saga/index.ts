@@ -17,6 +17,8 @@ export type AppDispatch = typeof store.dispatch;
 export type RootState = ReturnType<typeof store.getState>;
 export type AppState = RootState;
 
+export type { PaginationMeta } from "./students";
+
 export * from "./auth";
 export * from "./school";
 export * from "./students";
@@ -30,3 +32,4 @@ export * from "./homework";
 export * from "./notices";
 export * from "./marks";
 export * from "./attendance";
+

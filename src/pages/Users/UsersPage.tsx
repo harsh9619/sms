@@ -103,7 +103,8 @@ function UsersPageContent({
       email: user.email,
       phone: user.phone || "",
       role: user.role,
-      schoolId: user.schoolId || user.schoolIds?.[0] || activeSchool?.id || schools[0]?.id || "",
+      roleId: String(user.roleId || ""),
+      schoolId: String(user.schoolId || user.schoolIds?.[0] || activeSchool?.id || schools[0]?.id || ""),
     });
     setFormError(null);
     setShowModal(true);
@@ -115,7 +116,8 @@ function UsersPageContent({
       email: "",
       phone: "",
       role: "teacher",
-      schoolId: schoolId || activeSchool?.id || schools[0]?.id || "",
+      roleId: "",
+      schoolId: String(schoolId || activeSchool?.id || schools[0]?.id || ""),
     });
     setFormError(null);
   };

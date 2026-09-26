@@ -2,8 +2,8 @@ import type { Teacher } from "../../types";
 
 export interface RoleMaster {
   roleId: number;
-  roleName: string;
-  label: string;
+  roleName?: string;
+  label?: string;
   description?: string;
 }
 
@@ -43,6 +43,8 @@ export interface CreateTeacherRequestPayload {
   address?: string;
   salary?: number;
   status?: boolean;
+  roleId?: number | string;
+  role?: string;
 }
 
 export interface CreateTeacherSuccessPayload {

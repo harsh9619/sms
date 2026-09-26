@@ -50,10 +50,10 @@ import {
 
 
 export const fetchStudentsRequest = (
-  payload: FetchStudentRequestPayload
+  payload?: FetchStudentRequestPayload
 ): FetchStudentRequest => ({
   type: FETCH_STUDENTS_REQUEST,
-  payload,
+  payload: payload || {},
 });
 
 export const fetchStudentsSuccess = (

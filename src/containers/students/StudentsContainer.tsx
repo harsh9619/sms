@@ -23,7 +23,7 @@ import {
 } from "../../saga/students/types";
 import { fetchClassesRequest } from "../../saga/classes/actions";
 
-function StudentsContainerContent(props: StudentsContainerProps) {
+function StudentsContainerContent(props: any) {
   const {
     students,
     meta,
@@ -81,7 +81,7 @@ function StudentsContainerContent(props: StudentsContainerProps) {
     }
     else if (addEditStudentSuccess === false && addEditStudentMsg) {
       toast.error(addEditStudentMsg)
-      setFormError(prev => ({
+      setFormError((prev: any) => ({
         ...prev,
         email: addEditStudentMsg,
       }))
@@ -348,7 +348,7 @@ const mapStateToProps = (state: AppState) => ({
 const mapDispatchToProps = (dispatch: Dispatch) => ({
   fetchStudentsRequest: (
     payload?: FetchStudentRequestPayload
-  ) => dispatch(fetchStudentsRequest(payload)),
+  ) => dispatch(fetchStudentsRequest(payload || {})),
   fetchClassesRequest: () => dispatch(fetchClassesRequest()),
   createStudentRequest: (
     payload: CreateStudentRequestPayload

@@ -46,7 +46,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
 
   const selectedClassFeeItems = classFeeStructures.filter(
     (s) =>
-      String(s.classId) === String(generateClassId) ||
+      String((s as any).classId || (s as any).class_id) === String(generateClassId) ||
       (s.className && targetName && s.className.toLowerCase() === targetName.toLowerCase())
   );
 

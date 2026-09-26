@@ -114,7 +114,7 @@ export const GeneratePayrollModal: React.FC<GeneratePayrollModalProps> = ({
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-primary" /> Target Period
                 </span>
-                <Badge variant="primary" className="text-[10px] font-bold">
+                <Badge variant="default" className="text-[10px] font-bold">
                   {selectedMonthName} {payrollYear}
                 </Badge>
               </div>

@@ -1543,7 +1543,7 @@ const getConfidenceLevel = (
 // ============================================================================
 
 export const formatStudentRowPayload = (
-    rawRow: Record<string, string>,
+    rawRow: Record<string, any>,
     defaultSerialIndex = 1
 ): StudentOcrRow => {
     let studentName = cleanName(
@@ -1899,7 +1899,7 @@ export const formatStudentRowPayload = (
         duplicate_of_serial: null,
 
         source_line: rawRow.source_line,
-        source_cells: rawRow.source_cells,
+        source_cells: Array.isArray(rawRow.source_cells) ? rawRow.source_cells : (typeof rawRow.source_cells === "string" ? [rawRow.source_cells] : []),
 
         // Legacy aliases.
         name: studentName,
@@ -2403,7 +2403,7 @@ export const parseOcrTextToRows = (
                 source_line:
                     candidate.source_line || "",
                 source_cells:
-                    candidate.source_cells || [],
+                    Array.isArray(candidate.source_cells) ? candidate.source_cells : (typeof candidate.source_cells === "string" ? [candidate.source_cells] : []),
             },
             index + 1
         );

@@ -22,7 +22,7 @@ import { TeachersUI } from "../../components/modules/teachers/TeachersUI";
 import * as XLSX from "xlsx";
 import teacherService from "../../Services/teacher.service";
 
-function TeachersContainerContent(props: TeachersContainerProps) {
+function TeachersContainerContent(props: any) {
   const {
     teachers,
     meta,

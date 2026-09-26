@@ -49,7 +49,7 @@ function AssignTeacherPageContent({
 
   const filteredTeachers = teachers.filter(t =>
     t.name.toLowerCase().includes(searchTeacher.toLowerCase()) ||
-    t.subject.toLowerCase().includes(searchTeacher.toLowerCase())
+    (t.subject && t.subject.toLowerCase().includes(searchTeacher.toLowerCase()))
   );
 
   const handleAssign = () => {

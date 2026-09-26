@@ -26,6 +26,8 @@ export function importStudentsFromExcel(file: File): Promise<ImportResult<Studen
           try {
             const student: Student = {
               id: `s${Date.now()}${Math.random()}`,
+              school_id: "",
+              user_id: null,
               name: row.Name || row.name || "",
               email: row.Email || row.email || "",
               phone: row.Phone || row.phone || "",
@@ -94,6 +96,8 @@ export function importStudentsFromCSV(file: File): Promise<ImportResult<Student>
 
             const student: Student = {
               id: `s${Date.now()}${Math.random()}`,
+              school_id: "",
+              user_id: null,
               name: row.Name || row.name || "",
               email: row.Email || row.email || "",
               phone: row.Phone || row.phone || "",
@@ -166,6 +170,7 @@ export function importTeachersFromExcel(file: File): Promise<ImportResult<Teache
               address: row.Address || row.address || "",
               joinDate: new Date().toISOString().split("T")[0],
               salary: row.Salary ? parseFloat(row.Salary) : undefined,
+              status: true,
             };
 
             if (!teacher.name || !teacher.email || !teacher.subject) {
@@ -231,6 +236,7 @@ export function importTeachersFromCSV(file: File): Promise<ImportResult<Teacher>
               address: row.Address || row.address || "",
               joinDate: new Date().toISOString().split("T")[0],
               salary: row.Salary ? parseFloat(row.Salary) : undefined,
+              status: true,
             };
 
             if (!teacher.name || !teacher.email || !teacher.subject) {

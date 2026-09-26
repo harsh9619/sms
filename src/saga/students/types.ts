@@ -81,7 +81,8 @@ export interface StudentsContainerProps {
   handleOpenEditModal: (student: Student) => void;
 }
 
-import type { CasteMaster } from "../../types";
+import type { CasteMaster, Student } from "../../types";
+export type { Student };
 
 export interface StudentsUIProps {
   students: Student[];
@@ -115,47 +116,7 @@ export interface StudentsUIProps {
   handleExportExcel: () => void;
 }
 
-export interface Student {
-  id: string;
-  school_id: string;
-  user_id: number | null;
-  name: string;
-  email: string;
-  phone: string;
-  class_id: number | null;
-  class_name: string;
-  division_master_id: number | null;
-  division_name: string;
-  section: string;
-  caste_master_id?: number | null;
-  caste_name?: string;
-  caste_code?: string;
-  caste_category?: string;
-  registration_no?: string;
-  academic_year?: string;
-  aadhar_no?: string;
-  medium?: string;
-  father_name?: string;
-  father_occupation?: string;
-  father_qualification?: string;
-  mother_name?: string;
-  mother_occupation?: string;
-  mother_qualification?: string;
-  whatsapp_no?: string;
-  scholar_no?: string;
-  roll_no: string;
-  dob: string;
-  gender: string;
-  blood_group: string;
-  address: string;
-  guardian_name: string;
-  guardian_phone: string;
-  parent_name: string;
-  parent_phone: string;
-  admission_date: string;
-  created_at: string;
-  updated_at?: string;
-}
+
 
 
 export interface PaginationMeta {
@@ -167,8 +128,8 @@ export interface PaginationMeta {
 
 
 export interface FetchStudentRequestPayload {
-  page: number;
-  limit: number;
+  page?: number;
+  limit?: number;
   search?: string;
   classId?: string;
   divisionId?: string;
@@ -186,22 +147,26 @@ export interface FetchStudentFailurePayload {
 
 export interface FetchStudentRequest {
   type: typeof FETCH_STUDENTS_REQUEST;
-  payload: FetchStudentRequestPayload;
+  payload?: FetchStudentRequestPayload;
+  [key: string]: any;
 }
 
 export interface FetchStudentSuccess {
   type: typeof FETCH_STUDENTS_SUCCESS;
   payload: FetchStudentSuccessPayload;
+  [key: string]: any;
 }
 
 export interface FetchStudentFailure {
   type: typeof FETCH_STUDENTS_FAILURE;
   payload: FetchStudentFailurePayload;
+  [key: string]: any;
 }
 
 // Create Student Types
 export interface CreateStudentRequestPayload {
-  studentData: Partial<Student>;
+  studentData?: Partial<Student>;
+  [key: string]: any;
 }
 
 export interface CreateStudentSuccessPayload {
@@ -216,22 +181,26 @@ export interface CreateStudentFailurePayload {
 export interface CreateStudentRequest {
   type: typeof CREATE_STUDENT_REQUEST;
   payload: CreateStudentRequestPayload;
+  [key: string]: any;
 }
 
 export interface CreateStudentSuccess {
   type: typeof CREATE_STUDENT_SUCCESS;
   payload: CreateStudentSuccessPayload;
+  [key: string]: any;
 }
 
 export interface CreateStudentFailure {
   type: typeof CREATE_STUDENT_FAILURE;
   payload: CreateStudentFailurePayload;
+  [key: string]: any;
 }
 
 // Update Student Types
 export interface UpdateStudentRequestPayload {
-  id: string;
-  studentData: Partial<Student>;
+  id?: string;
+  studentData?: Partial<Student>;
+  [key: string]: any;
 }
 
 export interface UpdateStudentSuccessPayload {
@@ -246,16 +215,19 @@ export interface UpdateStudentFailurePayload {
 export interface UpdateStudentRequest {
   type: typeof UPDATE_STUDENT_REQUEST;
   payload: UpdateStudentRequestPayload;
+  [key: string]: any;
 }
 
 export interface UpdateStudentSuccess {
   type: typeof UPDATE_STUDENT_SUCCESS;
   payload: UpdateStudentSuccessPayload;
+  [key: string]: any;
 }
 
 export interface UpdateStudentFailure {
   type: typeof UPDATE_STUDENT_FAILURE;
   payload: UpdateStudentFailurePayload;
+  [key: string]: any;
 }
 
 // Delete Student Types
@@ -275,16 +247,19 @@ export interface DeleteStudentFailurePayload {
 export interface DeleteStudentRequest {
   type: typeof DELETE_STUDENT_REQUEST;
   payload: DeleteStudentRequestPayload;
+  [key: string]: any;
 }
 
 export interface DeleteStudentSuccess {
   type: typeof DELETE_STUDENT_SUCCESS;
   payload: DeleteStudentSuccessPayload;
+  [key: string]: any;
 }
 
 export interface DeleteStudentFailure {
   type: typeof DELETE_STUDENT_FAILURE;
   payload: DeleteStudentFailurePayload;
+  [key: string]: any;
 }
 
 export interface BulkCreateStudentsRequestPayload {

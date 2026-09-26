@@ -175,7 +175,7 @@ function SettingsPageContent({
 
   const openEditUser = (user: User) => {
     setEditingUser(user);
-    setUserForm({ name: user.name, email: user.email, phone: user.phone || "", role: user.role, schoolId: user.schoolIds?.[0] || "" });
+    setUserForm({ name: user.name, email: user.email, phone: user.phone || "", role: user.role, schoolId: String(user.schoolIds?.[0] || user.schoolId || "") });
     setFormError(null);
     setShowUserModal(true);
   };

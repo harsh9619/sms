@@ -1,5 +1,5 @@
 // ==================== User & Auth Types ====================
-export type UserRole = "admin" | "teacher" | "student";
+export type UserRole = "admin" | "teacher" | "student" | "school_admin" | "super_admin" | "parent";
 
 export interface User {
   id: string;
@@ -7,12 +7,15 @@ export interface User {
   user_name?: string;
   userName?: string;
   email: string;
-  role: UserRole;
+  role: UserRole | string;
   avatar?: string;
   phone?: string;
   address?: string;
-  joinDate: string;
+  joinDate?: string;
   schoolId: string;
+  schoolIds?: (string | number)[];
+  studentId?: string | number;
+  roleId?: string | number;
   // Teacher-specific
   subject?: string;
   department?: string;
@@ -40,11 +43,11 @@ export interface Student {
   name: string;
   email: string;
   phone: string;
-  class_id: number | null;
-  class_name: string;
-  division_master_id: number | null;
-  division_name: string;
-  section: string;
+  class_id?: number | null;
+  class_name?: string;
+  division_master_id?: number | null;
+  division_name?: string;
+  section?: string;
   caste_master_id?: number | null;
   caste_name?: string;
   caste_code?: string;
@@ -61,24 +64,31 @@ export interface Student {
   mother_qualification?: string;
   whatsapp_no?: string;
   scholar_no?: string;
-  roll_no: string;
-  dob: string;
-  gender: string;
-  blood_group: string;
-  address: string;
-  guardian_name: string;
-  guardian_phone: string;
-  parent_name: string;
-  parent_phone: string;
-  admission_date: string;
-  created_at: string;
+  roll_no?: string;
+  rollNumber?: string;
+  class?: string;
+  dob?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  blood_group?: string;
+  bloodGroup?: string;
+  address?: string;
+  guardian_name?: string;
+  guardian_phone?: string;
+  parent_name?: string;
+  parentName?: string;
+  parent_phone?: string;
+  parentPhone?: string;
+  admission_date?: string;
+  admissionDate?: string;
+  created_at?: string;
   updated_at?: string;
 }
 
 export interface RoleMaster {
   roleId: number;
-  roleName: string;
-  label: string;
+  roleName?: string;
+  label?: string;
   description?: string;
 }
 
@@ -88,18 +98,21 @@ export interface Teacher {
   name: string;
   email: string;
   phone: string;
-  subject: string;
-  department: string;
-  qualification: string;
-  experience: string;
-  address: string;
+  subject?: string;
+  department?: string;
+  qualification?: string;
+  experience?: string;
+  address?: string;
   avatar?: string;
-  joinDate: string;
+  avatar_url?: string;
+  joinDate?: string;
   salary?: number;
   status: boolean;
-  roleId?: number;
+  roleId?: number | string;
+  role?: string;
   roleName?: string;
 }
+
 
 export interface BulkUploadError {
   email: string;
@@ -151,7 +164,9 @@ export interface AttendanceRecord {
   date: string;
   status: "present" | "absent" | "late";
   markedBy: string;
+  markedByName?: string;
   markedAt: string;
+  createdAt?: string;
 }
 
 export interface AttendanceSheet {
@@ -183,6 +198,8 @@ export interface FeeRecord {
   class: string;
   section: string;
   feeType: string;
+  type?: string;
+  receiptNumber?: string;
   amount: number;
   dueDate: string;
   month?: string;
@@ -190,6 +207,7 @@ export interface FeeRecord {
   status: "pending" | "paid" | "overdue";
   remarks?: string;
 }
+
 
 // ==================== Salary Types ====================
 export interface SalaryRecord {

@@ -14,7 +14,7 @@ import {
 } from "./actionTypes";
 import type { FeeRecord } from "../../types";
 import type { ClassFeeStructureItem } from "../../Services/fee.service";
-import type { FeesUIProps } from "../../components/modules/fees/FeesUI";
+import type { FeesUIProps } from "../../components/modules/fees/types";
 
 // ==================== Pagination & Payload Types ====================
 export interface PaginationMeta {
@@ -69,61 +69,73 @@ export interface UpdateFeeRequestPayload {
 export interface FetchFeeRequestAction {
   type: typeof FETCH_FEES_REQUEST;
   payload?: FetchFeeRequestPayload;
+  [key: string]: any;
 }
 
 export interface FetchFeeSuccessAction {
   type: typeof FETCH_FEES_SUCCESS;
   payload: FetchFeeSuccessPayload | FeeRecord[];
+  [key: string]: any;
 }
 
 export interface FetchFeeFailureAction {
   type: typeof FETCH_FEES_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export interface CreateFeeRequestAction {
   type: typeof CREATE_FEE_REQUEST;
   payload: CreateFeeRequestPayload;
+  [key: string]: any;
 }
 
 export interface CreateFeeSuccessAction {
   type: typeof CREATE_FEE_SUCCESS;
   payload: FeeRecord;
+  [key: string]: any;
 }
 
 export interface CreateFeeFailureAction {
   type: typeof CREATE_FEE_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export interface UpdateFeeRequestAction {
   type: typeof UPDATE_FEE_REQUEST;
   payload: UpdateFeeRequestPayload;
+  [key: string]: any;
 }
 
 export interface UpdateFeeSuccessAction {
   type: typeof UPDATE_FEE_SUCCESS;
   payload: FeeRecord;
+  [key: string]: any;
 }
 
 export interface UpdateFeeFailureAction {
   type: typeof UPDATE_FEE_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export interface DeleteFeeRequestAction {
   type: typeof DELETE_FEE_REQUEST;
   payload: string;
+  [key: string]: any;
 }
 
 export interface DeleteFeeSuccessAction {
   type: typeof DELETE_FEE_SUCCESS;
   payload: string;
+  [key: string]: any;
 }
 
 export interface DeleteFeeFailureAction {
   type: typeof DELETE_FEE_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export type FeeActions =

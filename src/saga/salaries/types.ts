@@ -14,7 +14,7 @@ import {
 } from "./actionTypes";
 import type { SalaryRecord } from "../../types";
 import type { StaffSalaryStructureItem } from "../../Services/salary.service";
-import type { SalaryUIProps } from "../../components/modules/salary/SalaryUI";
+import type { SalaryUIProps } from "../../components/modules/salary/types";
 
 // ==================== Pagination & Payload Types ====================
 export interface PaginationMeta {
@@ -61,61 +61,73 @@ export interface UpdateSalaryRequestPayload {
 export interface FetchSalaryRequestAction {
   type: typeof FETCH_SALARIES_REQUEST;
   payload?: FetchSalaryRequestPayload;
+  [key: string]: any;
 }
 
 export interface FetchSalarySuccessAction {
   type: typeof FETCH_SALARIES_SUCCESS;
   payload: FetchSalarySuccessPayload | SalaryRecord[];
+  [key: string]: any;
 }
 
 export interface FetchSalaryFailureAction {
   type: typeof FETCH_SALARIES_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export interface CreateSalaryRequestAction {
   type: typeof CREATE_SALARY_REQUEST;
   payload: CreateSalaryRequestPayload;
+  [key: string]: any;
 }
 
 export interface CreateSalarySuccessAction {
   type: typeof CREATE_SALARY_SUCCESS;
   payload: SalaryRecord;
+  [key: string]: any;
 }
 
 export interface CreateSalaryFailureAction {
   type: typeof CREATE_SALARY_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export interface UpdateSalaryRequestAction {
   type: typeof UPDATE_SALARY_REQUEST;
   payload: UpdateSalaryRequestPayload;
+  [key: string]: any;
 }
 
 export interface UpdateSalarySuccessAction {
   type: typeof UPDATE_SALARY_SUCCESS;
   payload: SalaryRecord;
+  [key: string]: any;
 }
 
 export interface UpdateSalaryFailureAction {
   type: typeof UPDATE_SALARY_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export interface DeleteSalaryRequestAction {
   type: typeof DELETE_SALARY_REQUEST;
   payload: string;
+  [key: string]: any;
 }
 
 export interface DeleteSalarySuccessAction {
   type: typeof DELETE_SALARY_SUCCESS;
   payload: string;
+  [key: string]: any;
 }
 
 export interface DeleteSalaryFailureAction {
   type: typeof DELETE_SALARY_FAILURE;
   payload: string;
+  [key: string]: any;
 }
 
 export type SalaryActions =

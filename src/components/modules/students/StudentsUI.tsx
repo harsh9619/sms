@@ -87,7 +87,7 @@ export function StudentsUI({
 
   useEffect(() => {
     if (error) {
-      const errorMsg = typeof error === "object" ? (error.message || JSON.stringify(error)) : String(error);
+      const errorMsg = typeof error === "object" && error !== null ? ((error as any).message || JSON.stringify(error)) : String(error);
       setFieldErrors((prev) => ({ ...prev, email: errorMsg }));
     }
   }, [error]);
@@ -1160,7 +1160,7 @@ export function StudentsUI({
             "bloodGroup",
             "address",
           ]}
-          sampleRows={{}}
+          sampleRows={[]}
           onUpload={async (data) => {
             return studentService.bulkCreateStudents(data);
           }}

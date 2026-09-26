@@ -62,7 +62,7 @@ function* handleCreateStudent(action: { type: string; payload: CreateStudentRequ
 
 function* handleUpdateStudent(action: { type: string; payload: UpdateStudentRequestPayload }): Generator<StrictEffect, void, any> {
   try {
-    const response: any = yield call(studentService.updateStudent, action.payload.id, action.payload);
+    const response: any = yield call(studentService.updateStudent as any, action.payload.id || "", action.payload);
     yield put(updateStudentSuccess({ student: response }));
   } catch (error: any) {
     yield put(updateStudentFailure({

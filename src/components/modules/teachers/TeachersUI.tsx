@@ -6,6 +6,7 @@ import { Badge } from "../../ui/Badge";
 import { Avatar, AvatarFallback } from "../../ui/Avatar";
 import { Loader } from "../../ui/Loader";
 import type { TeachersUIProps, RoleMaster } from "../../../saga/teachers/types";
+import type { Teacher } from "../../../types";
 import { capitalizeFirstLetter } from "../../../lib/utils";
 import {
   TEACHER_CREATION_ROLES
@@ -287,9 +288,9 @@ export function TeachersUI({
                   className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted/50 border border-border/60 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
                 >
                   <option value="all">All Roles</option>
-                  {masterRoles?.filter((r) => TEACHER_CREATION_ROLES?.includes(r?.roleName?.toUpperCase())).map((r) => (
+                  {masterRoles?.filter((r) => TEACHER_CREATION_ROLES?.includes(r?.roleName?.toUpperCase() || "")).map((r) => (
                     <option key={r.roleId} value={String(r.roleId)}>
-                      {capitalizeFirstLetter(r.roleName)}
+                      {capitalizeFirstLetter(r.roleName || "")}
                     </option>
                   ))}
                 </select>
