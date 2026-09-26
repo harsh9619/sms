@@ -1,7 +1,7 @@
 import type { User, UserRole } from "../../types";
 import * as types from "./actionTypes";
 
-export const loginRequest = (payload: { email: string; password: string }) => ({
+export const loginRequest = (payload: { email?: string; phone?: string; identifier?: string; loginType?: "email" | "mobile"; password: string }) => ({
   type: types.LOGIN_REQUEST,
   payload,
 });

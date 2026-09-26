@@ -11,12 +11,12 @@ import {
 import authService, { LoginResponse } from "../../Services/auth.service";
 import type { User } from "../../types";
 
-function* handleLogin(action: { type: string; payload: { email: string; password: string } }): Generator<any, void, any> {
+function* handleLogin(action: { type: string; payload: { email?: string; phone?: string; identifier?: string; loginType?: "email" | "mobile"; password: string } }): Generator<any, void, any> {
   try {
-    const response: LoginResponse = yield call(authService.login, action.payload.email, action.payload.password);
+    const response: LoginResponse = yield call(authService.login, action.payload);
     yield put(loginSuccess({ user: response.user, token: response.token }));
   } catch (error: any) {
-    yield put(loginFailure(error.message || "Invalid email or password"));
+    yield put(loginFailure(error.message || "Invalid credentials"));
   }
 }
 

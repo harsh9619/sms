@@ -1,14 +1,32 @@
 import httpService from "Services/http.service";
 import type { User } from "../types";
 
+export interface LoginCredentials {
+  email?: string;
+  phone?: string;
+  identifier?: string;
+  loginType?: "email" | "mobile";
+  password: string;
+}
+
 export interface LoginResponse {
   token: string;
   user: User;
 }
 
 export const authService = {
-  login: async (email: string, password: string): Promise<LoginResponse> => {
-    return httpService.post<LoginResponse>("/auth/login", { email, password });
+  login: async (credentials: LoginCredentials | string, passwordParam?: string, loginTypeParam?: "email" | "mobile"): Promise<LoginResponse> => {
+    let payload: LoginCredentials;
+    if (typeof credentials === "object") {
+      payload = credentials;
+    } else {
+      if (loginTypeParam === "mobile") {
+        payload = { phone: credentials, identifier: credentials, loginType: "mobile", password: passwordParam || "" };
+      } else {
+        payload = { email: credentials, identifier: credentials, loginType: "email", password: passwordParam || "" };
+      }
+    }
+    return httpService.post<LoginResponse>("/auth/login", payload);
   },
 
   getCurrentUser: async (): Promise<User> => {

@@ -18,9 +18,9 @@ interface AuthContextType {
   simulatedRole: UserRole | null;
   setSimulatedRole: (role: UserRole | null) => void;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (identifier: string, password: string, loginType?: "email" | "mobile") => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  getDemoCredentials: () => { email: string; password: string; role: UserRole }[];
+  getDemoCredentials: () => { email: string; phone: string; password: string; role: UserRole }[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,8 +67,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, user, dispatch]);
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      dispatch(loginRequest({ email, password }));
+    async (identifier: string, password: string, loginType?: "email" | "mobile") => {
+      const isMobile = loginType === "mobile" || (/^\d+$/.test(identifier.replace(/\D/g, "")) && !identifier.includes("@"));
+      const payload = isMobile
+        ? { phone: identifier.replace(/\D/g, ""), identifier, loginType: "mobile" as const, password }
+        : { email: identifier.trim(), identifier: identifier.trim(), loginType: "email" as const, password };
+
+      dispatch(loginRequest(payload));
       // Return a promise that resolves based on Redux state outcome
       return new Promise<{ success: boolean; error?: string }>((resolve) => {
         const checkInterval = setInterval(() => {
@@ -112,9 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getDemoCredentials = useCallback(() => {
     return [
-      { email: "admin@greenwood.edu.in", password: "admin123", role: "admin" as UserRole },
-      { email: "teacher@school.com", password: "admin123", role: "teacher" as UserRole },
-      { email: "student@school.com", password: "admin123", role: "student" as UserRole },
+      { email: "admin@greenwood.edu.in", phone: "9876543210", password: "admin123", role: "admin" as UserRole },
+      { email: "anita.verma@greenwood.edu.in", phone: "9800000001", password: "admin123", role: "teacher" as UserRole },
+      { email: "student_101@greenwood.edu.in", phone: "9600000001", password: "admin123", role: "student" as UserRole },
     ];
   }, []);
 

@@ -1,12 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card";
 import { Badge } from "../ui/Badge";
-import { Mail, Lock, Eye, EyeOff, School, ArrowRight, Shield, BookOpen, GraduationCap, ChevronDown } from "lucide-react";
+import { Mail, Phone, Lock, Eye, EyeOff, School, ArrowRight, Shield, BookOpen, GraduationCap, ChevronDown } from "lucide-react";
 import type { School as SchoolType } from "../../context/SchoolContext";
 
 export interface LoginUIProps {
+    loginType?: "email" | "mobile";
+    setLoginType?: (type: "email" | "mobile") => void;
     email: string;
     setEmail: (val: string) => void;
     password: string;
@@ -19,16 +21,18 @@ export interface LoginUIProps {
     selectedSchoolId: string;
     setSelectedSchoolId: (val: string) => void;
     schools: SchoolType[];
-    demoCredentials: Array<{ role: string; email: string }>;
+    demoCredentials: Array<{ role: string; email: string; phone?: string }>;
     roleIcons: Record<string, React.ReactNode>;
     roleColors: Record<string, string>;
     onFormSubmit: (e: React.FormEvent) => void;
-    onDemoLogin: (email: string) => void;
+    onDemoLogin: (emailOrPhone: string) => void;
     onSelectSchoolSubmit: () => void;
     onBackToSignIn: () => void;
 }
 
 export function LoginUI({
+    loginType,
+    setLoginType,
     email,
     setEmail,
     password,
@@ -49,6 +53,18 @@ export function LoginUI({
     onSelectSchoolSubmit,
     onBackToSignIn,
 }: LoginUIProps) {
+    const [internalLoginType, setInternalLoginType] = useState<"email" | "mobile">("email");
+    const activeLoginType = loginType || internalLoginType;
+
+    const handleTypeChange = (type: "email" | "mobile") => {
+        if (setLoginType) {
+            setLoginType(type);
+        } else {
+            setInternalLoginType(type);
+        }
+        setEmail("");
+    };
+
     return (
         <div className="min-h-screen flex animate-fade-in">
             {/* Left Panel - Branding */}
@@ -170,20 +186,75 @@ export function LoginUI({
                                             </div>
                                         )}
 
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium" htmlFor="email">
-                                                Email
-                                            </label>
-                                            <Input
-                                                id="email"
-                                                type="email"
-                                                placeholder="Enter your email"
-                                                value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                icon={<Mail className="h-4 w-4" />}
-                                                required
-                                            />
+                                        {/* Toggle Login Method */}
+                                        <div className="flex bg-muted/60 p-1 rounded-xl gap-1 border border-border/50">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTypeChange("email")}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                                                    activeLoginType === "email"
+                                                        ? "bg-background text-foreground shadow-sm"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                }`}
+                                            >
+                                                <Mail className="h-3.5 w-3.5" />
+                                                Email Address
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTypeChange("mobile")}
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                                                    activeLoginType === "mobile"
+                                                        ? "bg-background text-foreground shadow-sm"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                }`}
+                                            >
+                                                <Phone className="h-3.5 w-3.5" />
+                                                Mobile Number
+                                            </button>
                                         </div>
+
+                                        {activeLoginType === "email" ? (
+                                            <div className="space-y-2 animate-fade-in">
+                                                <label className="text-sm font-medium" htmlFor="email">
+                                                    Email Address
+                                                </label>
+                                                <Input
+                                                    id="email"
+                                                    type="email"
+                                                    placeholder="Enter your email"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    icon={<Mail className="h-4 w-4" />}
+                                                    required
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2 animate-fade-in">
+                                                <label className="text-sm font-medium" htmlFor="mobile">
+                                                    Mobile Number
+                                                </label>
+                                                <Input
+                                                    id="mobile"
+                                                    type="tel"
+                                                    placeholder="Enter 10-digit mobile number"
+                                                    value={email}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                                        setEmail(val);
+                                                    }}
+                                                    icon={<Phone className="h-4 w-4" />}
+                                                    maxLength={10}
+                                                    required
+                                                />
+                                                <p className="text-[11px] text-muted-foreground flex justify-between">
+                                                    <span>Must be exactly 10 digits</span>
+                                                    <span className={email.length === 10 ? "text-emerald-500 font-semibold" : "text-muted-foreground"}>
+                                                        {email.length}/10
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        )}
 
                                         <div className="space-y-2">
                                             <label className="text-sm font-medium" htmlFor="password">
@@ -237,7 +308,7 @@ export function LoginUI({
                                             {demoCredentials.map((cred) => (
                                                 <button
                                                     key={cred.role}
-                                                    onClick={() => onDemoLogin(cred.email)}
+                                                    onClick={() => onDemoLogin(activeLoginType === "mobile" ? (cred.phone || cred.email) : cred.email)}
                                                     disabled={loading}
                                                     className="relative flex flex-col items-center gap-2 p-3 rounded-xl border border-border hover:border-primary/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg group bg-gradient-to-b from-background to-muted/30"
                                                 >

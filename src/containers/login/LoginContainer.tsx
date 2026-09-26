@@ -7,7 +7,8 @@ import { Shield, BookOpen, GraduationCap } from "lucide-react";
 import { LoginUI } from "../../components/login/LoginUI";
 
 export function LoginContainer() {
-    const [email, setEmail] = useState("");
+    const [loginType, setLoginType] = useState<"email" | "mobile">("email");
+    const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -39,10 +40,24 @@ export function LoginContainer() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setError("");
 
-        const result = await login(email, password);
+        if (loginType === "mobile") {
+            const digitsOnly = identifier.replace(/\D/g, "");
+            if (digitsOnly.length !== 10) {
+                setError("Mobile number must be exactly 10 digits.");
+                return;
+            }
+        } else {
+            if (!identifier.trim() || !identifier.includes("@")) {
+                setError("Please enter a valid email address.");
+                return;
+            }
+        }
+
+        setLoading(true);
+
+        const result = await login(identifier, password, loginType);
         if (result.success) {
             setJustLoggedIn(true);
         } else {
@@ -51,17 +66,23 @@ export function LoginContainer() {
         }
     };
 
-    const handleDemoLogin = async (demoEmail: string) => {
+    const handleDemoLogin = async (demoKey: string) => {
         const demoCreds = getDemoCredentials();
-        const cred = demoCreds.find((c) => c.email === demoEmail);
-        const pass = cred ? cred.password : "demo123";
+        const cred = demoCreds.find((c) => c.email === demoKey || c.phone === demoKey);
+        
+        let targetValue = demoKey;
 
-        setEmail(demoEmail);
+        if (cred) {
+            targetValue = loginType === "mobile" ? (cred.phone || "9876543210") : cred.email;
+        }
+        const pass = cred ? cred.password : "admin123";
+
+        setIdentifier(targetValue);
         setPassword(pass);
         setLoading(true);
         setError("");
 
-        const result = await login(demoEmail, pass);
+        const result = await login(targetValue, pass, loginType);
         if (result.success) {
             setJustLoggedIn(true);
         } else {
@@ -98,8 +119,14 @@ export function LoginContainer() {
 
     return (
         <LoginUI
-            email={email}
-            setEmail={setEmail}
+            loginType={loginType}
+            setLoginType={(type) => {
+                setLoginType(type);
+                setError("");
+                setIdentifier("");
+            }}
+            email={identifier}
+            setEmail={setIdentifier}
             password={password}
             setPassword={setPassword}
             showPassword={showPassword}
