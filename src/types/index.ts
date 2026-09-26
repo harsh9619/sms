@@ -4,6 +4,8 @@ export type UserRole = "admin" | "teacher" | "student";
 export interface User {
   id: string;
   name: string;
+  user_name?: string;
+  userName?: string;
   email: string;
   role: UserRole;
   avatar?: string;

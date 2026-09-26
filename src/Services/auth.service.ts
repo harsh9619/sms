@@ -4,8 +4,10 @@ import type { User } from "../types";
 export interface LoginCredentials {
   email?: string;
   phone?: string;
+  user_name?: string;
+  username?: string;
   identifier?: string;
-  loginType?: "email" | "mobile";
+  loginType?: "email" | "mobile" | "username";
   password: string;
 }
 
@@ -15,13 +17,15 @@ export interface LoginResponse {
 }
 
 export const authService = {
-  login: async (credentials: LoginCredentials | string, passwordParam?: string, loginTypeParam?: "email" | "mobile"): Promise<LoginResponse> => {
+  login: async (credentials: LoginCredentials | string, passwordParam?: string, loginTypeParam?: "email" | "mobile" | "username"): Promise<LoginResponse> => {
     let payload: LoginCredentials;
     if (typeof credentials === "object") {
       payload = credentials;
     } else {
       if (loginTypeParam === "mobile") {
         payload = { phone: credentials, identifier: credentials, loginType: "mobile", password: passwordParam || "" };
+      } else if (loginTypeParam === "username") {
+        payload = { username: credentials, user_name: credentials, identifier: credentials, loginType: "username", password: passwordParam || "" };
       } else {
         payload = { email: credentials, identifier: credentials, loginType: "email", password: passwordParam || "" };
       }

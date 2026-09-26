@@ -18,9 +18,9 @@ interface AuthContextType {
   simulatedRole: UserRole | null;
   setSimulatedRole: (role: UserRole | null) => void;
   isAuthenticated: boolean;
-  login: (identifier: string, password: string, loginType?: "email" | "mobile") => Promise<{ success: boolean; error?: string }>;
+  login: (identifier: string, password: string, loginType?: "email" | "mobile" | "username") => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  getDemoCredentials: () => { email: string; phone: string; password: string; role: UserRole }[];
+  getDemoCredentials: () => { userName: string; email: string; phone: string; password: string; role: UserRole }[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -67,11 +67,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, user, dispatch]);
 
   const login = useCallback(
-    async (identifier: string, password: string, loginType?: "email" | "mobile") => {
-      const isMobile = loginType === "mobile" || (/^\d+$/.test(identifier.replace(/\D/g, "")) && !identifier.includes("@"));
-      const payload = isMobile
-        ? { phone: identifier.replace(/\D/g, ""), identifier, loginType: "mobile" as const, password }
-        : { email: identifier.trim(), identifier: identifier.trim(), loginType: "email" as const, password };
+    async (identifier: string, password: string, loginType?: "email" | "mobile" | "username") => {
+      const isMobile = loginType === "mobile" || (/^\d+$/.test(identifier.replace(/\D/g, "")) && !identifier.includes("@") && loginType !== "username");
+      const isUsername = loginType === "username";
+      
+      let payload;
+      if (isMobile) {
+        payload = { phone: identifier.replace(/\D/g, ""), identifier, loginType: "mobile" as const, password };
+      } else if (isUsername) {
+        payload = { username: identifier.trim(), user_name: identifier.trim(), identifier: identifier.trim(), loginType: "username" as const, password };
+      } else {
+        payload = { email: identifier.trim(), identifier: identifier.trim(), loginType: "email" as const, password };
+      }
 
       dispatch(loginRequest(payload));
       // Return a promise that resolves based on Redux state outcome
@@ -117,9 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getDemoCredentials = useCallback(() => {
     return [
-      { email: "admin@greenwood.edu.in", phone: "9876543210", password: "admin123", role: "admin" as UserRole },
-      { email: "anita.verma@greenwood.edu.in", phone: "9800000001", password: "admin123", role: "teacher" as UserRole },
-      { email: "student_101@greenwood.edu.in", phone: "9600000001", password: "admin123", role: "student" as UserRole },
+      { userName: "admin", email: "admin@greenwood.edu.in", phone: "9876543210", password: "admin123", role: "admin" as UserRole },
+      { userName: "teacher", email: "anita.verma@greenwood.edu.in", phone: "9800000001", password: "admin123", role: "teacher" as UserRole },
+      { userName: "student", email: "student_101@greenwood.edu.in", phone: "9600000001", password: "admin123", role: "student" as UserRole },
     ];
   }, []);
 

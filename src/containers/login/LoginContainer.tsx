@@ -7,7 +7,7 @@ import { Shield, BookOpen, GraduationCap } from "lucide-react";
 import { LoginUI } from "../../components/login/LoginUI";
 
 export function LoginContainer() {
-    const [loginType, setLoginType] = useState<"email" | "mobile">("email");
+    const [loginType, setLoginType] = useState<"username" | "email" | "mobile">("username");
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -48,9 +48,14 @@ export function LoginContainer() {
                 setError("Mobile number must be exactly 10 digits.");
                 return;
             }
-        } else {
+        } else if (loginType === "email") {
             if (!identifier.trim() || !identifier.includes("@")) {
                 setError("Please enter a valid email address.");
+                return;
+            }
+        } else {
+            if (!identifier.trim()) {
+                setError("Please enter a valid username.");
                 return;
             }
         }
@@ -68,12 +73,12 @@ export function LoginContainer() {
 
     const handleDemoLogin = async (demoKey: string) => {
         const demoCreds = getDemoCredentials();
-        const cred = demoCreds.find((c) => c.email === demoKey || c.phone === demoKey);
+        const cred = demoCreds.find((c) => c.userName === demoKey || c.email === demoKey || c.phone === demoKey);
         
         let targetValue = demoKey;
 
         if (cred) {
-            targetValue = loginType === "mobile" ? (cred.phone || "9876543210") : cred.email;
+            targetValue = loginType === "mobile" ? (cred.phone || "9876543210") : loginType === "username" ? (cred.userName || "admin") : cred.email;
         }
         const pass = cred ? cred.password : "admin123";
 

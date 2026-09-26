@@ -3,12 +3,12 @@ import { Button } from "../ui/Button";
 import { Input } from "../ui/Input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/Card";
 import { Badge } from "../ui/Badge";
-import { Mail, Phone, Lock, Eye, EyeOff, School, ArrowRight, Shield, BookOpen, GraduationCap, ChevronDown } from "lucide-react";
+import { Mail, Phone, User as UserIcon, Lock, Eye, EyeOff, School, ArrowRight, Shield, BookOpen, GraduationCap, ChevronDown } from "lucide-react";
 import type { School as SchoolType } from "../../context/SchoolContext";
 
 export interface LoginUIProps {
-    loginType?: "email" | "mobile";
-    setLoginType?: (type: "email" | "mobile") => void;
+    loginType?: "username" | "email" | "mobile";
+    setLoginType?: (type: "username" | "email" | "mobile") => void;
     email: string;
     setEmail: (val: string) => void;
     password: string;
@@ -21,11 +21,11 @@ export interface LoginUIProps {
     selectedSchoolId: string;
     setSelectedSchoolId: (val: string) => void;
     schools: SchoolType[];
-    demoCredentials: Array<{ role: string; email: string; phone?: string }>;
+    demoCredentials: Array<{ role: string; email: string; phone?: string; userName?: string }>;
     roleIcons: Record<string, React.ReactNode>;
     roleColors: Record<string, string>;
     onFormSubmit: (e: React.FormEvent) => void;
-    onDemoLogin: (emailOrPhone: string) => void;
+    onDemoLogin: (emailOrPhoneOrUser: string) => void;
     onSelectSchoolSubmit: () => void;
     onBackToSignIn: () => void;
 }
@@ -53,10 +53,10 @@ export function LoginUI({
     onSelectSchoolSubmit,
     onBackToSignIn,
 }: LoginUIProps) {
-    const [internalLoginType, setInternalLoginType] = useState<"email" | "mobile">("email");
+    const [internalLoginType, setInternalLoginType] = useState<"username" | "email" | "mobile">("username");
     const activeLoginType = loginType || internalLoginType;
 
-    const handleTypeChange = (type: "email" | "mobile") => {
+    const handleTypeChange = (type: "username" | "email" | "mobile") => {
         if (setLoginType) {
             setLoginType(type);
         } else {
@@ -190,31 +190,58 @@ export function LoginUI({
                                         <div className="flex bg-muted/60 p-1 rounded-xl gap-1 border border-border/50">
                                             <button
                                                 type="button"
+                                                onClick={() => handleTypeChange("username")}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                                                    activeLoginType === "username"
+                                                        ? "bg-background text-foreground shadow-sm"
+                                                        : "text-muted-foreground hover:text-foreground"
+                                                }`}
+                                            >
+                                                <UserIcon className="h-3.5 w-3.5" />
+                                                Username
+                                            </button>
+                                            <button
+                                                type="button"
                                                 onClick={() => handleTypeChange("email")}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                                                     activeLoginType === "email"
                                                         ? "bg-background text-foreground shadow-sm"
                                                         : "text-muted-foreground hover:text-foreground"
                                                 }`}
                                             >
                                                 <Mail className="h-3.5 w-3.5" />
-                                                Email Address
+                                                Email
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleTypeChange("mobile")}
-                                                className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
                                                     activeLoginType === "mobile"
                                                         ? "bg-background text-foreground shadow-sm"
                                                         : "text-muted-foreground hover:text-foreground"
                                                 }`}
                                             >
                                                 <Phone className="h-3.5 w-3.5" />
-                                                Mobile Number
+                                                Mobile
                                             </button>
                                         </div>
 
-                                        {activeLoginType === "email" ? (
+                                        {activeLoginType === "username" ? (
+                                            <div className="space-y-2 animate-fade-in">
+                                                <label className="text-sm font-medium" htmlFor="username">
+                                                    Username
+                                                </label>
+                                                <Input
+                                                    id="username"
+                                                    type="text"
+                                                    placeholder="Enter your username (e.g. admin)"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    icon={<UserIcon className="h-4 w-4" />}
+                                                    required
+                                                />
+                                            </div>
+                                        ) : activeLoginType === "email" ? (
                                             <div className="space-y-2 animate-fade-in">
                                                 <label className="text-sm font-medium" htmlFor="email">
                                                     Email Address
@@ -308,7 +335,7 @@ export function LoginUI({
                                             {demoCredentials.map((cred) => (
                                                 <button
                                                     key={cred.role}
-                                                    onClick={() => onDemoLogin(activeLoginType === "mobile" ? (cred.phone || cred.email) : cred.email)}
+                                                    onClick={() => onDemoLogin(activeLoginType === "mobile" ? (cred.phone || cred.email) : activeLoginType === "username" ? (cred.userName || cred.email) : cred.email)}
                                                     disabled={loading}
                                                     className="relative flex flex-col items-center gap-2 p-3 rounded-xl border border-border hover:border-primary/30 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg group bg-gradient-to-b from-background to-muted/30"
                                                 >

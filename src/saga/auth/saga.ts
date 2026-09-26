@@ -11,7 +11,7 @@ import {
 import authService, { LoginResponse } from "../../Services/auth.service";
 import type { User } from "../../types";
 
-function* handleLogin(action: { type: string; payload: { email?: string; phone?: string; identifier?: string; loginType?: "email" | "mobile"; password: string } }): Generator<any, void, any> {
+function* handleLogin(action: { type: string; payload: { email?: string; phone?: string; user_name?: string; username?: string; identifier?: string; loginType?: "email" | "mobile" | "username"; password: string } }): Generator<any, void, any> {
   try {
     const response: LoginResponse = yield call(authService.login, action.payload);
     yield put(loginSuccess({ user: response.user, token: response.token }));
