@@ -81,9 +81,9 @@ export function LoginUI({
                     <div className="h-20 w-20 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center mb-8 shadow-2xl ring-1 ring-white/20">
                         <School className="h-10 w-10 text-white" />
                     </div>
-                    <h1 className="text-4xl font-bold text-white mb-4 text-center">EduManage</h1>
+                    <h1 className="text-4xl font-bold text-white mb-4 text-center">EduOrbit</h1>
                     <p className="text-lg text-white/70 text-center max-w-md mb-12">
-                        A modern school management system designed to streamline education administration.
+                        Entire school ecosystem around one platform
                     </p>
 
                     {/* Feature Cards */}
@@ -119,7 +119,7 @@ export function LoginUI({
                             <School className="h-6 w-6 text-primary-foreground" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-bold">EduManage</h1>
+                            <h1 className="text-xl font-bold">EduOrbit</h1>
                             <p className="text-xs text-muted-foreground">School Management</p>
                         </div>
                     </div>
@@ -191,11 +191,10 @@ export function LoginUI({
                                             <button
                                                 type="button"
                                                 onClick={() => handleTypeChange("username")}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                                                    activeLoginType === "username"
-                                                        ? "bg-background text-foreground shadow-sm"
-                                                        : "text-muted-foreground hover:text-foreground"
-                                                }`}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${activeLoginType === "username"
+                                                    ? "bg-background text-foreground shadow-sm"
+                                                    : "text-muted-foreground hover:text-foreground"
+                                                    }`}
                                             >
                                                 <UserIcon className="h-3.5 w-3.5" />
                                                 Username
@@ -203,11 +202,10 @@ export function LoginUI({
                                             <button
                                                 type="button"
                                                 onClick={() => handleTypeChange("email")}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                                                    activeLoginType === "email"
-                                                        ? "bg-background text-foreground shadow-sm"
-                                                        : "text-muted-foreground hover:text-foreground"
-                                                }`}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${activeLoginType === "email"
+                                                    ? "bg-background text-foreground shadow-sm"
+                                                    : "text-muted-foreground hover:text-foreground"
+                                                    }`}
                                             >
                                                 <Mail className="h-3.5 w-3.5" />
                                                 Email
@@ -215,11 +213,10 @@ export function LoginUI({
                                             <button
                                                 type="button"
                                                 onClick={() => handleTypeChange("mobile")}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                                                    activeLoginType === "mobile"
-                                                        ? "bg-background text-foreground shadow-sm"
-                                                        : "text-muted-foreground hover:text-foreground"
-                                                }`}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200 ${activeLoginType === "mobile"
+                                                    ? "bg-background text-foreground shadow-sm"
+                                                    : "text-muted-foreground hover:text-foreground"
+                                                    }`}
                                             >
                                                 <Phone className="h-3.5 w-3.5" />
                                                 Mobile
@@ -327,7 +324,7 @@ export function LoginUI({
                                     </form>
 
                                     {/* Demo Credentials */}
-                                    <div className="mt-6 pt-6 border-t border-border">
+                                    {/* <div className="mt-6 pt-6 border-t border-border">
                                         <p className="text-xs font-semibold text-muted-foreground mb-3 text-center uppercase tracking-wider">
                                             Quick Demo Access
                                         </p>
@@ -351,14 +348,14 @@ export function LoginUI({
                                                 </button>
                                             ))}
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </CardContent>
                             </>
                         )}
                     </Card>
 
                     <p className="text-center text-xs text-muted-foreground mt-6">
-                        © 2026 EduManage. All rights reserved.
+                        © 2026 EduOrbit. All rights reserved.
                     </p>
                 </div>
             </div>

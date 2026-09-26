@@ -12,6 +12,8 @@ import {
 
 
 
+import { hasModuleAccess, hasPermission as checkPermission, ACFAction } from "../constants/navigation";
+
 interface AuthContextType {
   user: User | null;
   originalUser: User | null;
@@ -21,6 +23,8 @@ interface AuthContextType {
   login: (identifier: string, password: string, loginType?: "email" | "mobile" | "username") => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   getDemoCredentials: () => { userName: string; email: string; phone: string; password: string; role: UserRole }[];
+  canAccessModule: (moduleKey: string) => boolean;
+  hasPermission: (moduleKey: string, action: ACFAction) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -161,6 +165,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [user, simulatedRole, allUsers, activeSchoolId]);
 
+  const canAccessModule = useCallback(
+    (moduleKey: string) => {
+      return hasModuleAccess(effectiveUser?.role, moduleKey);
+    },
+    [effectiveUser?.role]
+  );
+
+  const hasPermissionCallback = useCallback(
+    (moduleKey: string, action: ACFAction) => {
+      return checkPermission(effectiveUser?.role, moduleKey, action);
+    },
+    [effectiveUser?.role]
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -172,6 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         getDemoCredentials,
+        canAccessModule,
+        hasPermission: hasPermissionCallback,
       }}
     >
       {children}

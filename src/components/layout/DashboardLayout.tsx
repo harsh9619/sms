@@ -43,7 +43,7 @@ interface SidebarProps {
 }
 
 export function DashboardLayout({ children }: SidebarProps) {
-  const { user, originalUser, setSimulatedRole, logout } = useAuth();
+  const { user, canAccessModule, originalUser, setSimulatedRole, logout } = useAuth();
   const { mode, toggleMode, theme, setTheme } = useTheme();
   const { schools, activeSchool, setActiveSchool, academicYears, activeAcademicYear, setActiveAcademicYear } = useSchool();
   const navigate = useNavigate();
@@ -118,7 +118,7 @@ export function DashboardLayout({ children }: SidebarProps) {
       .slice(0, 2);
   };
 
-  const filteredNav = navItems.filter((item) => user && item.roles.includes(user.role));
+  const filteredNav = navItems.filter((item) => user && item.roles.includes(user.role) && canAccessModule(item.moduleKey));
 
   const currentSchoolId = activeSchool?.id || routeParams.schoolId || "";
 
@@ -144,7 +144,7 @@ export function DashboardLayout({ children }: SidebarProps) {
           </div>
           {sidebarOpen && (
             <div className="animate-fade-in text-left">
-              <h1 className="text-sm font-bold text-sidebar-foreground">EduManage</h1>
+              <h1 className="text-sm font-bold text-sidebar-foreground">EduOrbit</h1>
               <p className="text-[10px] text-sidebar-foreground/50">School Management</p>
             </div>
           )}

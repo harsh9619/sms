@@ -5,6 +5,7 @@ import { Input } from "../../ui/Input";
 import { Badge } from "../../ui/Badge";
 import { Avatar, AvatarFallback } from "../../ui/Avatar";
 import { Loader } from "../../ui/Loader";
+import { useAuth } from "../../../context/AuthContext";
 import type { StudentsUIProps } from "../../../saga/students/types";
 import {
   Search,
@@ -68,6 +69,12 @@ export function StudentsUI({
   handleExportExcel,
   handleRefresh,
 }: StudentsUIProps) {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("students", "create");
+  const canExport = hasPermission("students", "export");
+  const canUpdate = hasPermission("students", "update");
+  const canDelete = hasPermission("students", "delete");
+
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [showOcrModal, setShowOcrModal] = useState(false);
@@ -168,8 +175,8 @@ export function StudentsUI({
               {totalStudents} {totalStudents === 1 ? "student" : "students"} enrolled
             </p>
           </div>
-          <div className="flex gap-2">
-            {handleExportExcel && (
+          <div className="flex flex-wrap gap-2">
+            {canExport && handleExportExcel && (
               <Button
                 variant="outline"
                 className="rounded-xl border-border hover:bg-muted shadow-sm text-xs font-semibold"
@@ -178,29 +185,33 @@ export function StudentsUI({
                 <Download className="h-4 w-4 mr-2 text-primary" /> Export Excel
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => setShowBulkModal(true)}
-            >
-              <Upload className="h-4 w-4 mr-2 text-primary" /> Bulk Upload from Excel
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowOcrModal(true)}
-              className="rounded-xl border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 font-semibold shadow-sm"
-            >
-              <ImageIcon className="h-4 w-4 mr-2 text-violet-500" /> Upload from Image
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowOcrCsvModal(true)}
-              className="rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-sm"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" /> OCR to CSV
-            </Button>
-            <Button onClick={handleOpenAddModal}>
-              <Plus className="h-4 w-4 mr-2" /> Add Student
-            </Button>
+            {canCreate && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBulkModal(true)}
+                >
+                  <Upload className="h-4 w-4 mr-2 text-primary" /> Bulk Upload from Excel
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowOcrModal(true)}
+                  className="rounded-xl border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 font-semibold shadow-sm"
+                >
+                  <ImageIcon className="h-4 w-4 mr-2 text-violet-500" /> Upload from Image
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowOcrCsvModal(true)}
+                  className="rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-sm"
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" /> OCR to CSV
+                </Button>
+                <Button onClick={handleOpenAddModal}>
+                  <Plus className="h-4 w-4 mr-2" /> Add Student
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -404,24 +415,28 @@ export function StudentsUI({
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Edit Student"
-                              onClick={() => handleOpenEditModal(student)}
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Delete Student"
-                              onClick={() => setStudentToDelete(student)}
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {canUpdate && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Edit Student"
+                                onClick={() => handleOpenEditModal(student)}
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Delete Student"
+                                onClick={() => setStudentToDelete(student)}
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
