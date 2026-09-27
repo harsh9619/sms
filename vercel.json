@@ -1,8 +1,16 @@
 {
     "rewrites": [
         {
+            "source": "/auth/:path*",
+            "destination": "https://sms-nest.onrender.com/auth/:path*"
+        },
+        {
             "source": "/api/:path*",
             "destination": "https://sms-nest.onrender.com/api/:path*"
+        },
+        {
+            "source": "/((?!api|auth).*)",
+            "destination": "/index.html"
         }
     ]
 }
