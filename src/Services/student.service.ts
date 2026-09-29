@@ -53,6 +53,28 @@ export const studentService = {
   getCastes: async (): Promise<any[]> => {
     return httpService.get("/api/castes");
   },
+
+  extractOcrData: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append(
+      "prompt",
+      "Extract all student register table rows from this image into a JSON array of student objects. Map fields: serial_no, admission_no, admission_date, student_name, father_guardian_name, mother_name, date_of_birth, class, gender, mobile_number, address, category."
+    );
+    const token = localStorage.getItem("sms_token");
+    const response = await fetch("/api/ocr/extract", {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.message || "Failed to extract OCR data from server.");
+    }
+    return response.json();
+  },
 };
 
 export default studentService;
