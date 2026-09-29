@@ -17,7 +17,8 @@ class HttpService {
     const schoolId = localStorage.getItem("sms_active_school_id");
     let finalUrl = url;
     if (schoolId && finalUrl.startsWith("/api/") && !finalUrl.startsWith("/api/schools")
-      && !finalUrl.startsWith("/api/master-themes") && !finalUrl.startsWith("/api/castes")) {
+      && !finalUrl.startsWith("/api/master-themes") && !finalUrl.startsWith("/api/castes")
+      && !finalUrl.startsWith("/api/ocr")) {
       if (!/^\/api\/\d+(\/|$)/.test(finalUrl)) {
         finalUrl = finalUrl.replace(/^\/api\//, `/api/${schoolId}/`);
       }
