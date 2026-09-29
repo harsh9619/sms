@@ -91,6 +91,20 @@ function slugify(s: string) {
     .replace(/-+/g, "-");
 }
 
+// ─── Field wrapper ────────────────────────────────────────────────────────────
+const Field = ({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+      {label}{required && <span className="text-destructive ml-0.5">*</span>}
+    </label>
+    {children}
+    {error && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{error}</p>}
+  </div>
+);
+
+const inputCls = (err?: string) =>
+  `w-full h-10 rounded-lg border ${err ? "border-destructive" : "border-input"} bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all`;
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 function CreateSchoolPageContent({
@@ -104,9 +118,10 @@ function CreateSchoolPageContent({
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [masterThemes, setMasterThemes] = useState<MasterTheme[]>([]);
   const [themesLoading, setThemesLoading] = useState(false);
+  const [masterAcademicYears, setMasterAcademicYears] = useState<any[]>([]);
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
 
-  // Load master themes from DB via API
+  // Load master themes & master academic years from DB via API
   useEffect(() => {
     setThemesLoading(true);
     schoolService.getMasterThemes()
@@ -119,6 +134,14 @@ function CreateSchoolPageContent({
         { id: 5, name: "amber", label: "Sunset Amber", color: "#f97316", sortOrder: 5 },
       ]))
       .finally(() => setThemesLoading(false));
+
+    schoolService.getMasterAcademicYears()
+      .then((years) => {
+        if (years && years.length > 0) {
+          setMasterAcademicYears(years);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Detect successful creation
@@ -149,8 +172,12 @@ function CreateSchoolPageContent({
       if (!form.slug.trim()) errs.slug = "Slug is required.";
       else if (!/^[a-z0-9-]+$/.test(form.slug)) errs.slug = "Only lowercase letters, numbers, hyphens.";
     }
-    if (s === 2 && form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      errs.email = "Enter a valid email.";
+    if (s === 2) {
+      if (form.phone && form.phone.length > 0 && !/^[6-9]\d{9}$/.test(form.phone))
+        errs.phone = "Enter valid 10-digit mobile number starting with 6-9";
+      if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+        errs.email = "Enter a valid email.";
+    }
     if (s === 3) {
       if (!form.academicYear.trim()) errs.academicYear = "Academic year is required.";
       if (form.maxStudents && isNaN(Number(form.maxStudents))) errs.maxStudents = "Must be a number.";
@@ -224,20 +251,6 @@ function CreateSchoolPageContent({
     );
   }
 
-  // ── Field wrapper ────────────────────────────────────────────────────────────
-  const Field = ({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) => (
-    <div className="space-y-1.5">
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-        {label}{required && <span className="text-destructive ml-0.5">*</span>}
-      </label>
-      {children}
-      {error && <p className="text-xs text-destructive flex items-center gap-1"><AlertCircle className="h-3.5 w-3.5" />{error}</p>}
-    </div>
-  );
-
-  const inputCls = (err?: string) =>
-    `w-full h-10 rounded-lg border ${err ? "border-destructive" : "border-input"} bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all`;
-
   // ── Main Render ──────────────────────────────────────────────────────────────
   return (
     <div className="max-w-2xl mx-auto space-y-6 pb-8">
@@ -263,8 +276,8 @@ function CreateSchoolPageContent({
             <React.Fragment key={s.id}>
               <div className="flex flex-col items-center gap-1.5 flex-1">
                 <div className={`h-10 w-10 rounded-xl flex items-center justify-center border-2 transition-all duration-300 ${isDone ? "bg-primary border-primary text-primary-foreground"
-                    : isActive ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/20"
-                      : "bg-muted/50 border-border text-muted-foreground"
+                  : isActive ? "bg-primary/10 border-primary text-primary shadow-lg shadow-primary/20"
+                    : "bg-muted/50 border-border text-muted-foreground"
                   }`}>
                   {isDone ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                 </div>
@@ -342,11 +355,19 @@ function CreateSchoolPageContent({
                 </div>
               </Field>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <Field label="Phone Number">
+                <Field label="Phone Number" error={errors.phone}>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input id="school-phone" className={`${inputCls()} pl-9`} placeholder="+91 98765 43210"
-                      value={form.phone} onChange={(e) => set("phone", e.target.value)} />
+                    <input
+                      id="school-phone"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={10}
+                      className={`${inputCls(errors.phone)} pl-9`}
+                      placeholder="9876543210"
+                      value={form.phone}
+                      onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    />
                   </div>
                 </Field>
                 <Field label="Email Address" error={errors.email}>
@@ -375,9 +396,32 @@ function CreateSchoolPageContent({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <Field label="Academic Year" error={errors.academicYear} required>
                   <div className="relative">
-                    <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input id="school-academic-year" className={`${inputCls(errors.academicYear)} pl-9`} placeholder="2025-2026"
-                      value={form.academicYear} onChange={(e) => set("academicYear", e.target.value)} />
+                    <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <select
+                      id="school-academic-year"
+                      className={`${inputCls(errors.academicYear)} pl-9 pr-4 appearance-none cursor-pointer`}
+                      value={form.academicYear}
+                      onChange={(e) => set("academicYear", e.target.value)}
+                    >
+                      {masterAcademicYears.length > 0 ? (
+                        masterAcademicYears.map((ay) => (
+                          <option key={ay.id || ay.label} value={ay.label}>
+                            {ay.label}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value={`${new Date().getFullYear()}-${new Date().getFullYear() + 1}`}>
+                            {`${new Date().getFullYear()}-${new Date().getFullYear() + 1}`}
+                          </option>
+                          <option value="2024-2025">2024-2025</option>
+                          <option value="2025-2026">2025-2026</option>
+                          <option value="2026-2027">2026-2027</option>
+                          <option value="2024-25">2024-25</option>
+                          <option value="2025-26">2025-26</option>
+                        </>
+                      )}
+                    </select>
                   </div>
                 </Field>
                 <Field label="Max Students" error={errors.maxStudents}>
@@ -480,8 +524,8 @@ function CreateSchoolPageContent({
                 <div className="grid grid-cols-2 gap-4">
                   <button type="button" id="appearance-light" onClick={() => set("appearanceMode", "light")}
                     className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${form.appearanceMode === "light"
-                        ? "border-amber-400 bg-amber-50/60 dark:bg-amber-900/10 shadow-md shadow-amber-200/50"
-                        : "border-border bg-muted/20 hover:border-amber-300/50"
+                      ? "border-amber-400 bg-amber-50/60 dark:bg-amber-900/10 shadow-md shadow-amber-200/50"
+                      : "border-border bg-muted/20 hover:border-amber-300/50"
                       }`}>
                     <div className="h-14 w-20 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center">
                       <Sun className="h-6 w-6 text-amber-500" />
@@ -495,8 +539,8 @@ function CreateSchoolPageContent({
 
                   <button type="button" id="appearance-dark" onClick={() => set("appearanceMode", "dark")}
                     className={`flex flex-col items-center gap-3 p-5 rounded-xl border-2 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${form.appearanceMode === "dark"
-                        ? "border-blue-500 bg-slate-900/10 shadow-md shadow-blue-900/20"
-                        : "border-border bg-muted/20 hover:border-blue-400/40"
+                      ? "border-blue-500 bg-slate-900/10 shadow-md shadow-blue-900/20"
+                      : "border-border bg-muted/20 hover:border-blue-400/40"
                       }`}>
                     <div className="h-14 w-20 rounded-lg bg-gray-900 border border-gray-700 shadow-sm flex items-center justify-center">
                       <Moon className="h-6 w-6 text-blue-400" />

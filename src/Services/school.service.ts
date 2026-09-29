@@ -9,6 +9,13 @@ export interface MasterTheme {
   sortOrder: number;
 }
 
+export interface MasterAcademicYear {
+  id: string;
+  label: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export const schoolService = {
   getSchools: async (): Promise<School[]> => {
     return httpService.get<School[]>("/api/schools");
@@ -21,6 +28,9 @@ export const schoolService = {
   },
   getMasterThemes: async (): Promise<MasterTheme[]> => {
     return httpService.get<MasterTheme[]>("/api/master-themes");
+  },
+  getMasterAcademicYears: async (): Promise<MasterAcademicYear[]> => {
+    return httpService.get<MasterAcademicYear[]>("/api/academic-years/master");
   },
 };
 

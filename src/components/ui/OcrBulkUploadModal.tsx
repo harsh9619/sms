@@ -1,16 +1,13 @@
 ﻿import React, { useState, useRef } from "react";
 import { Button } from "./Button";
-import { X, Upload, CheckCircle2, AlertCircle, RefreshCw, Image as ImageIcon, ScanLine, Sparkles, Trash2, Plus, ArrowLeft } from "lucide-react";
+import { X, Upload, CheckCircle2, AlertCircle, RefreshCw, Image as ImageIcon, ScanLine, Sparkles, Trash2, Plus, ArrowLeft, Cpu } from "lucide-react";
 import Tesseract from "tesseract.js";
 import { transliterateHindiToEnglish } from "../../lib/transliterate";
-// import {
-//   parseOcrTextToRows,
-//   createEmptyStudentRow,
-// } from "../../lib/OcrTableParser";
 import {
   parseOcrTextToRows,
   createEmptyStudentRow,
 } from "../../lib/OcrStudTableParser";
+import studentService from "../../Services/student.service";
 
 interface OcrBulkUploadModalProps {
   isOpen: boolean;
@@ -33,6 +30,7 @@ export function OcrBulkUploadModal({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isOcrProcessing, setIsOcrProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrSource, setOcrSource] = useState<string | null>(null);
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{ addedCount: number; skippedCount: number; errors: Array<{ email: string; reason: string }> } | null>(null);
@@ -45,6 +43,7 @@ export function OcrBulkUploadModal({
     setImagePreview(null);
     setIsOcrProcessing(false);
     setOcrProgress(0);
+    setOcrSource(null);
     setTranslationNotice(null);
     setParsedData([]);
     setResult(null);
@@ -57,6 +56,7 @@ export function OcrBulkUploadModal({
     setImagePreview(null);
     setIsOcrProcessing(false);
     setOcrProgress(0);
+    setOcrSource(null);
     setParsedData([]);
     setParseError(null);
     setTranslationNotice(null);
@@ -112,36 +112,108 @@ export function OcrBulkUploadModal({
 
   const processImageOcr = async (imgFile: File) => {
     setIsOcrProcessing(true);
-    setOcrProgress(0);
+    setOcrProgress(10);
     setParseError(null);
+    setOcrSource(null);
 
     try {
-      let res: any;
+      let apiSuccess = false;
+
+      // 1. Attempt extraction using Server OCR API (Gemini / OpenAI Vision AI)
       try {
-        res = await Tesseract.recognize(imgFile, "hin+eng", {
-          logger: (m: any) => {
-            if (m.status === "recognizing text") {
-              setOcrProgress(Math.round((m.progress || 0) * 100));
+        setOcrProgress(25);
+        const apiRes = await studentService.extractOcrData(imgFile);
+        setOcrProgress(75);
+
+        if (apiRes && (apiRes.success || apiRes.data)) {
+          const rawData = apiRes.data;
+          let rows: any[] = [];
+
+          if (Array.isArray(rawData)) {
+            rows = rawData;
+          } else if (rawData && typeof rawData === "object") {
+            if (Array.isArray(rawData.students)) rows = rawData.students;
+            else if (Array.isArray(rawData.rows)) rows = rawData.rows;
+            else if (Array.isArray(rawData.data)) rows = rawData.data;
+            else if (Array.isArray(rawData.records)) rows = rawData.records;
+            else if (rawData.rawText && typeof rawData.rawText === "string") {
+              parseOcrTextToData(rawData.rawText);
+              apiSuccess = true;
+              setOcrSource(`Server OCR (${apiRes.provider || "AI Engine"})`);
             }
-          },
-        });
-      } catch (e) {
-        res = await Tesseract.recognize(imgFile, "eng", {
-          logger: (m: any) => {
-            if (m.status === "recognizing text") {
-              setOcrProgress(Math.round((m.progress || 0) * 100));
-            }
-          },
-        });
+          }
+
+          if (rows.length > 0) {
+            const formattedRows = rows.map((item: any, idx: number) => {
+              const serial = item.serial_no || item.serialNo || item.sNo || (idx + 1);
+              const empty = createEmptyStudentRow(Number(serial) || (idx + 1));
+              return {
+                ...empty,
+                serial_no: Number(serial) || (idx + 1),
+                admission_no: String(item.admission_no || item.admissionNo || item.registration_no || item.registrationNo || item.regNo || ""),
+                registration_no: String(item.admission_no || item.admissionNo || item.registration_no || item.registrationNo || item.regNo || ""),
+                registrationNo: String(item.admission_no || item.admissionNo || item.registration_no || item.registrationNo || item.regNo || ""),
+                admission_date: String(item.admission_date || item.admissionDate || ""),
+                admissionDate: String(item.admission_date || item.admissionDate || ""),
+                student_name: String(item.student_name || item.studentName || item.name || ""),
+                name: String(item.student_name || item.studentName || item.name || ""),
+                father_guardian_name: String(item.father_guardian_name || item.fatherGuardianName || item.father_name || item.fatherName || item.parentName || ""),
+                father_name: String(item.father_guardian_name || item.fatherGuardianName || item.father_name || item.fatherName || item.parentName || ""),
+                parentName: String(item.father_guardian_name || item.fatherGuardianName || item.father_name || item.fatherName || item.parentName || ""),
+                mother_name: String(item.mother_name || item.motherName || ""),
+                motherName: String(item.mother_name || item.motherName || ""),
+                date_of_birth: String(item.date_of_birth || item.dateOfBirth || item.dob || ""),
+                dateOfBirth: String(item.date_of_birth || item.dateOfBirth || item.dob || ""),
+                class: item.class ? String(item.class) : "5",
+                gender: item.gender === "Female" || item.gender === "स्त्री." ? "स्त्री." : "पु.",
+                mobile_number: String(item.mobile_number || item.mobileNumber || item.phone || item.parentPhone || ""),
+                parentphone: String(item.mobile_number || item.mobileNumber || item.phone || item.parentPhone || ""),
+                parentPhone: String(item.mobile_number || item.mobileNumber || item.phone || item.parentPhone || ""),
+                address: String(item.address || ""),
+                category: String(item.category || item.caste_category || item.casteCategory || "General"),
+                caste_category: String(item.category || item.caste_category || item.casteCategory || "General"),
+              };
+            });
+
+            setParsedData(formattedRows);
+            setParseError(null);
+            apiSuccess = true;
+            const prov = apiRes.provider ? apiRes.provider.toUpperCase() : "AI Vision";
+            setOcrSource(`Server OCR (${prov}${apiRes.model ? `: ${apiRes.model}` : ""})`);
+          }
+        }
+      } catch (apiErr: any) {
+        console.warn("Server OCR API extraction failed, falling back to local Tesseract OCR:", apiErr?.message);
       }
 
-      const extractedText = res?.data?.text || "";
+      // 2. Fallback to client-side Tesseract OCR if Server API was unavailable or returned no rows
+      if (!apiSuccess) {
+        setOcrProgress(30);
+        let res: any;
+        try {
+          res = await Tesseract.recognize(imgFile, "hin+eng", {
+            logger: (m: any) => {
+              if (m.status === "recognizing text") {
+                setOcrProgress(30 + Math.round((m.progress || 0) * 70));
+              }
+            },
+          });
+        } catch (e) {
+          res = await Tesseract.recognize(imgFile, "eng", {
+            logger: (m: any) => {
+              if (m.status === "recognizing text") {
+                setOcrProgress(30 + Math.round((m.progress || 0) * 70));
+              }
+            },
+          });
+        }
 
-      console.log("Parsed students:", extractedText.students);
-      console.log("Missing rows:", extractedText.missingSerialNumbers);
-      console.log("Warnings:", extractedText.warnings);
-      console.log(' extracted text', extractedText)
-      parseOcrTextToData(extractedText);
+        const extractedText = res?.data?.text || "";
+        parseOcrTextToData(extractedText);
+        setOcrSource("Local Tesseract OCR Engine");
+      }
+
+      setOcrProgress(100);
     } catch (err: any) {
       setParseError("Failed to perform OCR on image. " + (err?.message || ""));
       setParsedData([]);
@@ -359,6 +431,11 @@ export function OcrBulkUploadModal({
                       <span className="px-2.5 py-1 rounded-lg bg-violet-600 text-white text-xs font-bold">
                         {parsedData.length} Records Extracted
                       </span>
+                      {ocrSource && (
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1">
+                          <Cpu className="h-3 w-3" /> {ocrSource}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground hidden sm:inline">
                         Review and edit parsed values before import
                       </span>

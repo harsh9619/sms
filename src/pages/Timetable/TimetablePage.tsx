@@ -225,7 +225,7 @@ function TimetablePageContent({
             >
               <option value="" disabled>Select Class</option>
               {classes.map((c) => (
-                <option key={c.id} value={c.id}>Class {c.name}-{c.section}</option>
+                <option key={c.id} value={c.id}>{c.name}-{c.section}</option>
               ))}
             </select>
             <Button onClick={openAddModal}>

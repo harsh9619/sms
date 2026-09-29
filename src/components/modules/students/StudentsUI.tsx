@@ -200,13 +200,13 @@ export function StudentsUI({
                 >
                   <ImageIcon className="h-4 w-4 mr-2 text-violet-500" /> Upload from Image
                 </Button>
-                <Button
+                {/* <Button
                   variant="outline"
                   onClick={() => setShowOcrCsvModal(true)}
                   className="rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold shadow-sm"
                 >
                   <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-500" /> OCR to CSV
-                </Button>
+                </Button> */}
                 <Button onClick={handleOpenAddModal}>
                   <Plus className="h-4 w-4 mr-2" /> Add Student
                 </Button>

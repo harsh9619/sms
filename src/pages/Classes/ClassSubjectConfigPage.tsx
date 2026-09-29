@@ -1010,12 +1010,12 @@ export function ClassSubjectConfigPage() {
                   </div>
 
                   {/* Additional Custom Division Input */}
-                  <Input
+                  {/* <Input
                     placeholder="Additional custom sections (optional, e.g. F, G)"
                     value={customSectionInput}
                     onChange={(e) => setCustomSectionInput(e.target.value)}
                     className="h-9 text-xs font-mono"
-                  />
+                  /> */}
                 </div>
               </CardContent>
 

@@ -871,7 +871,7 @@ export function TeachersUI({
                         className="w-full rounded-xl border border-border bg-background p-2.5 text-xs text-foreground focus:ring-2 focus:ring-primary/50 outline-none"
                       >
                         {masterRoles.length > 0 ? (
-                          masterRoles.map((r) => (
+                          masterRoles.filter((r) => TEACHER_CREATION_ROLES?.includes(r?.roleName?.toUpperCase() || "")).map((r) => (
                             <option key={r.roleId} value={r.roleId}>
                               {r.label || r.roleName}
                             </option>
