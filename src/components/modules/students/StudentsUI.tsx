@@ -351,7 +351,7 @@ export function StudentsUI({
                 )}
 
                 <span className="ml-auto text-[11px] font-semibold text-muted-foreground">
-                  Showing {students.length} of {meta?.totalItems ?? students.length} students
+                  Showing {students.length} of {meta?.totalItems ?? meta?.total ?? students.length} students
                 </span>
               </div>
             )}

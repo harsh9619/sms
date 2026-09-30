@@ -40,7 +40,9 @@ export interface Student {
   id: string;
   school_id: string;
   user_id: number | null;
+  student_id?: string;
   name: string;
+  studentName?: string;
   email: string;
   phone: string;
   class_id?: number | null;
@@ -53,6 +55,7 @@ export interface Student {
   caste_code?: string;
   caste_category?: string;
   registration_no?: string;
+  registrationNo?: string;
   academic_year?: string;
   aadhar_no?: string;
   medium?: string;
@@ -83,6 +86,13 @@ export interface Student {
   admissionDate?: string;
   created_at?: string;
   updated_at?: string;
+  attendanceId?: string;
+  attendanceStatus?: string;
+  status?: string;
+  studentDetail?: {
+    registrationNo?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface RoleMaster {
