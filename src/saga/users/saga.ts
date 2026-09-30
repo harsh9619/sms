@@ -12,13 +12,12 @@ import {
   deleteUserSuccess,
   deleteUserFailure,
 } from "./actions";
-import userService from "../../Services/user.service";
+import userService, { GetUsersParams } from "../../Services/user.service";
 import type { User } from "../../types";
 
-function* handleFetchUsers(action: { type: string; payload?: string | { schoolId?: string } }): Generator<any, void, any> {
+function* handleFetchUsers(action: { type: string; payload?: string | GetUsersParams }): Generator<any, void, any> {
   try {
-    const schoolId = typeof action.payload === "string" ? action.payload : action.payload?.schoolId;
-    const users: User[] = yield call(userService.getUsers, schoolId);
+    const users: User[] = yield call(userService.getUsers, action.payload);
     yield put(fetchUsersSuccess(users));
   } catch (error: any) {
     yield put(fetchUsersFailure(error.message || "Failed to fetch users"));

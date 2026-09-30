@@ -90,6 +90,7 @@ export interface RoleMaster {
   roleName?: string;
   label?: string;
   description?: string;
+  seq?: number;
 }
 
 // ==================== Teacher Types ====================

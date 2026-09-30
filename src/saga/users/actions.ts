@@ -1,7 +1,8 @@
 import type { User } from "../../types";
+import type { GetUsersParams } from "../../Services/user.service";
 import * as types from "./actionTypes";
 
-export const fetchUsersRequest = (payload?: string | { schoolId?: string }) => ({
+export const fetchUsersRequest = (payload?: string | GetUsersParams) => ({
   type: types.FETCH_USERS_REQUEST,
   payload,
 });

@@ -12,6 +12,8 @@ import { homeworkReducer } from "./homework";
 import { noticesReducer } from "./notices";
 import { marksReducer } from "./marks";
 import { attendanceReducer } from "./attendance";
+import { subjectTeacherConfigReducer } from "./subjectTeacherConfig";
+import { classTeacherConfigReducer } from "./classTeacherConfig";
 
 export const rootReducer = combineReducers({
   auth: authReducer,
@@ -27,6 +29,8 @@ export const rootReducer = combineReducers({
   notices: noticesReducer,
   marks: marksReducer,
   attendance: attendanceReducer,
+  subjectTeacherConfig: subjectTeacherConfigReducer,
+  classTeacherConfig: classTeacherConfigReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

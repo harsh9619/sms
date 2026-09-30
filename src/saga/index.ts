@@ -32,4 +32,5 @@ export * from "./homework";
 export * from "./notices";
 export * from "./marks";
 export * from "./attendance";
+export * from "./subjectTeacherConfig";
 

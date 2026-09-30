@@ -598,7 +598,7 @@ export function FeesUI({
   }, [formData.selectedFeeItems, formData.selectedMonths]);
 
   return (
-    <div className="space-y-6 text-left">
+    <div className="p-3 sm:p-4 md:p-6 mx-auto space-y-4 sm:space-y-6 animate-fade-in max-w-[1600px]">
       {/* Header & Stats Cards */}
       <FeesHeader
         isMyFees={isMyFees}
@@ -747,7 +747,7 @@ export function FeesUI({
       {activeReceipt && (
         <ReceiptModal
           activeReceipt={activeReceipt}
-          setActiveReceipt={setActiveReceipt || (() => {})}
+          setActiveReceipt={setActiveReceipt || (() => { })}
           fees={fees}
         />
       )}

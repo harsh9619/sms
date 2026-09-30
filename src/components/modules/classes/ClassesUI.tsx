@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../ui/Card";
+import { DataTable, ColumnDef } from "../../ui/DataTable";
 import { RefreshCw, UserCheck, BookOpen, Filter, School as SchoolIcon, Layers, GraduationCap, CheckCircle2, Check } from "lucide-react";
 import type { ClassInfo } from "../../../types";
 
@@ -73,6 +74,84 @@ export function ClassesUI({
   totalCount,
   onTeacherChange,
 }: ClassesUIProps) {
+  const columns: ColumnDef<ClassTeacherItem>[] = useMemo(
+    () => [
+      {
+        key: "class",
+        header: "Class",
+        cell: (r) => {
+          const classNameDisplay = r.className
+            ? r.className.toLowerCase().includes("class")
+              ? r.className
+              : `Class ${r.className}`
+            : "Class";
+          return <span className="font-bold text-foreground">{classNameDisplay}</span>;
+        },
+      },
+      {
+        key: "division",
+        header: "Division",
+        cell: (r) => <span className="font-bold text-xs">{r.divisionName}</span>,
+      },
+      {
+        key: "teacher",
+        header: "Teacher Dropdown (List of Teachers)",
+        cell: (r) => {
+          const currentTeacherId = assignments[r.id] || (r.teacherId ? String(r.teacherId) : "");
+          const isSaving = savingClassId === r.id;
+          return (
+            <div className="flex items-center gap-3 min-w-[280px]">
+              <select
+                value={currentTeacherId}
+                disabled={isSaving}
+                onChange={(e) => onTeacherChange(r.classId, e.target.value)}
+                className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold focus:ring-2 focus:ring-primary outline-none cursor-pointer shadow-sm transition-all"
+              >
+                <option value="" className="text-muted-foreground font-normal">
+                  Select Teacher
+                </option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id} className="text-foreground font-medium py-1">
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        },
+      },
+      {
+        key: "status",
+        header: "Status",
+        align: "center",
+        cell: (r) => {
+          const currentTeacherId = assignments[r.id] || (r.teacherId ? String(r.teacherId) : "");
+          const isSaving = savingClassId === r.id;
+          if (isSaving) {
+            return (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Saving...
+              </span>
+            );
+          }
+          if (currentTeacherId) {
+            return (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                <Check className="h-3.5 w-3.5" /> Assigned
+              </span>
+            );
+          }
+          return (
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+              Unassigned
+            </span>
+          );
+        },
+      },
+    ],
+    [assignments, savingClassId, teachers, onTeacherChange]
+  );
+
   return (
     <div className="p-6 mx-auto space-y-6 animate-fade-in">
       {/* Header */}
@@ -199,7 +278,7 @@ export function ClassesUI({
         </CardContent>
       </Card>
 
-      {/* Main Table View */}
+      {/* Main Table View using Reusable DataTable */}
       <Card className="border-border/60 shadow-lg overflow-hidden">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border/40 bg-muted/20">
           <div>
@@ -211,101 +290,18 @@ export function ClassesUI({
         </CardHeader>
 
         <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <RefreshCw className="h-6 w-6 animate-spin text-primary" />
-                <span className="text-sm font-semibold">Loading class-teacher configuration...</span>
-              </div>
-            </div>
-          ) : filteredRows.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground">
-              <UserCheck className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p className="text-base font-bold">No matching records found</p>
-              <p className="text-xs text-muted-foreground mt-1">Try broadening your class, division, teacher, or status filters</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    <th className="px-6 py-4">Class</th>
-                    <th className="px-6 py-4">Division</th>
-                    <th className="px-6 py-4">Teacher Dropdown (List of Teachers)</th>
-                    <th className="px-6 py-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60 text-sm">
-                  {filteredRows.map((r) => {
-                    const currentTeacherId = assignments[r.id] || (r.teacherId ? String(r.teacherId) : "");
-                    const isSaving = savingClassId === r.id;
-
-                    const classNameDisplay = r.className
-                      ? (r.className.toLowerCase().includes("class") ? r.className : `Class ${r.className}`)
-                      : "Class";
-
-                    return (
-                      <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                        {/* Class */}
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-foreground">
-                              {classNameDisplay}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Division */}
-                        <td className="px-6 py-4">
-                          <span className="font-bold text-xs px-3 py-1">
-                            {r.divisionName}
-                          </span>
-                        </td>
-
-                        {/* Teacher Dropdown */}
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3 min-w-[280px]">
-                            <select
-                              value={currentTeacherId}
-                              disabled={isSaving}
-                              onChange={(e) => onTeacherChange(r.classId, e.target.value)}
-                              className="w-full h-10 rounded-xl border px-3 text-xs font-semibold focus:ring-2 focus:ring-primary outline-none cursor-pointer shadow-sm transition-all"
-                            >
-                              <option value="" className="text-muted-foreground font-normal">Select Teacher</option>
-                              {teachers.map((t) => (
-                                <option key={t.id} value={t.id} className="text-foreground font-medium py-1">
-                                  {t.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-6 py-4 text-center">
-                          {isSaving ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
-                              <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Saving...
-                            </span>
-                          ) : currentTeacherId ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                              <Check className="h-3.5 w-3.5" /> Assigned
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
-                              Unassigned
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable
+            data={filteredRows}
+            columns={columns}
+            rowKey={(r) => r.id}
+            loading={loading}
+            bordered={true}
+            emptyText="No matching class records found"
+          />
         </CardContent>
       </Card>
     </div>
   );
 }
+
+export default ClassesUI;

@@ -12,6 +12,8 @@ import { homeworkSaga } from "./homework";
 import { noticesSaga } from "./notices";
 import { marksSaga } from "./marks";
 import { attendanceSaga } from "./attendance";
+import { subjectTeacherConfigSaga } from "./subjectTeacherConfig";
+import { classTeacherConfigSaga } from "./classTeacherConfig";
 
 export function* rootSaga() {
   yield all([
@@ -28,5 +30,7 @@ export function* rootSaga() {
     fork(noticesSaga),
     fork(marksSaga),
     fork(attendanceSaga),
+    fork(subjectTeacherConfigSaga),
+    fork(classTeacherConfigSaga),
   ]);
 }

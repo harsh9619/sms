@@ -5,6 +5,7 @@ import { Input } from "../../ui/Input";
 import { Badge } from "../../ui/Badge";
 import { Avatar, AvatarFallback } from "../../ui/Avatar";
 import { Loader } from "../../ui/Loader";
+import { DataTable, ColumnDef } from "../../ui/DataTable";
 import type { TeachersUIProps, RoleMaster } from "../../../saga/teachers/types";
 import type { Teacher } from "../../../types";
 import { capitalizeFirstLetter } from "../../../lib/utils";
@@ -168,7 +169,7 @@ export function TeachersUI({
     <>
       <Loader loading={loading} />
 
-      <div className="space-y-6 animate-fade-in pb-8">
+      <div className="p-3 sm:p-4 md:p-6 mx-auto space-y-4 sm:space-y-6 animate-fade-in max-w-[1600px]">
         {/* Top Header Banner */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-gradient-to-r from-primary/10 via-background to-primary/5 p-6 rounded-3xl border border-primary/15 shadow-sm">
           <div>
@@ -247,130 +248,203 @@ export function TeachersUI({
           </Card>
         </div>
 
-        {/* Search & View Switcher Bar */}
-        <Card className="border-border/80 shadow-sm">
-          <CardContent className="p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            {/* Search Input */}
-            <div className="w-full md:max-w-md">
-              <Input
-                placeholder="Search teachers by name, phone, email"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                icon={<Search className="h-4 w-4 text-muted-foreground" />}
-                className="rounded-xl bg-background"
-              />
+        {/* Search & View Switcher Bar (Mobile First) */}
+        <Card className="border-border/80 shadow-sm bg-card/60 backdrop-blur-sm">
+          <CardContent className="p-3.5 sm:p-4 space-y-3">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+              {/* Search Box */}
+              <div className="flex-1 relative w-full">
+                <Input
+                  placeholder="Search teachers by name, phone, email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  icon={<Search className="h-4 w-4 text-muted-foreground" />}
+                  className="w-full pl-9 pr-9 h-10 rounded-xl border-border bg-background/60 focus:bg-background transition-all text-sm shadow-inner"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/80 transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+
+              {/* Filter Controls Row */}
+              <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2.5 w-full lg:w-auto">
+                {/* Status Segmented Pill Tabs */}
+                <div className="inline-flex items-center p-1 rounded-xl bg-muted/50 border border-border/60 gap-1 text-xs overflow-x-auto max-w-full no-scrollbar">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("all")}
+                    className={`px-2.5 py-1.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
+                      statusFilter === "all"
+                        ? "bg-card text-foreground shadow-xs ring-1 ring-border/80"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    All
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-primary/10 text-primary font-bold">
+                      {teachers.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("active")}
+                    className={`px-2.5 py-1.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
+                      statusFilter === "active"
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-xs ring-1 ring-emerald-500/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
+                    Active
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                      {activeTeachersCount}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("inactive")}
+                    className={`px-2.5 py-1.5 rounded-lg font-semibold transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap ${
+                      statusFilter === "inactive"
+                        ? "bg-destructive/15 text-destructive shadow-xs ring-1 ring-destructive/30"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    <span className="h-2 w-2 rounded-full bg-destructive inline-block" />
+                    Inactive
+                    <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-destructive/20 text-destructive font-bold">
+                      {inactiveTeachersCount}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Role Filter & Actions */}
+                <div className="flex items-center gap-2">
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="h-10 px-3 rounded-xl text-xs font-semibold bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer shadow-xs"
+                  >
+                    <option value="all">All Roles</option>
+                    {masterRoles
+                      ?.filter((r) =>
+                        TEACHER_CREATION_ROLES?.includes(r?.roleName?.toUpperCase() || "")
+                      )
+                      .map((r) => (
+                        <option key={r.roleId} value={String(r.roleId)}>
+                          {capitalizeFirstLetter(r.roleName || "")}
+                        </option>
+                      ))}
+                  </select>
+
+                  {/* Reset Filter Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!(searchQuery || statusFilter !== "all" || roleFilter !== "all")}
+                    onClick={() => {
+                      setSearchQuery("");
+                      setStatusFilter("all");
+                      setRoleFilter("all");
+                    }}
+                    className="h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
+                    title="Reset all filters"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Reset</span>
+                  </Button>
+
+                  {/* View Switcher Toggle */}
+                  <div className="inline-flex items-center p-1 rounded-xl bg-muted/50 border border-border/60 gap-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("table")}
+                      title="Table View"
+                      className={`p-1.5 rounded-lg transition-all duration-200 ${
+                        viewMode === "table"
+                          ? "bg-card text-foreground shadow-xs ring-1 ring-border/80"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <List className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("card")}
+                      title="Card View"
+                      className={`p-1.5 rounded-lg transition-all duration-200 ${
+                        viewMode === "card"
+                          ? "bg-card text-foreground shadow-xs ring-1 ring-border/80"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Filter Pills & View Switcher */}
-            <div className="flex flex-wrap items-center justify-between md:justify-end gap-3 w-full md:w-auto">
-              {/* Role Filter Dropdown */}
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground hidden sm:inline-block" />
-                {/* Reset Filter Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!(searchQuery || statusFilter !== "all" || roleFilter !== "all")}
-                  onClick={() => {
-                    setSearchQuery("");
-                    setStatusFilter("all");
-                    setRoleFilter("all");
-                  }}
-                  className="h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
-                  title="Reset all filters"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Reset
-                </Button>
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted/50 border border-border/60 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
-                >
-                  <option value="all">All Roles</option>
-                  {masterRoles?.filter((r) => TEACHER_CREATION_ROLES?.includes(r?.roleName?.toUpperCase() || "")).map((r) => (
-                    <option key={r.roleId} value={String(r.roleId)}>
-                      {capitalizeFirstLetter(r.roleName || "")}
-                    </option>
-                  ))}
-                </select>
+            {/* Active Filter Chips & Summary */}
+            {(searchQuery || statusFilter !== "all" || roleFilter !== "all") && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/40 text-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1 flex items-center gap-1">
+                  <Filter className="h-3 w-3 text-primary" /> Active Filters:
+                </span>
+
+                {searchQuery && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border-primary/20"
+                  >
+                    Search: "{searchQuery}"
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors ml-0.5"
+                      onClick={() => setSearchQuery("")}
+                    />
+                  </Badge>
+                )}
+
+                {statusFilter !== "all" && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border-primary/20 capitalize"
+                  >
+                    Status: {statusFilter}
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors ml-0.5"
+                      onClick={() => setStatusFilter("all")}
+                    />
+                  </Badge>
+                )}
+
+                {roleFilter !== "all" && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border-primary/20"
+                  >
+                    Role:{" "}
+                    {capitalizeFirstLetter(
+                      masterRoles?.find((r) => String(r.roleId) === roleFilter)?.roleName ||
+                        roleFilter
+                    )}
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors ml-0.5"
+                      onClick={() => setRoleFilter("all")}
+                    />
+                  </Badge>
+                )}
+
+                <span className="ml-auto text-[11px] font-semibold text-muted-foreground">
+                  Showing {filteredTeachers.length} of {teachers.length} teachers
+                </span>
               </div>
-
-              {/* Status Segmented Pill Tabs */}
-              <div className="inline-flex items-center p-1 rounded-2xl bg-muted/50 border border-border/60 gap-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter("all")}
-                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all duration-200 flex items-center gap-1.5 ${statusFilter === "all"
-                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                    }`}
-                >
-                  All
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-primary/10 text-primary font-bold">
-                    {teachers.length}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter("active")}
-                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all duration-200 flex items-center gap-1.5 ${statusFilter === "active"
-                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm ring-1 ring-emerald-500/30"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                    }`}
-                >
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" />
-                  Active
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">
-                    {activeTeachersCount}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter("inactive")}
-                  className={`px-3 py-1.5 rounded-xl font-semibold transition-all duration-200 flex items-center gap-1.5 ${statusFilter === "inactive"
-                    ? "bg-destructive/15 text-destructive shadow-sm ring-1 ring-destructive/30"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                    }`}
-                >
-                  <span className="h-2 w-2 rounded-full bg-destructive inline-block" />
-                  Inactive
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-destructive/20 text-destructive font-bold">
-                    {inactiveTeachersCount}
-                  </span>
-                </button>
-              </div>
-
-
-
-              {/* View Switcher Toggle */}
-              <div className="inline-flex items-center p-1 rounded-2xl bg-muted/50 border border-border/60 gap-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("table")}
-                  title="Table View"
-                  className={`p-1.5 rounded-xl transition-all duration-200 ${viewMode === "table"
-                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
-                    : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  <List className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("card")}
-                  title="Card View"
-                  className={`p-1.5 rounded-xl transition-all duration-200 ${viewMode === "card"
-                    ? "bg-card text-foreground shadow-sm ring-1 ring-border/80"
-                    : "text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -498,173 +572,217 @@ export function TeachersUI({
             ))}
           </div>
         ) : (
-          /* Table View Mode */
-          <Card className="overflow-hidden border border-border/80 rounded-3xl shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead>
-                  <tr className="bg-muted/40 border-b border-border/70 text-[11px] uppercase tracking-wider text-muted-foreground font-bold">
-                    <th className="py-3.5 px-5">Teacher</th>
-                    <th className="py-3.5 px-5">Contact Phone</th>
-                    <th className="py-3.5 px-5">Email Address</th>
-                    <th className="py-3.5 px-5">Role</th>
-                    <th className="py-3.5 px-5">Status</th>
-                    <th className="py-3.5 px-5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {filteredTeachers.map((teacher) => (
-                    <tr
-                      key={teacher.id}
-                      className="hover:bg-muted/30 transition-colors group"
+          /* Table View Mode using Reusable DataTable */
+          <Card className="overflow-hidden border border-border/80 rounded-3xl shadow-sm p-0">
+            <DataTable
+              data={filteredTeachers}
+              columns={[
+                {
+                  key: "teacher",
+                  header: "Teacher",
+                  cell: (teacher) => (
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/10">
+                        {teacher.avatar ? (
+                          <img
+                            src={getImageUrl(teacher.avatar)}
+                            alt={teacher.name}
+                            className="h-full w-full object-cover rounded-full"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                            {getInitials(teacher.name)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div>
+                        <div className="font-bold text-foreground text-sm hover:text-primary transition-colors">
+                          {capitalizeFirstLetter(teacher.name)}
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: "phone",
+                  header: "Contact Phone",
+                  cell: (teacher) => (
+                    <div className="flex items-center gap-2 text-foreground font-medium text-xs">
+                      <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>{teacher.phone || "-"}</span>
+                    </div>
+                  ),
+                },
+                {
+                  key: "email",
+                  header: "Email Address",
+                  cell: (teacher) => (
+                    <div className="flex items-center gap-2 text-foreground font-medium text-xs">
+                      <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="truncate max-w-[200px]">{teacher.email}</span>
+                    </div>
+                  ),
+                },
+                {
+                  key: "role",
+                  header: "Role",
+                  cell: (teacher) => (
+                    <div className="flex items-center gap-2 text-foreground font-medium text-xs">
+                      <span className="truncate max-w-[200px]">{capitalizeFirstLetter(teacher.roleName) || "-"}</span>
+                    </div>
+                  ),
+                },
+                {
+                  key: "status",
+                  header: "Status",
+                  cell: (teacher) => (
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold ${teacher.status === false
+                        ? "bg-destructive/10 text-destructive border-destructive/20"
+                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                        }`}
                     >
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 ring-2 ring-primary/10">
-                            {teacher.avatar ? (
-                              <img
-                                src={getImageUrl(teacher.avatar)}
-                                alt={teacher.name}
-                                className="h-full w-full object-cover rounded-full"
-                              />
-                            ) : (
-                              <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                                {getInitials(teacher.name)}
-                              </AvatarFallback>
-                            )}
-                          </Avatar>
-                          <div>
-                            <div className="font-bold text-foreground text-sm group-hover:text-primary transition-colors">
-                              {capitalizeFirstLetter(teacher.name)}
-                            </div>
-                          </div>
+                      {teacher.status === false ? "Inactive" : "Active"}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: "actions",
+                  header: "Actions",
+                  align: "right",
+                  cell: (teacher) => (
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
+                        title="View Details"
+                        onClick={() => setShowDetail(teacher)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg hover:bg-muted"
+                        title="Edit Teacher"
+                        onClick={() => handleOpenEditModal(teacher)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                        title="Delete Teacher"
+                        onClick={() => setTeacherToDelete(teacher)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              rowKey={(teacher) => String(teacher.id)}
+              loading={loading}
+              bordered={true}
+              emptyText="No teachers found"
+              renderMobileCard={(teacher) => (
+                <div className="flex flex-col gap-3 p-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 ring-2 ring-primary/10">
+                        {teacher.avatar ? (
+                          <img
+                            src={getImageUrl(teacher.avatar)}
+                            alt={teacher.name}
+                            className="h-full w-full object-cover rounded-full"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                            {getInitials(teacher.name)}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
+                      <div>
+                        <div className="font-bold text-foreground text-sm">
+                          {capitalizeFirstLetter(teacher.name)}
                         </div>
-                      </td>
-
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-2 text-foreground font-medium text-xs">
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>{teacher.phone || "-"}</span>
+                        <div className="text-[11px] font-medium text-primary flex items-center gap-1">
+                          <Briefcase className="h-3 w-3" />
+                          {capitalizeFirstLetter(teacher.roleName) || "Teacher"}
                         </div>
-                      </td>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold ${teacher.status === false
+                          ? "bg-destructive/10 text-destructive border-destructive/20"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                        }`}
+                    >
+                      {teacher.status === false ? "Inactive" : "Active"}
+                    </Badge>
+                  </div>
 
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-2 text-foreground font-medium text-xs">
-                          <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="truncate max-w-[200px]">{teacher.email}</span>
-                        </div>
-                      </td>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground pt-2 border-t border-border/40">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="truncate text-foreground font-medium">
+                        {teacher.email || "No email"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-foreground font-medium">
+                        {teacher.phone || "No phone"}
+                      </span>
+                    </div>
+                  </div>
 
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-2 text-foreground font-medium text-xs">
-                          <span className="truncate max-w-[200px]">{capitalizeFirstLetter(teacher.roleName) || "-"}</span>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-5">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold ${teacher.status === false
-                            ? "bg-destructive/10 text-destructive border-destructive/20"
-                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                            }`}
-                        >
-                          {teacher.status === false ? "Inactive" : "Active"}
-                        </Badge>
-                      </td>
-
-                      <td className="py-3.5 px-5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
-                            title="View Details"
-                            onClick={() => setShowDetail(teacher)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-muted"
-                            title="Edit Teacher"
-                            onClick={() => handleOpenEditModal(teacher)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                            title="Delete Teacher"
-                            onClick={() => setTeacherToDelete(teacher)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  <div className="flex items-center justify-end gap-1 pt-2 border-t border-border/40">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs gap-1 hover:bg-primary/10 hover:text-primary rounded-xl"
+                      title="View Details"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDetail(teacher);
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5" /> View
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs gap-1 hover:bg-muted rounded-xl"
+                      title="Edit Teacher"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenEditModal(teacher);
+                      }}
+                    >
+                      <Edit className="h-3.5 w-3.5" /> Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs gap-1 text-destructive hover:bg-destructive/10 rounded-xl"
+                      title="Delete Teacher"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTeacherToDelete(teacher);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </Button>
+                  </div>
+                </div>
+              )}
+            />
           </Card>
-        )}
-
-        {/* Pagination Toolbar */}
-        {teachers.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
-            <div className="text-xs text-muted-foreground">
-              Showing <span className="font-semibold">{Math.min((page - 1) * limit + 1, totalTeachers)}</span> to{" "}
-              <span className="font-semibold">{Math.min(page * limit, totalTeachers)}</span> of{" "}
-              <span className="font-semibold">{totalTeachers}</span> teachers
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl text-xs"
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-              </Button>
-
-              <div className="flex items-center gap-1 px-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                  .map((p, idx, arr) => {
-                    const prev = arr[idx - 1];
-                    const showEllipsis = prev && p - prev > 1;
-                    return (
-                      <React.Fragment key={p}>
-                        {showEllipsis && <span className="px-1 text-xs text-muted-foreground">...</span>}
-                        <Button
-                          variant={page === p ? "default" : "ghost"}
-                          size="sm"
-                          className="h-8 w-8 p-0 text-xs rounded-lg font-semibold"
-                          onClick={() => setPage(p)}
-                        >
-                          {p}
-                        </Button>
-                      </React.Fragment>
-                    );
-                  })}
-              </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl text-xs"
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
-              >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </div>
         )}
 
         {/* Add/Edit Modal */}

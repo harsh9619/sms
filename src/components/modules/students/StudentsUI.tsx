@@ -5,6 +5,7 @@ import { Input } from "../../ui/Input";
 import { Badge } from "../../ui/Badge";
 import { Avatar, AvatarFallback } from "../../ui/Avatar";
 import { Loader } from "../../ui/Loader";
+import { DataTable, ColumnDef } from "../../ui/DataTable";
 import { useAuth } from "../../../context/AuthContext";
 import type { StudentsUIProps } from "../../../saga/students/types";
 import {
@@ -163,7 +164,7 @@ export function StudentsUI({
     <>
       <Loader loading={loading} />
 
-      <div className="space-y-6 animate-fade-in">
+      <div className="p-3 sm:p-4 md:p-6 mx-auto space-y-4 sm:space-y-6 animate-fade-in max-w-[1600px]">
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -215,63 +216,70 @@ export function StudentsUI({
           </div>
         </div>
 
-        {/* Search & Filter Bar */}
+        {/* Search & Filter Bar (Mobile First) */}
         <Card className="border-border/60 bg-card/60 backdrop-blur-sm shadow-sm">
-          <CardContent className="p-4 space-y-3">
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
+          <CardContent className="p-3.5 sm:p-4 space-y-3">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
               {/* Search Box */}
-              <div className="flex-1 relative">
+              <div className="flex-1 relative w-full">
                 <Input
-                  placeholder="Search by student name, roll no, email, or guardian contact..."
+                  placeholder="Search student by name, roll no, email, contact..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   icon={<Search className="h-4 w-4 text-muted-foreground" />}
-                  className="w-full pl-9 pr-9 h-10 rounded-xl border-border bg-background/50 focus:bg-background transition-all text-sm"
+                  className="w-full pl-9 pr-9 h-10 rounded-xl border-border bg-background/60 focus:bg-background transition-all text-sm shadow-inner"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-muted"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/80 transition-colors"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-3 w-3" />
                   </button>
                 )}
               </div>
 
               {/* Class & Division Filters */}
-              <div className="flex items-center gap-2.5 shrink-0">
-                {/* <div className="flex items-center gap-2 px-3 h-10 rounded-xl border border-border bg-background/50 text-xs font-semibold text-muted-foreground">
-                  <Filter className="h-3.5 w-3.5 text-primary" />
-                  <span>Filters</span>
-                </div> */}
-
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 shrink-0 w-full lg:w-auto">
                 {/* Class Select */}
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-                >
-                  <option value="all">All Classes</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <div className="relative col-span-1 sm:w-auto">
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => {
+                      setSelectedClass(e.target.value);
+                      setSelectedSection("all");
+                    }}
+                    className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-xs"
+                  >
+                    <option value="all">All Classes</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Section Select */}
-                <select
-                  value={selectedSection}
-                  disabled={!selectedClass || selectedClass === "all"}
-                  onChange={(e) => setSelectedSection(e.target.value)}
-                  className="h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <option value="all">All Sections</option>
-                  {classes.find((c) => c.id === selectedClass)?.divisions?.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                <div className="relative col-span-1 sm:w-auto">
+                  <select
+                    value={selectedSection}
+                    disabled={!selectedClass || selectedClass === "all"}
+                    onChange={(e) => setSelectedSection(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                  >
+                    <option value="all">All Sections</option>
+                    {classes
+                      .find((c) => c.id === selectedClass)
+                      ?.divisions?.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
-                {/* Clear Filters Button */}
-                {/* {(searchQuery || selectedClass !== "all" || selectedSection !== "all") && ( */}
+                {/* Reset Filters Button */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -281,15 +289,72 @@ export function StudentsUI({
                     setSelectedClass("all");
                     setSelectedSection("all");
                   }}
-                  className="h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="col-span-2 sm:col-auto h-10 rounded-xl px-3 text-xs font-semibold hover:text-foreground gap-1.5 disabled:cursor-not-allowed disabled:opacity-40 transition-all"
                   title="Reset all filters"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  Reset
+                  <span>Reset</span>
                 </Button>
-                {/* )} */}
               </div>
             </div>
+
+            {/* Active Filter Chips & Counter (Mobile & Desktop) */}
+            {(searchQuery || selectedClass !== "all" || selectedSection !== "all") && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-border/40 text-xs">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1 flex items-center gap-1">
+                  <Filter className="h-3 w-3 text-primary" /> Active Filters:
+                </span>
+
+                {searchQuery && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border-primary/20"
+                  >
+                    Search: "{searchQuery}"
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors ml-0.5"
+                      onClick={() => setSearchQuery("")}
+                    />
+                  </Badge>
+                )}
+
+                {selectedClass !== "all" && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border-primary/20"
+                  >
+                    Class: {classes.find((c) => c.id === selectedClass)?.name || selectedClass}
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors ml-0.5"
+                      onClick={() => {
+                        setSelectedClass("all");
+                        setSelectedSection("all");
+                      }}
+                    />
+                  </Badge>
+                )}
+
+                {selectedSection !== "all" && (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold bg-primary/10 text-primary border-primary/20"
+                  >
+                    Section:{" "}
+                    {classes
+                      .find((c) => c.id === selectedClass)
+                      ?.divisions?.find((d) => d.id === selectedSection)?.name || selectedSection}
+                    <X
+                      className="h-3 w-3 cursor-pointer hover:text-destructive transition-colors ml-0.5"
+                      onClick={() => setSelectedSection("all")}
+                    />
+                  </Badge>
+                )}
+
+                <span className="ml-auto text-[11px] font-semibold text-muted-foreground">
+                  Showing {students.length} of {meta?.totalItems ?? students.length} students
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -306,198 +371,244 @@ export function StudentsUI({
           </Card>
         ) : (
           <>
-            {/* Table View */}
-            <Card className="overflow-hidden border border-border">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-muted/40 border-b border-border text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                      <th className="py-3 px-4">Admission No.</th>
-                      <th className="py-3 px-4">Student Name</th>
-                      <th className="py-3 px-4">Class </th>
-                      <th className="py-3 px-4">Div</th>
-                      {/* <th className="py-3 px-4">Roll No</th> */}
-                      <th className="py-3 px-4">Gender</th>
-                      <th className="py-3 px-4">Guardian</th>
-                      <th className="py-3 px-4">Contact Info</th>
-                      <th className="py-3 px-4 text-center">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60">
-                    {students.map((student) => (
-                      <tr
-                        key={student.id}
-                        className="hover:bg-muted/30 transition-colors group"
-                      >
-                        <td className="py-3 px-4 font-semibold ">
-                          <span className="font-mono">
-                            {student.registration_no || "N/A"}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-
-                            <div className="font-semibold text-foreground">{student.name}</div>
-
+            {/* Table View using Reusable DataTable */}
+            <Card className="overflow-hidden border border-border p-0">
+              <DataTable
+                data={students}
+                columns={[
+                  {
+                    key: "registration_no",
+                    header: "Admission No.",
+                    cell: (student) => (
+                      <span className="font-mono font-semibold">
+                        {student.registration_no || "N/A"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "name",
+                    header: "Student Name",
+                    cell: (student) => (
+                      <div className="font-semibold text-foreground">{student.name}</div>
+                    ),
+                  },
+                  {
+                    key: "class",
+                    header: "Class",
+                    cell: (student) =>
+                      student.class_name ? (
+                        <span className="font-semibold text-xs">{student.class_name}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Unassigned</span>
+                      ),
+                  },
+                  {
+                    key: "division",
+                    header: "Div",
+                    cell: (student) =>
+                      student.division_name ? (
+                        <span className="font-semibold text-xs">{student.division_name}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Unassigned</span>
+                      ),
+                  },
+                  {
+                    key: "gender",
+                    header: "Gender",
+                    cell: (student) => (
+                      <span className="font-semibold text-xs capitalize">
+                        {student.gender || "male"}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "guardian",
+                    header: "Guardian",
+                    cell: (student) =>
+                      student.parent_name || student.guardian_name ? (
+                        <div className="font-medium text-foreground text-xs">
+                          {student.parent_name || student.guardian_name}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      ),
+                  },
+                  {
+                    key: "contact",
+                    header: "Contact Info",
+                    cell: (student) => (
+                      <div className="text-xs space-y-0.5">
+                        {student.email && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="truncate max-w-[160px]">{student.email}</span>
                           </div>
-                        </td>
-
-                        <td className="py-3 px-4">
-                          {student.class_name ? (
-                            <span className="font-semibold text-xs">
-                              {student.class_name || ""}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Unassigned</span>
-                          )}
-                        </td>
-
-                        <td className="py-3 px-4">
-                          {student.division_name ? (
-                            <span className="font-semibold text-xs">
-                              {student.division_name ? `${student.division_name}` : ""}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Unassigned</span>
-                          )}
-                        </td>
-
-                        {/* <td className="py-3 px-4 font-semibold text-xs capitalize">
-                          {student.roll_no}
-                        </td> */}
-
-                        <td className="py-3 px-4 font-semibold text-xs capitalize">
-                          {student.gender || "male"}
-                        </td>
-
-                        <td className="py-3 px-4 text-xs">
-                          {student.parent_name || student.guardian_name ? (
-                            <div className="font-medium text-foreground">
-                              {student.parent_name || student.guardian_name}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">N/A</span>
-                          )}
-                        </td>
-
-                        <td className="py-3 px-4 text-xs space-y-0.5">
-                          {student.email && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Mail className="h-3 w-3 shrink-0" />
-                              <span className="truncate max-w-[160px]">{student.email}</span>
-                            </div>
-                          )}
-                          {student.phone && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Phone className="h-3 w-3 shrink-0" />
-                              <span>{student.phone}</span>
-                            </div>
-                          )}
-                          {(student.parent_phone || student.guardian_phone) && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Phone className="h-3 w-3 shrink-0 text-primary" />
-                              <span>{student.parent_phone || student.guardian_phone}</span>
-                            </div>
-                          )}
-                          {!student.email && !student.phone && !(student.parent_phone || student.guardian_phone) && (
-                            <span className="text-muted-foreground">N/A</span>
-                          )}
-                        </td>
-
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="View Profile"
-                              onClick={() => setShowDetail(student)}
-                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {canUpdate && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Edit Student"
-                                onClick={() => handleOpenEditModal(student)}
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {canDelete && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Delete Student"
-                                onClick={() => setStudentToDelete(student)}
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
+                        )}
+                        {student.phone && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Phone className="h-3 w-3 shrink-0" />
+                            <span>{student.phone}</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-
-
-            {/* Pagination Toolbar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
-              <div className="text-xs text-muted-foreground">
-                Showing <span className="font-semibold">{Math.min((page - 1) * limit + 1, totalStudents)}</span> to{" "}
-                <span className="font-semibold">{Math.min(page * limit, totalStudents)}</span> of{" "}
-                <span className="font-semibold">{totalStudents}</span> students
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-                </Button>
-
-                <div className="flex items-center gap-1 px-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                    .map((p, idx, arr) => {
-                      const prev = arr[idx - 1];
-                      const showEllipsis = prev && p - prev > 1;
-                      return (
-                        <React.Fragment key={p}>
-                          {showEllipsis && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                        )}
+                        {(student.parent_phone || student.guardian_phone) && (
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Phone className="h-3 w-3 shrink-0 text-primary" />
+                            <span>{student.parent_phone || student.guardian_phone}</span>
+                          </div>
+                        )}
+                        {!student.email && !student.phone && !(student.parent_phone || student.guardian_phone) && (
+                          <span className="text-muted-foreground">N/A</span>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "actions",
+                    header: "Actions",
+                    align: "right",
+                    cell: (student) => (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="View Profile"
+                          onClick={() => setShowDetail(student)}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canUpdate && (
                           <Button
-                            variant={page === p ? "default" : "ghost"}
-                            size="sm"
-                            className="h-8 w-8 p-0 text-xs"
-                            onClick={() => setPage(p)}
+                            variant="ghost"
+                            size="icon"
+                            title="Edit Student"
+                            onClick={() => handleOpenEditModal(student)}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           >
-                            {p}
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        </React.Fragment>
-                      );
-                    })}
-                </div>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Delete Student"
+                            onClick={() => setStudentToDelete(student)}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ),
+                  },
+                ]}
+                rowKey={(student) => String(student.id)}
+                loading={loading}
+                bordered={true}
+                emptyText="No students found"
+                renderMobileCard={(student) => (
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-foreground">{student.name}</span>
+                          <span className="font-mono text-xs font-semibold text-muted-foreground">
+                            #{student.registration_no || "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                            {student.class_name ? `Class ${student.class_name}` : "Unassigned"}
+                          </span>
+                          {student.division_name && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-muted text-muted-foreground">
+                              Div: {student.division_name}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground capitalize">
+                            • {student.gender || "male"}
+                          </span>
+                        </div>
+                      </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="View Profile"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDetail(student);
+                          }}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Edit Student"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditModal(student);
+                            }}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Delete Student"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStudentToDelete(student);
+                            }}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {(student.parent_name || student.guardian_name || student.phone || student.email || student.parent_phone) && (
+                      <div className="pt-2 border-t border-border/40 grid grid-cols-2 gap-2 text-xs">
+                        {(student.parent_name || student.guardian_name) && (
+                          <div className="col-span-1">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground">Guardian</span>
+                            <p className="font-medium text-foreground truncate">{student.parent_name || student.guardian_name}</p>
+                          </div>
+                        )}
+                        {(student.phone || student.parent_phone || student.guardian_phone) && (
+                          <div className="col-span-1">
+                            <span className="text-[10px] uppercase font-bold text-muted-foreground">Contact</span>
+                            <p className="font-medium text-foreground truncate flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-primary" />
+                              {student.phone || student.parent_phone || student.guardian_phone}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                pagination={{
+                  page,
+                  limit,
+                  totalItems: totalStudents,
+                  onPageChange: setPage,
+                  onLimitChange: setLimit,
+                  showPerPage: true,
+                }}
+              />
+            </Card>
           </>
+
         )}
 
         {/* Add/Edit Modal */}

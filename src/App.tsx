@@ -9,6 +9,7 @@ import { DashboardPage } from "./pages/Dashboard/DashboardPage";
 import { StudentsPage } from "./pages/Students/StudentsPage";
 import { TeachersPage } from "./pages/Teachers/TeachersPage";
 import { ClassesPage } from "./pages/Classes/ClassesPage";
+import { ClassTeacherConfigPage } from "./pages/Classes/ClassTeacherConfigPage";
 import { AssignTeacherPage } from "./pages/Classes/AssignTeacherPage";
 import { ClassSubjectConfigPage } from "./pages/Classes/ClassSubjectConfigPage";
 import { SubjectTeacherConfigPage } from "./pages/Classes/SubjectTeacherConfigPage";
@@ -123,6 +124,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={getRolesForPath("/classes")} moduleKey="classes">
               <ClassesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/class-teacher-config"
+          element={
+            <ProtectedRoute allowedRoles={getRolesForPath("/classes")} moduleKey="classes">
+              <ClassTeacherConfigPage />
             </ProtectedRoute>
           }
         />

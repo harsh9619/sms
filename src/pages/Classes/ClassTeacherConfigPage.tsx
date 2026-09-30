@@ -1,9 +1,8 @@
 import React from "react";
 import { ClassTeacherConfigContainer } from "../../containers/classes/ClassTeacherConfigContainer";
 
-export function ClassesPage() {
+export function ClassTeacherConfigPage() {
   return <ClassTeacherConfigContainer />;
 }
 
-export { ClassTeacherConfigPage } from "./ClassTeacherConfigPage";
-export default ClassesPage;
+export default ClassTeacherConfigPage;

@@ -83,10 +83,10 @@ export function ClassesContainer() {
       prev.map((c) =>
         String(c.classId) === String(classId) || String(c.id) === String(classId)
           ? {
-              ...c,
-              teacherId: newTeacherId ? Number(newTeacherId) : null,
-              teacherName: assignedTeacher?.name || null,
-            }
+            ...c,
+            teacherId: newTeacherId ? Number(newTeacherId) : null,
+            teacherName: assignedTeacher?.name || null,
+          }
           : c
       )
     );

@@ -33,11 +33,35 @@ export const classSubjectService = {
     return httpService.get<SubjectItem[]>(`/api/subjects${query}`);
   },
 
-  async getSubjectsWithTeachers(classId?: string): Promise<SubjectItem[]> {
-    const query = classId ? `?classId=${classId}` : "";
-    return httpService.get<SubjectItem[]>(`/api/subjects/class-subject-teacher${query}`);
-
-
+  async getSubjectsWithTeachers(
+    params?: {
+      page?: number;
+      limit?: number;
+      classId?: string;
+      division?: string;
+      teacherId?: string;
+      status?: string;
+      subjectName?: string;
+      search?: string;
+    } | string
+  ): Promise<any> {
+    let query = "";
+    if (typeof params === "string") {
+      query = params ? `?classId=${params}` : "";
+    } else if (params && typeof params === "object") {
+      const searchParams = new URLSearchParams();
+      if (params.page) searchParams.append("page", String(params.page));
+      if (params.limit) searchParams.append("limit", String(params.limit));
+      if (params.classId) searchParams.append("classId", params.classId);
+      if (params.division && params.division !== "ALL") searchParams.append("division", params.division);
+      if (params.teacherId && params.teacherId !== "ALL") searchParams.append("teacherId", params.teacherId);
+      if (params.status && params.status !== "ALL") searchParams.append("status", params.status);
+      if (params.subjectName && params.subjectName !== "ALL") searchParams.append("subjectName", params.subjectName);
+      if (params.search) searchParams.append("search", params.search);
+      const queryString = searchParams.toString();
+      query = queryString ? `?${queryString}` : "";
+    }
+    return httpService.get<any>(`/api/subjects/class-subject-teacher${query}`);
   },
 
   async syncClassSubjects(classId: string, masterSubjectIds: (number | string)[]): Promise<SubjectItem[]> {
