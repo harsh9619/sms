@@ -369,10 +369,86 @@ export function DashboardLayout({ children }: SidebarProps) {
               {mode === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </Button> */}
 
+            {/* User Profile in Header */}
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-border bg-gradient-to-b from-background to-muted/20 hover:from-accent/50 hover:to-accent transition-all duration-200 cursor-pointer shadow-sm"
+              >
+                <Avatar size="sm" className="h-7 w-7">
+                  <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                    {user ? getInitials(user.name) : "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="text-left hidden md:block leading-tight">
+                  <p className="text-xs font-semibold text-foreground truncate max-w-[120px]">{user?.name}</p>
+                  <p className="text-[10px] text-muted-foreground capitalize truncate">{user?.role}</p>
+                </div>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 flex-shrink-0 ${showProfileMenu ? "rotate-180" : ""}`} />
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div className="absolute right-0 top-12 w-60 bg-card border border-border rounded-xl shadow-2xl p-3 z-50 animate-scale-in">
+                  <div className="flex items-center gap-3 pb-3 border-b border-border">
+                    <Avatar size="md" className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                        {user ? getInitials(user.name) : "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="text-sm font-semibold text-foreground truncate">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                      <Badge variant="outline" className="mt-1 text-[9px] py-0 px-1.5 uppercase font-semibold capitalize">
+                        {user?.role}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Role Switcher if superadmin */}
+                  {originalUser?.role === "superadmin" && (
+                    <div className="py-2 border-b border-border">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 px-1 text-left">
+                        Switch Role (Dev)
+                      </p>
+                      <div className="space-y-0.5">
+                        {(["admin", "teacher", "student", "parent"] as UserRole[]).map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => {
+                              handleRoleChange(r);
+                              setShowProfileMenu(false);
+                            }}
+                            className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${user?.role === r ? "bg-primary/10 text-primary font-semibold" : "text-foreground/80 hover:bg-muted"}`}
+                          >
+                            <span className="capitalize">{r}</span>
+                            {user?.role === r && <UserCheck className="h-3.5 w-3.5 text-primary" />}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        handleLogout();
+                      }}
+                      className="w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Logout */}
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive">
+            {/* <Button variant="ghost" size="icon" onClick={handleLogout} className="hover:bg-destructive/10 hover:text-destructive" title="Logout">
               <LogOut className="h-5 w-5" />
-            </Button>
+            </Button> */}
           </div>
         </header>
 
@@ -384,6 +460,11 @@ export function DashboardLayout({ children }: SidebarProps) {
           <div className="animate-fade-in">{children}</div>
         </main>
       </div>
+
+      {/* Click outside to close profile dropdown */}
+      {showProfileMenu && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)} />
+      )}
 
       {/* Click outside to close theme picker */}
       {showThemePicker && (

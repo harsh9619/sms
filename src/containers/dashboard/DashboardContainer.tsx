@@ -12,14 +12,14 @@ import {
 import { GraduationCap, Users, BookOpen } from "lucide-react";
 import { DashboardUI } from "../../components/modules/dashboard/DashboardUI";
 
-const weeklyAttendanceMock = [
-  { day: "Mon", present: 85, absent: 10, late: 5 },
-  { day: "Tue", present: 90, absent: 7, late: 3 },
-  { day: "Wed", present: 88, absent: 8, late: 4 },
-  { day: "Thu", present: 92, absent: 5, late: 3 },
-  { day: "Fri", present: 78, absent: 15, late: 7 },
-  { day: "Sat", present: 45, absent: 50, late: 5 },
-];
+// const weeklyAttendanceMock = [
+//   { day: "Mon", present: 85, absent: 10, late: 5 },
+//   { day: "Tue", present: 90, absent: 7, late: 3 },
+//   { day: "Wed", present: 88, absent: 8, late: 4 },
+//   { day: "Thu", present: 92, absent: 5, late: 3 },
+//   { day: "Fri", present: 78, absent: 15, late: 7 },
+//   { day: "Sat", present: 45, absent: 50, late: 5 },
+// ];
 
 const classPerformanceMock = [
   { class: "8A", score: 82 },
@@ -43,10 +43,22 @@ export function DashboardContainer() {
   const { activeSchool } = useSchool();
 
   useEffect(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 is Sun, 1 is Mon, ..., 6 is Sat
+    const distanceToMonday = (dayOfWeek + 6) % 7;
+
+    const mondayObj = new Date(today);
+    mondayObj.setDate(today.getDate() - distanceToMonday);
+    const startDate = mondayObj.toISOString().split("T")[0];
+
+    const sundayObj = new Date(mondayObj);
+    sundayObj.setDate(mondayObj.getDate() + 6);
+    const endDate = sundayObj.toISOString().split("T")[0];
+
     dispatch(fetchStudentsRequest());
     dispatch(fetchTeachersRequest());
     dispatch(fetchClassesRequest());
-    dispatch(fetchAttendanceRequest());
+    dispatch(fetchAttendanceRequest({ startDate, endDate }));
     dispatch(fetchMarksRequest());
   }, [dispatch, activeSchool]);
 
@@ -110,9 +122,6 @@ export function DashboardContainer() {
   const activeMotto = activeSchool ? (bannerMottos[activeSchool.theme || "default"] || "Welcome to your school administration portal") : "Welcome to your school administration portal";
 
   const dynamicWeeklyAttendance = useMemo(() => {
-    if (!attendance || attendance.length === 0) {
-      return weeklyAttendanceMock;
-    }
     const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const dailyStats = daysOfWeek.map((day) => ({
       day,
@@ -123,24 +132,28 @@ export function DashboardContainer() {
     }));
 
     attendance.forEach((record: any) => {
+      if (!record.date) return;
       const date = new Date(record.date);
       const dayIndex = date.getDay();
-      const status = record.status.toLowerCase();
+      const status = (record.status || "").toLowerCase();
 
       dailyStats[dayIndex].count++;
       if (status === "present") dailyStats[dayIndex].present++;
       else if (status === "absent") dailyStats[dayIndex].absent++;
-      else if (status === "late") dailyStats[dayIndex].late++;
+      else if (status === "late" || status === "excused") dailyStats[dayIndex].late++;
     });
 
-    return dailyStats
-      .filter(d => d.day !== "Sun")
-      .map(d => ({
-        day: d.day,
-        present: d.count > 0 ? Math.round((d.present / d.count) * 100) : 80,
-        absent: d.count > 0 ? Math.round((d.absent / d.count) * 100) : 15,
-        late: d.count > 0 ? Math.round((d.late / d.count) * 100) : 5,
-      }));
+    const orderedDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    return orderedDays.map((dayName) => {
+      const d = dailyStats.find((item) => item.day === dayName);
+      const count = d ? d.count : 0;
+      return {
+        day: dayName,
+        present: count > 0 ? Math.round((d!.present / count) * 100) : 0,
+        absent: count > 0 ? Math.round((d!.absent / count) * 100) : 0,
+        late: count > 0 ? Math.round((d!.late / count) * 100) : 0,
+      };
+    });
   }, [attendance]);
 
   const dynamicClassPerformance = useMemo(() => {

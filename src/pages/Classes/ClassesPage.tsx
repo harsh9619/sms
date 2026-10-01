@@ -6,4 +6,5 @@ export function ClassesPage() {
 }
 
 export { ClassTeacherConfigPage } from "./ClassTeacherConfigPage";
+export { ClassSubjectConfigPage } from "./ClassSubjectConfigPage";
 export default ClassesPage;

@@ -14,6 +14,8 @@ import { marksReducer } from "./marks";
 import { attendanceReducer } from "./attendance";
 import { subjectTeacherConfigReducer } from "./subjectTeacherConfig";
 import { classTeacherConfigReducer } from "./classTeacherConfig";
+import { classSubjectConfigReducer } from "./classSubjectConfig";
+import { settingsConfigReducer } from "./settingsConfig";
 
 export const rootReducer = combineReducers({
   auth: authReducer,
@@ -31,6 +33,8 @@ export const rootReducer = combineReducers({
   attendance: attendanceReducer,
   subjectTeacherConfig: subjectTeacherConfigReducer,
   classTeacherConfig: classTeacherConfigReducer,
+  classSubjectConfig: classSubjectConfigReducer,
+  settingsConfig: settingsConfigReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;
