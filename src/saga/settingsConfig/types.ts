@@ -1,5 +1,5 @@
 import React from "react";
-import type { User } from "../../types";
+import type { User, ThemeName } from "../../types";
 import type { School } from "../../context/SchoolContext";
 import type { MasterTheme } from "../../Services/school.service";
 
@@ -39,7 +39,7 @@ export interface SettingsConfigUIProps {
   // Theme & Mode Context
   theme?: string;
   mode?: "light" | "dark";
-  setTheme?: (theme: string) => void;
+  setTheme?: (theme: ThemeName) => void;
   setMode?: (mode: "light" | "dark") => void;
 
   // Master Themes
