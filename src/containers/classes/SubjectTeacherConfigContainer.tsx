@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { connect } from "react-redux";
 import { Dispatch } from "redux";
 import { AppState } from "../../saga/rootReducer";
@@ -39,13 +40,22 @@ function SubjectTeacherConfigContainerContent(props: any) {
   } = props;
 
   const { activeSchool } = useSchool();
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get("status") || "ALL";
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedDivision, setSelectedDivision] = useState<string>("ALL");
   const [selectedTeacherFilter, setSelectedTeacherFilter] = useState<string>("ALL");
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("ALL");
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>(initialStatus);
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>("ALL");
+
+  useEffect(() => {
+    const statusParam = searchParams.get("status");
+    if (statusParam) {
+      setSelectedStatusFilter(statusParam);
+    }
+  }, [searchParams]);
 
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);

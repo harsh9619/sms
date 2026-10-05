@@ -1,7 +1,13 @@
 import type { TimetableSlot } from "../../types";
 import * as types from "./actionTypes";
 
-export const fetchTimetablesRequest = (payload?: { classId?: string; teacherId?: string }) => ({
+export const fetchTimetablesRequest = (payload?: {
+  classId?: string;
+  teacherId?: string;
+  divisionId?: string;
+  division?: string;
+  dayOfWeek?: string;
+}) => ({
   type: types.FETCH_TIMETABLES_REQUEST,
   payload,
 });
@@ -58,5 +64,20 @@ export const deleteTimetableSuccess = (payload: string) => ({
 
 export const deleteTimetableFailure = (payload: string) => ({
   type: types.DELETE_TIMETABLE_FAILURE,
+  payload,
+});
+
+export const generateTimetableRequest = (payload: any) => ({
+  type: types.GENERATE_TIMETABLE_REQUEST,
+  payload,
+});
+
+export const generateTimetableSuccess = (payload: any) => ({
+  type: types.GENERATE_TIMETABLE_SUCCESS,
+  payload,
+});
+
+export const generateTimetableFailure = (payload: string) => ({
+  type: types.GENERATE_TIMETABLE_FAILURE,
   payload,
 });

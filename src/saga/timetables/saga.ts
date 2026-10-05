@@ -9,11 +9,22 @@ import {
   updateTimetableFailure,
   deleteTimetableSuccess,
   deleteTimetableFailure,
+  generateTimetableSuccess,
+  generateTimetableFailure,
 } from "./actions";
 import timetableService from "../../Services/timetable.service";
 import type { TimetableSlot } from "../../types";
 
-function* handleFetchTimetables(action: { type: string; payload?: { classId?: string; teacherId?: string } }): Generator<any, void, any> {
+function* handleFetchTimetables(action: {
+  type: string;
+  payload?: {
+    classId?: string;
+    teacherId?: string;
+    divisionId?: string;
+    division?: string;
+    dayOfWeek?: string;
+  };
+}): Generator<any, void, any> {
   try {
     const data: TimetableSlot[] = yield call(timetableService.getTimetables, action.payload);
     yield put(fetchTimetablesSuccess(data));
@@ -49,9 +60,27 @@ function* handleDeleteTimetable(action: { type: string; payload: string }): Gene
   }
 }
 
+function* handleGenerateTimetable(action: { type: string; payload: any }): Generator<any, void, any> {
+  try {
+    const res: any = yield call(timetableService.generateTimetable, action.payload);
+    yield put(generateTimetableSuccess(res));
+  } catch (error: any) {
+    const errorMsg =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Failed to auto generate timetable";
+    yield put(
+      generateTimetableFailure(
+        Array.isArray(errorMsg) ? errorMsg.join(", ") : String(errorMsg)
+      )
+    );
+  }
+}
+
 export function* timetablesSaga() {
   yield takeLatest(types.FETCH_TIMETABLES_REQUEST, handleFetchTimetables);
   yield takeLatest(types.CREATE_TIMETABLE_REQUEST, handleCreateTimetable);
   yield takeLatest(types.UPDATE_TIMETABLE_REQUEST, handleUpdateTimetable);
   yield takeLatest(types.DELETE_TIMETABLE_REQUEST, handleDeleteTimetable);
+  yield takeLatest(types.GENERATE_TIMETABLE_REQUEST, handleGenerateTimetable);
 }

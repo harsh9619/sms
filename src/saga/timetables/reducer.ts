@@ -5,6 +5,7 @@ const initialState: TimetablesState = {
   timetables: [],
   loading: false,
   error: null,
+  lastGenResult: null,
 };
 
 export function timetablesReducer(state: TimetablesState = initialState, action: any): TimetablesState {
@@ -13,6 +14,7 @@ export function timetablesReducer(state: TimetablesState = initialState, action:
     case types.CREATE_TIMETABLE_REQUEST:
     case types.UPDATE_TIMETABLE_REQUEST:
     case types.DELETE_TIMETABLE_REQUEST:
+    case types.GENERATE_TIMETABLE_REQUEST:
       return { ...state, loading: true, error: null };
 
     case types.FETCH_TIMETABLES_SUCCESS:
@@ -35,10 +37,24 @@ export function timetablesReducer(state: TimetablesState = initialState, action:
         timetables: state.timetables.filter((t) => t.id !== action.payload),
       };
 
+    case types.GENERATE_TIMETABLE_SUCCESS:
+      return {
+        ...state,
+        loading: false,
+        timetables: action.payload.timetables || state.timetables,
+        lastGenResult: {
+          message: action.payload.message,
+          generatedSlotsCount: action.payload.generatedSlotsCount,
+          classesCount: action.payload.classesCount,
+          warnings: action.payload.warnings,
+        },
+      };
+
     case types.FETCH_TIMETABLES_FAILURE:
     case types.CREATE_TIMETABLE_FAILURE:
     case types.UPDATE_TIMETABLE_FAILURE:
     case types.DELETE_TIMETABLE_FAILURE:
+    case types.GENERATE_TIMETABLE_FAILURE:
       return { ...state, loading: false, error: action.payload };
 
     default:
