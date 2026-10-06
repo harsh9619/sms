@@ -162,6 +162,7 @@ export interface ClassInfo {
   academicYearId?: string;
   academicYear?: string;
   classMasterId?: string;
+  divisionMasterId?: string;
 }
 
 // ==================== Attendance Types ====================
@@ -262,8 +263,11 @@ export interface TimetableSlot {
   id: string;
   schoolId: string;
   classId: string;
+  classMasterId?: string | number | null;
+  divisionMasterId?: string | number | null;
   className: string;
   section: string;
+  divisionId?: string | null;
   subjectId: string;
   subjectName: string;
   dayOfWeek: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday";
