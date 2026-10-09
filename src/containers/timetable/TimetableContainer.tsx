@@ -152,18 +152,40 @@ function TimetableContainerContent({
     }
   }, [user, activeSchool]);
 
+  // Resolve Student class or Teacher ID based on user role
   useEffect(() => {
-    if (user?.role === "student") {
-      const profile = reduxStudents.find((s: any) => s.email === user.email);
-      if (profile && (profile as any).classId) {
-        setStudentClassId((profile as any).classId);
+    const role = (user?.role || "").toLowerCase();
+    if (role === "student") {
+      const profile = reduxStudents.find(
+        (s: any) =>
+          s.email === user?.email ||
+          String(s.user_id) === String(user?.id) ||
+          String(s.id) === String(user?.id) ||
+          (user?.studentId && String(s.id) === String(user?.studentId))
+      );
+
+      const clsId =
+        (profile as any)?.class_master_id ||
+        (profile as any)?.class_id ||
+        (profile as any)?.classId ||
+        user?.class;
+
+      if (clsId) {
+        setStudentClassId(String(clsId));
       }
-    } else if (user?.role === "teacher") {
-      if (!selectedTeacherId) {
-        setSelectedTeacherId(String(user.id));
+    } else if (role === "teacher") {
+      const teacherProfile = reduxTeachers.find(
+        (t: any) =>
+          String(t.id) === String(user?.id) ||
+          t.email === user?.email ||
+          (user?.roleId && String(t.roleId) === String(user?.roleId))
+      );
+      const tid = teacherProfile ? String(teacherProfile.id) : String(user?.id || "");
+      if (tid && !selectedTeacherId) {
+        setSelectedTeacherId(tid);
       }
     }
-  }, [user, reduxStudents, selectedTeacherId]);
+  }, [user, reduxStudents, reduxTeachers, selectedTeacherId]);
 
   // Extract available unique divisions/sections
   const availableDivisions = useMemo(() => {
@@ -171,13 +193,19 @@ function TimetableContainerContent({
     return Array.from(new Set(divs)).sort();
   }, [reduxClasses]);
 
-  // Fetch timetables based on active filters
+  // Fetch timetables based on active filters & user role
   useEffect(() => {
     let params: any = {};
+    const role = (user?.role || "").toLowerCase();
 
-    if (user?.role === "student" && studentClassId) {
+    if (role === "student" && studentClassId) {
       params.classId = studentClassId;
+    } else if (role === "teacher") {
+      if (selectedTeacherId) params.teacherId = selectedTeacherId;
+      else if (user?.id) params.teacherId = String(user.id);
+      if (selectedClassId) params.classId = selectedClassId;
     } else {
+      // admin, school_admin, principal, super_admin
       if (selectedClassId) params.classId = selectedClassId;
       if (selectedTeacherId) params.teacherId = selectedTeacherId;
     }
@@ -197,21 +225,61 @@ function TimetableContainerContent({
     fetchTimetablesRequest,
   ]);
 
-  // Filter slots locally if needed
+  // Filter slots locally based on user role and selected criteria
   const timetable = useMemo(() => {
     let list = reduxTimetable;
+    const role = (user?.role || "").toLowerCase();
 
-    if (user?.role === "student" && studentClassId) {
-      list = list.filter((t: any) => String(t.classId) === String(studentClassId));
-    }
-    if (selectedTeacherId) {
-      list = list.filter((t: any) => String(t.teacherId) === String(selectedTeacherId));
-    }
-    if (selectedDay) {
+    if (role === "student" && studentClassId) {
       list = list.filter(
-        (t: any) => t.dayOfWeek.toLowerCase() === selectedDay.toLowerCase()
+        (t: any) =>
+          String(t.classMasterId || t.classId) === String(studentClassId) ||
+          String(t.classId) === String(studentClassId)
+      );
+    } else if (role === "teacher") {
+      const activeTeacherId = selectedTeacherId || String(user?.id || "");
+      if (activeTeacherId) {
+        list = list.filter(
+          (t: any) =>
+            String(t.teacherId) === String(activeTeacherId) ||
+            (t.teacherName && user?.name && t.teacherName.toLowerCase() === user.name.toLowerCase())
+        );
+      }
+      if (selectedClassId) {
+        list = list.filter(
+          (t: any) =>
+            String(t.classMasterId || t.classId) === String(selectedClassId) ||
+            String(t.classId) === String(selectedClassId)
+        );
+      }
+    } else {
+      // admin, principal, school_admin
+      if (selectedClassId) {
+        list = list.filter(
+          (t: any) =>
+            String(t.classMasterId || t.classId) === String(selectedClassId) ||
+            String(t.classId) === String(selectedClassId)
+        );
+      }
+      if (selectedTeacherId) {
+        list = list.filter((t: any) => String(t.teacherId) === String(selectedTeacherId));
+      }
+    }
+
+    if (selectedDivision && role !== "student") {
+      list = list.filter(
+        (t: any) =>
+          String(t.divisionMasterId || t.divisionId) === String(selectedDivision) ||
+          String(t.section || "").toLowerCase() === String(selectedDivision).toLowerCase()
       );
     }
+
+    if (selectedDay) {
+      list = list.filter(
+        (t: any) => (t.dayOfWeek || "").toLowerCase() === selectedDay.toLowerCase()
+      );
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(
@@ -224,7 +292,16 @@ function TimetableContainerContent({
     }
 
     return list;
-  }, [reduxTimetable, user, selectedClassId, selectedTeacherId, selectedDivision, selectedDay, studentClassId, searchQuery]);
+  }, [
+    reduxTimetable,
+    user,
+    selectedClassId,
+    selectedTeacherId,
+    selectedDivision,
+    selectedDay,
+    studentClassId,
+    searchQuery,
+  ]);
 
   // Break / Recess Time Config state
   const [breakConfig, setBreakConfig] = useState<{
