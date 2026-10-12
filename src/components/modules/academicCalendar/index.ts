@@ -1,4 +1,4 @@
-export { AcademicCalendarUI } from "./AcademicCalendarUI";
+export { AcademicCalendarUI, default } from "./AcademicCalendarUI";
 export { CalendarHeader } from "./CalendarHeader";
 export { CalendarStats } from "./CalendarStats";
 export { CalendarGridView } from "./CalendarGridView";
@@ -9,4 +9,4 @@ export { SchoolConfigModal } from "./SchoolConfigModal";
 export { EventDetailsModal } from "./EventDetailsModal";
 export * from "./calendarConstants";
 export * from "./types";
-export default AcademicCalendarUI;
+
