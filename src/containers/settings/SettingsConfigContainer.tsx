@@ -90,7 +90,6 @@ export function SettingsConfigContainer() {
 
   const getUserCount = (schoolId: string, role: string) =>
     users.filter((u) => u.schoolIds?.includes(schoolId) && u.role === role).length;
-  debugger
   // User Modal Handlers
   const openCreateUser = (schoolId?: string) => {
     setEditingUser(null);

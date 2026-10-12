@@ -16,6 +16,7 @@ import { subjectTeacherConfigSaga } from "./subjectTeacherConfig";
 import { classTeacherConfigSaga } from "./classTeacherConfig";
 import { classSubjectConfigSaga } from "./classSubjectConfig";
 import { settingsConfigSaga } from "./settingsConfig";
+import { academicCalendarSaga } from "./academicCalendar";
 
 export function* rootSaga() {
   yield all([
@@ -36,5 +37,6 @@ export function* rootSaga() {
     fork(classTeacherConfigSaga),
     fork(classSubjectConfigSaga),
     fork(settingsConfigSaga),
+    fork(academicCalendarSaga),
   ]);
 }

@@ -16,6 +16,7 @@ import { subjectTeacherConfigReducer } from "./subjectTeacherConfig";
 import { classTeacherConfigReducer } from "./classTeacherConfig";
 import { classSubjectConfigReducer } from "./classSubjectConfig";
 import { settingsConfigReducer } from "./settingsConfig";
+import { academicCalendarReducer } from "./academicCalendar";
 
 export const rootReducer = combineReducers({
   auth: authReducer,
@@ -35,6 +36,7 @@ export const rootReducer = combineReducers({
   classTeacherConfig: classTeacherConfigReducer,
   classSubjectConfig: classSubjectConfigReducer,
   settingsConfig: settingsConfigReducer,
+  academicCalendar: academicCalendarReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

@@ -21,6 +21,7 @@ import { SalaryReportPage } from "./pages/Reports/SalaryReportPage";
 import { FeeSalaryReportPage } from "./pages/Reports/FeeSalaryReportPage";
 import { AttendanceReportPage } from "./pages/Reports/AttendanceReportPage";
 import { TimetablePage } from "./pages/Timetable/TimetablePage";
+import { AcademicCalendarPage } from "./pages/AcademicCalendar/AcademicCalendarPage";
 import { HomeworkPage } from "./pages/Homework/HomeworkPage";
 import { NoticesPage } from "./pages/Notices/NoticesPage";
 import { MarksPage } from "./pages/Marks/MarksPage";
@@ -228,6 +229,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={getRolesForPath("/timetable")} moduleKey="timetable">
               <TimetablePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/school/:schoolId/academic-calendar"
+          element={
+            <ProtectedRoute allowedRoles={getRolesForPath("/academic-calendar")} moduleKey="academic-calendar">
+              <AcademicCalendarPage />
             </ProtectedRoute>
           }
         />

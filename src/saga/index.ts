@@ -33,4 +33,5 @@ export * from "./notices";
 export * from "./marks";
 export * from "./attendance";
 export * from "./subjectTeacherConfig";
+export * from "./academicCalendar";
 
