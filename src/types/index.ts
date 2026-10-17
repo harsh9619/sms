@@ -40,6 +40,13 @@ export interface Student {
   id: string;
   school_id: string;
   user_id: number | null;
+  user?: {
+    id?: number;
+    name?: string;
+    email?: string;
+    phone?: string;
+    avatar?: string;
+  };
   student_id?: string;
   name: string;
   studentName?: string;

@@ -980,7 +980,7 @@ function FeeInvoicesContainerContent({
   const handleStudentSelect = (studentId: string) => {
     const selected = students.find((s: any) => String(s.id) === String(studentId));
     if (selected) {
-      const sName = selected.name || (selected?.user ? selected.user.name : "");
+      const sName = selected.name || selected.user?.name || (selected as any).studentName || "";
       const sRoll = selected.roll_no || selected.rollNumber || "";
       const sClass = selected.class_name || selected.class || "";
       const sSection = selected.division_name || selected.section || "";
