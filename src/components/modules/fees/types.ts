@@ -1,107 +1,27 @@
 import type { FeeRecord } from "../../../types";
-import { ClassFeeStructureItem } from "../../../Services/fee.service";
+import {
+  ClassFeeStructureItem,
+  FeePaymentScheduleItem,
+  SchoolFeeSettings,
+  FeeStatsResponse,
+} from "../../../Services/fee.service";
 
-export const ALL_CLASS_OPTIONS = [
-  { id: "1", label: "LKG" },
-  { id: "2", label: "UKG" },
-  { id: "3", label: "Class 1" },
-  { id: "4", label: "Class 2" },
-  { id: "5", label: "Class 3" },
-  { id: "6", label: "Class 4" },
-  { id: "7", label: "Class 5" },
-  { id: "8", label: "Class 6" },
-  { id: "9", label: "Class 7" },
-  { id: "10", label: "Class 8" },
-  { id: "11", label: "Class 9" },
-  { id: "12", label: "Class 10" },
-  { id: "13", label: "Class 11" },
-  { id: "14", label: "Class 12" },
-];
+export type {
+  ClassFeeStructureItem,
+  FeePaymentScheduleItem,
+  SchoolFeeSettings,
+  FeeStatsResponse,
+  FeeRecord,
+};
 
-export const FEE_PRESET_TEMPLATES = [
-  {
-    name: "Monthly Tuition Fee",
-    feeType: "tuition",
-    amount: "3000",
-    frequency: "monthly",
-    month: "all",
-    description: "Standard monthly tuition fee component",
-    badge: "Popular",
-  },
-  {
-    name: "Term 1 Mid-Term Exam Fee",
-    feeType: "exam",
-    amount: "500",
-    frequency: "one_time",
-    month: "07",
-    description: "July term examination fee",
-    badge: "July Exam",
-  },
-  {
-    name: "Term 2 Mid-Term Exam Fee",
-    feeType: "exam",
-    amount: "500",
-    frequency: "one_time",
-    month: "11",
-    description: "November term examination fee",
-    badge: "November Exam",
-  },
-  {
-    name: "Bus Transport Fee",
-    feeType: "transport",
-    amount: "800",
-    frequency: "monthly",
-    month: "all",
-    description: "Optional monthly bus transport charge",
-    badge: "Monthly",
-  },
-  {
-    name: "Computer & IT Fee",
-    feeType: "computer",
-    amount: "400",
-    frequency: "monthly",
-    month: "all",
-    description: "Monthly CS lab access charge",
-    badge: "Lab Access",
-  },
-  {
-    name: "Annual Activity Fee",
-    feeType: "annual",
-    amount: "1000",
-    frequency: "annually",
-    month: "04",
-    description: "Annual academic activity and sports fee",
-    badge: "April Annual",
-  },
-  {
-    name: "Uniform Set Charge",
-    feeType: "uniforms",
-    amount: "1500",
-    frequency: "one_time",
-    month: "04",
-    description: "One-time uniform set charge",
-    badge: "One Time",
-  },
-];
-
-export const MONTH_GRID_ITEMS = [
-  { value: "04", label: "Apr", fullLabel: "April", badge: "Session Start" },
-  { value: "05", label: "May", fullLabel: "May", badge: "" },
-  { value: "06", label: "Jun", fullLabel: "June", badge: "Term 1 Exam" },
-  { value: "07", label: "Jul", fullLabel: "July", badge: "" },
-  { value: "08", label: "Aug", fullLabel: "August", badge: "" },
-  { value: "09", label: "Sep", fullLabel: "September", badge: "Mid Year" },
-  { value: "10", label: "Oct", fullLabel: "October", badge: "" },
-  { value: "11", label: "Nov", fullLabel: "November", badge: "Term 2 Exam" },
-  { value: "12", label: "Dec", fullLabel: "December", badge: "" },
-  { value: "01", label: "Jan", fullLabel: "January", badge: "" },
-  { value: "02", label: "Feb", fullLabel: "February", badge: "" },
-  { value: "03", label: "Mar", fullLabel: "March", badge: "Year End" },
-];
+export * from "../../../constants/fee";
 
 export interface FeesUIProps {
   fees: FeeRecord[];
   classFeeStructures?: ClassFeeStructureItem[];
+  feeSchedules?: FeePaymentScheduleItem[];
+  schoolSettings?: SchoolFeeSettings | null;
+  feeStats?: FeeStatsResponse | null;
   classes?: any[];
   students?: any[];
   loading?: boolean;
@@ -135,8 +55,23 @@ export interface FeesUIProps {
   handleExportSummary?: () => void;
 
   // Sub-Tab Switcher
-  activeSubTab?: "invoices" | "structures";
-  setActiveSubTab?: (tab: "invoices" | "structures") => void;
+  activeSubTab?: "invoices" | "schedules" | "structures" | "analytics";
+  setActiveSubTab?: (tab: "invoices" | "schedules" | "structures" | "analytics") => void;
+
+  // Payment Schedules (V2)
+  scheduleSessionFilter?: string;
+  setScheduleSessionFilter?: (val: string) => void;
+  scheduleFormatFilter?: string;
+  setScheduleFormatFilter?: (val: string) => void;
+  showScheduleModal?: boolean;
+  setShowScheduleModal?: (show: boolean) => void;
+  editingScheduleItem?: FeePaymentScheduleItem | null;
+  setEditingScheduleItem?: (item: FeePaymentScheduleItem | null) => void;
+  handleSaveScheduleItem?: (data: any) => void;
+  handleDeleteScheduleItem?: (id: string) => void;
+  handleGenerateDefaultSchedule?: (sessionStart: "april" | "july", format: "monthly" | "quarterly") => void;
+  handleUpdateSchoolSettings?: (settings: { feeSessionStart?: string; feeFrequency?: string }) => void;
+  isGeneratingSchedule?: boolean;
 
   // Class Fee Structure Actions
   showStructModal?: boolean;
@@ -161,16 +96,18 @@ export interface FeesUIProps {
     totalPages: number;
   } | null;
 
-  // Month Filtering
+  // Month & Schedule Filtering
   monthFilter?: string;
   setMonthFilter?: (val: string) => void;
+  sessionFilter?: string;
+  setSessionFilter?: (val: string) => void;
 
   // Active Receipt View Modal
   activeReceipt?: any;
   setActiveReceipt?: (receipt: any) => void;
   handleViewReceipt?: (fee: FeeRecord) => void;
 
-  // Auto Generate Invoices Modal
+  // Auto Generate Invoices Modal (V2)
   showGenerateModal?: boolean;
   setShowGenerateModal?: (show: boolean) => void;
   generateClassId?: string;
@@ -179,6 +116,18 @@ export interface FeesUIProps {
   setGenerateDueDate?: (val: string) => void;
   generateMonth?: string;
   setGenerateMonth?: (val: string) => void;
+  generateScheduleId?: string;
+  setGenerateScheduleId?: (val: string) => void;
+  generateInstallmentName?: string;
+  setGenerateInstallmentName?: (val: string) => void;
+  generateMultiplier?: number;
+  setGenerateMultiplier?: (val: number) => void;
+  generateSessionStart?: string;
+  setGenerateSessionStart?: (val: string) => void;
+  generateFormat?: string;
+  setGenerateFormat?: (val: string) => void;
+  generateIsEntireYear?: boolean;
+  setGenerateIsEntireYear?: (val: boolean) => void;
   handleGenerateInvoices?: () => void;
   isGenerating?: boolean;
 }

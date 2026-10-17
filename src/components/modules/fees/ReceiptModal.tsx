@@ -28,23 +28,28 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40">
-          <div className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-primary" />
-            <h3 className="font-black text-base text-foreground">Official Fee Payment Receipt</h3>
+        <div className="p-3.5 sm:p-4 border-b border-border flex items-center justify-between bg-muted/40">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Receipt className="h-5 w-5 text-primary shrink-0" />
+            <h3 className="font-black text-sm sm:text-base text-foreground truncate">
+              <span className="sm:hidden">Payment Receipt</span>
+              <span className="hidden sm:inline">Official Fee Payment Receipt</span>
+            </h3>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs font-bold gap-1"
+              className="h-8 px-2 sm:px-3 text-xs font-bold gap-1"
               onClick={() => window.print()}
+              title="Print Receipt"
             >
-              <FileText className="h-3.5 w-3.5" /> Print
+              <FileText className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Print</span>
             </Button>
             <Button
               size="sm"
-              className="h-8 text-xs font-bold gap-1"
+              className="h-8 px-2 sm:px-3 text-xs font-bold gap-1 bg-indigo-600 hover:bg-indigo-700"
               onClick={() =>
                 feeService.downloadFeeReceiptPdf(
                   activeReceipt.items?.[0]?.id || "1",
@@ -52,12 +57,15 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                   fees
                 )
               }
+              title="Download PDF"
             >
-              <Download className="h-3.5 w-3.5" /> Download PDF
+              <Download className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Download PDF</span>
+              <span className="sm:hidden">PDF</span>
             </Button>
             <button
               onClick={() => setActiveReceipt(null)}
-              className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors ml-1"
+              className="w-8 h-8 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
             >
               <X className="h-4 w-4" />
             </button>
@@ -65,7 +73,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
 
         {/* Printable Receipt Body Container */}
-        <div className="p-6 space-y-6 text-sm bg-background">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 text-sm bg-background">
           {/* Receipt Branding Band */}
           <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-700 to-teal-800 text-white shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>

@@ -8,12 +8,15 @@ import {
   Sparkles,
   Receipt,
   Layers,
+  Calendar,
+  BarChart3,
+  Sliders,
 } from "lucide-react";
 
 interface FeesHeaderProps {
   isMyFees?: boolean;
-  activeSubTab?: "invoices" | "structures";
-  setActiveSubTab?: (tab: "invoices" | "structures") => void;
+  activeSubTab?: "invoices" | "schedules" | "structures" | "analytics";
+  setActiveSubTab?: (tab: "invoices" | "schedules" | "structures" | "analytics") => void;
   error?: string | null;
   stats: {
     totalAmount: number;
@@ -30,6 +33,8 @@ interface FeesHeaderProps {
   handleOpenAddModal?: () => void;
   handleOpenAddStructModal?: () => void;
   setShowGenerateModal?: (show: boolean) => void;
+  statusFilter?: string;
+  setStatusFilter?: (val: string) => void;
 }
 
 export const FeesHeader: React.FC<FeesHeaderProps> = ({
@@ -43,131 +48,257 @@ export const FeesHeader: React.FC<FeesHeaderProps> = ({
   handleOpenAddModal,
   handleOpenAddStructModal,
   setShowGenerateModal,
+  statusFilter = "all",
+  setStatusFilter,
 }) => {
+  const handleStatCardClick = (status: "all" | "paid" | "pending" | "overdue") => {
+    if (!setStatusFilter) return;
+    if (statusFilter === status) {
+      setStatusFilter("all");
+    } else {
+      setStatusFilter(status);
+    }
+  };
+  console.log(stats);
   return (
-    <div className="space-y-6 text-left">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 text-left">
+      {/* Top Title and Action Row */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <DollarSign className="h-7 w-7 text-primary animate-pulse-glow" />
-            {isMyFees ? "My Fees" : "Fee Management & Ledgers"}
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-950/40 dark:border-indigo-800 dark:text-indigo-300 mb-1">
+            <Sparkles className="h-3 w-3 text-indigo-500 shrink-0" />
+            <span className="truncate">Fee Management Engine V2.0</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+            <div className="rounded-xl bg-indigo-600 p-1.5 sm:p-2 text-white shadow-md shadow-indigo-200 dark:shadow-none shrink-0">
+              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <span className="truncate">
+              {isMyFees ? "My Fee Records" : "School Fees & Ledger"}
+            </span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 max-w-2xl hidden sm:block">
             {isMyFees
-              ? "View your school fees, invoices and payment transaction history"
-              : "Manage student billing, class-wise fee structures, collections, and financial receipts"}
+              ? "View school fee schedules, installments, paid receipts and download tax-compliant payment PDFs."
+              : "Comprehensive billing engine for monthly/quarterly payment schedules (April & July cycles), class-wise fee structures, and receipts."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {handleExportExcel && (
-            <Button variant="outline" size="sm" onClick={handleExportExcel}>
-              <Download className="h-4 w-4 mr-2" /> Export Excel
+        {/* Action Buttons - Mobile First Stack & Wrap */}
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* Primary Action Button */}
+          {!isMyFees && activeSubTab === "invoices" && handleOpenAddModal && (
+            <Button
+              size="sm"
+              onClick={handleOpenAddModal}
+              className="w-full sm:w-auto rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 font-bold shadow-md shadow-indigo-200 dark:shadow-none h-9 order-1 sm:order-last"
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Add Fee Entry
             </Button>
           )}
-          {handleExportSummary && (
-            <Button variant="outline" size="sm" onClick={handleExportSummary}>
+
+          {!isMyFees && activeSubTab === "structures" && handleOpenAddStructModal && (
+            <Button
+              size="sm"
+              onClick={handleOpenAddStructModal}
+              className="w-full sm:w-auto rounded-xl text-xs bg-indigo-600 hover:bg-indigo-700 font-bold shadow-md shadow-indigo-200 dark:shadow-none h-9 order-1 sm:order-last"
+            >
+              <Plus className="h-4 w-4 mr-1.5" /> Configure Class Fee
+            </Button>
+          )}
+
+          {!isMyFees && setShowGenerateModal && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowGenerateModal(true)}
+              className="flex-1 sm:flex-initial rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 border border-indigo-200 text-xs font-bold shadow-xs h-9"
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+              <span className="truncate">Generate Invoices</span>
+            </Button>
+          )}
+
+          {/* {handleExportExcel && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              className="rounded-xl text-xs h-9 px-2.5 sm:px-3 font-semibold"
+              title="Export fee records to Excel"
+            >
+              <Download className="h-3.5 w-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Export Excel</span>
+            </Button>
+          )} */}
+
+          {/* {handleExportSummary && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportSummary}
+              className="rounded-xl text-xs h-9 px-2.5 sm:px-3 font-semibold hidden md:inline-flex"
+            >
               Summary Report
             </Button>
-          )}
-          {!isMyFees && activeSubTab === "invoices" && handleOpenAddModal && (
-            <Button size="sm" onClick={handleOpenAddModal}>
-              <Plus className="h-4 w-4 mr-2" /> Add Fee Entry
-            </Button>
-          )}
-          {!isMyFees && activeSubTab === "structures" && handleOpenAddStructModal && (
-            <Button size="sm" onClick={handleOpenAddStructModal}>
-              <Plus className="h-4 w-4 mr-2" /> Configure Class Fee
-            </Button>
-          )}
-          {!isMyFees && activeSubTab === "structures" && setShowGenerateModal && (
-            <Button size="sm" variant="secondary" onClick={() => setShowGenerateModal(true)}>
-              <Sparkles className="h-4 w-4 mr-2 text-primary" /> Auto-Generate Invoices
-            </Button>
-          )}
+          )} */}
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-sm font-medium">
+        <div className="p-3 sm:p-4 bg-destructive/10 border border-destructive/30 rounded-xl text-destructive text-xs sm:text-sm font-medium">
           {error}
         </div>
       )}
 
-      {/* Admin Sub-Tabs Switcher */}
+      {/* Admin Sub-Tabs Navigation (Mobile Pill Bar with Snap) */}
       {!isMyFees && setActiveSubTab && (
-        <div className="flex gap-2 border-b border-border/60 pb-1">
+        <div className="flex gap-1.5 p-1 bg-muted/50 rounded-2xl border border-border/60 overflow-x-auto no-scrollbar scroll-smooth snap-x">
           <button
             onClick={() => setActiveSubTab("invoices")}
-            className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors flex items-center gap-2 ${
-              activeSubTab === "invoices"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-3 py-2 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shrink-0 snap-start ${activeSubTab === "invoices"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              }`}
           >
-            <Receipt className="h-4 w-4" />
-            Student Fee Invoices & Ledgers
+            <Receipt className="h-3.5 w-3.5" />
+            <span>Invoices</span>
+            <span className="hidden sm:inline">&amp; Ledger</span>
           </button>
+
+          <button
+            onClick={() => setActiveSubTab("schedules")}
+            className={`px-3 py-2 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shrink-0 snap-start ${activeSubTab === "schedules"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              }`}
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            <span>Schedules</span>
+            <span className="hidden sm:inline">Master (V2)</span>
+          </button>
+
           <button
             onClick={() => setActiveSubTab("structures")}
-            className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors flex items-center gap-2 ${
-              activeSubTab === "structures"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+            className={`px-3 py-2 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shrink-0 snap-start ${activeSubTab === "structures"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              }`}
           >
-            <Layers className="h-4 w-4" />
-            Class-Wise Fee Structures
+            <Layers className="h-3.5 w-3.5" />
+            <span>Class Fees</span>
+            <span className="hidden sm:inline">Structures</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab("analytics")}
+            className={`px-3 py-2 font-bold text-xs rounded-xl transition-all flex items-center gap-1.5 shrink-0 snap-start ${activeSubTab === "analytics"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              }`}
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span>Analytics</span>
+            <span className="hidden sm:inline">&amp; KPIs</span>
           </button>
         </div>
       )}
 
-      {/* Summary Cards */}
+      {/* Summary KPI Cards for Invoices tab (Mobile 2x2 Grid, Interactive Tap-To-Filter) */}
       {activeSubTab === "invoices" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="hover-lift">
-            <CardContent className="pt-5 pb-5">
-              <p className="text-xs text-muted-foreground font-semibold">Total Fee Billing</p>
-              <p className="text-2xl font-black text-foreground mt-1.5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          {/* Total Invoices */}
+          <Card
+            onClick={() => handleStatCardClick("all")}
+            className={`hover-lift rounded-2xl border-gray-200 shadow-xs dark:border-gray-800 cursor-pointer transition-all ${statusFilter === "all" ? "ring-2 ring-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20" : ""
+              }`}
+          >
+            <CardContent className="p-3 sm:pt-5 sm:pb-5">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-bold uppercase tracking-wider truncate">
+                  Total Fees
+                </p>
+                {statusFilter === "all" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                )}
+              </div>
+              <p className="text-base sm:text-2xl font-black text-foreground mt-1 truncate">
                 ₹{stats.totalAmount.toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground mt-1">{stats.totalCount} Invoices</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 font-medium truncate">
+                {stats.totalCount} Invoices
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="hover-lift border-l-4 border-l-success">
-            <CardContent className="pt-5 pb-5">
-              <p className="text-xs text-muted-foreground font-semibold">Amount Settled (Paid)</p>
-              <p className="text-2xl font-black text-success mt-1.5">
+          {/* Paid */}
+          <Card
+            onClick={() => handleStatCardClick("paid")}
+            className={`hover-lift rounded-2xl border-l-4 border-l-emerald-500 shadow-xs dark:border-gray-800 cursor-pointer transition-all ${statusFilter === "paid" ? "ring-2 ring-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20" : ""
+              }`}
+          >
+            <CardContent className="p-3 sm:pt-5 sm:pb-5">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-bold uppercase tracking-wider truncate">
+                  Paid
+                </p>
+                {statusFilter === "paid" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                )}
+              </div>
+              <p className="text-base sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 truncate">
                 ₹{stats.paidAmount.toLocaleString()}
               </p>
-              <p className="text-xs text-success/80 mt-1 font-medium">
-                {stats.paidCount} Fully Paid Receipts
+              <p className="text-[10px] sm:text-xs text-emerald-600/80 mt-0.5 font-medium truncate">
+                {stats.paidCount} Fully Paid
               </p>
             </CardContent>
           </Card>
 
-          <Card className="hover-lift border-l-4 border-l-warning">
-            <CardContent className="pt-5 pb-5">
-              <p className="text-xs text-muted-foreground font-semibold">Pending Collection</p>
-              <p className="text-2xl font-black text-warning mt-1.5">
+          {/* Pending */}
+          <Card
+            onClick={() => handleStatCardClick("pending")}
+            className={`hover-lift rounded-2xl border-l-4 border-l-amber-500 shadow-xs dark:border-gray-800 cursor-pointer transition-all ${statusFilter === "pending" ? "ring-2 ring-amber-500 bg-amber-50/20 dark:bg-amber-950/20" : ""
+              }`}
+          >
+            <CardContent className="p-3 sm:pt-5 sm:pb-5">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-bold uppercase tracking-wider truncate">
+                  Pending
+                </p>
+                {statusFilter === "pending" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                )}
+              </div>
+              <p className="text-base sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 truncate">
                 ₹{stats.pendingAmount.toLocaleString()}
               </p>
-              <p className="text-xs text-warning/80 mt-1 font-medium">
-                {stats.pendingCount} Invoices Pending
+              <p className="text-[10px] sm:text-xs text-amber-600/80 mt-0.5 font-medium truncate">
+                {stats.pendingCount} Pending
               </p>
             </CardContent>
           </Card>
 
-          <Card className="hover-lift border-l-4 border-l-destructive">
-            <CardContent className="pt-5 pb-5">
-              <p className="text-xs text-muted-foreground font-semibold">Overdue Dues</p>
-              <p className="text-2xl font-black text-destructive mt-1.5">
+          {/* Overdue */}
+          <Card
+            onClick={() => handleStatCardClick("overdue")}
+            className={`hover-lift rounded-2xl border-l-4 border-l-red-500 shadow-xs dark:border-gray-800 cursor-pointer transition-all ${statusFilter === "overdue" ? "ring-2 ring-red-500 bg-red-50/20 dark:bg-red-950/20" : ""
+              }`}
+          >
+            <CardContent className="p-3 sm:pt-5 sm:pb-5">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-bold uppercase tracking-wider truncate">
+                  Overdue
+                </p>
+                {statusFilter === "overdue" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                )}
+              </div>
+              <p className="text-base sm:text-2xl font-black text-red-600 dark:text-red-400 mt-1 truncate">
                 ₹{stats.overdueAmount.toLocaleString()}
               </p>
-              <p className="text-xs text-destructive/80 mt-1 font-medium">
-                {stats.overdueCount} Critical Overdue
+              <p className="text-[10px] sm:text-xs text-red-600/80 mt-0.5 font-medium truncate">
+                {stats.overdueCount} Critical
               </p>
             </CardContent>
           </Card>
@@ -176,3 +307,4 @@ export const FeesHeader: React.FC<FeesHeaderProps> = ({
     </div>
   );
 };
+

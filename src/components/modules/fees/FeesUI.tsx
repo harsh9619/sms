@@ -5,6 +5,8 @@ import { FeesHeader } from "./FeesHeader";
 import { FeesToolbar } from "./FeesToolbar";
 import { FeesTable } from "./FeesTable";
 import { ClassFeeStructuresTable } from "./ClassFeeStructuresTable";
+import { FeeSchedulesTab } from "./FeeSchedulesTab";
+import { FeeAnalyticsTab } from "./FeeAnalyticsTab";
 import { ReceiptModal } from "./ReceiptModal";
 import { CheckoutModal } from "./CheckoutModal";
 import { AddEditFeeModal } from "./AddEditFeeModal";
@@ -14,6 +16,9 @@ import { GenerateInvoicesModal } from "./GenerateInvoicesModal";
 export function FeesUI({
   fees,
   classFeeStructures = [],
+  feeSchedules = [],
+  schoolSettings = null,
+  feeStats = null,
   classes = [],
   students = [],
   loading = false,
@@ -26,6 +31,8 @@ export function FeesUI({
   setFeeTypeFilter,
   monthFilter = "all",
   setMonthFilter,
+  sessionFilter = "all",
+  setSessionFilter,
   isMyFees = false,
   payingFee = null,
   setPayingFee,
@@ -72,10 +79,105 @@ export function FeesUI({
   setGenerateDueDate,
   generateMonth = new Date().toISOString().slice(0, 7),
   setGenerateMonth,
+  generateScheduleId = "",
+  setGenerateScheduleId,
+  generateInstallmentName = "",
+  setGenerateInstallmentName,
+  generateMultiplier = 1,
+  setGenerateMultiplier,
+  generateSessionStart = "april",
+  setGenerateSessionStart,
+  generateFormat = "monthly",
+  setGenerateFormat,
+  generateIsEntireYear = false,
+  setGenerateIsEntireYear,
   handleGenerateInvoices,
   isGenerating = false,
+  handleGenerateDefaultSchedule,
+  handleSaveScheduleItem,
+  handleDeleteScheduleItem,
+  handleUpdateSchoolSettings,
+  isGeneratingSchedule = false,
 }: FeesUIProps) {
   const [selectedClassFilter, setSelectedClassFilter] = React.useState<string>("all");
+  const [selectedDivisionFilter, setSelectedDivisionFilter] = React.useState<string>("all");
+
+  // Distinct classes list for toolbar filter
+  const availableClassesList = React.useMemo(() => {
+    const classMap = new Map<string, string>();
+    classes.forEach((c) => {
+      const name = c.name || c.className;
+      if (name) {
+        const clean = String(name).split("-")[0].trim();
+        classMap.set(clean, clean);
+      }
+    });
+    students.forEach((s) => {
+      const name = s.class_name || s.class;
+      if (name) {
+        const clean = String(name).split("-")[0].trim();
+        classMap.set(clean, clean);
+      }
+    });
+    fees.forEach((f) => {
+      if (f.class) {
+        const clean = String(f.class).split("-")[0].trim();
+        classMap.set(clean, clean);
+      }
+    });
+    return Array.from(classMap.values()).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+  }, [classes, students, fees]);
+
+  // Divisions list dependent on selected class
+  const availableDivisionsList = React.useMemo(() => {
+    const divSet = new Set<string>();
+
+    classes.forEach((c) => {
+      const cName = (c.name || c.className || "").split("-")[0].trim().toLowerCase();
+      if (
+        selectedClassFilter === "all" ||
+        cName === selectedClassFilter.toLowerCase() ||
+        (c.name || c.className || "").toLowerCase().includes(selectedClassFilter.toLowerCase())
+      ) {
+        if (c.section) divSet.add(String(c.section).trim());
+        if (c.division) divSet.add(String(c.division).trim());
+        if (c.divisions && Array.isArray(c.divisions)) {
+          c.divisions.forEach((d: any) => d.name && divSet.add(String(d.name).trim()));
+        }
+      }
+    });
+
+    students.forEach((s) => {
+      const sClass = (s.class_name || s.class || "").split("-")[0].trim().toLowerCase();
+      if (
+        selectedClassFilter === "all" ||
+        sClass === selectedClassFilter.toLowerCase() ||
+        (s.class_name || s.class || "").toLowerCase().includes(selectedClassFilter.toLowerCase())
+      ) {
+        const div = s.division_name || s.section;
+        if (div) divSet.add(String(div).trim());
+      }
+    });
+
+    fees.forEach((f) => {
+      const fClass = (f.class || "").split("-")[0].trim().toLowerCase();
+      if (
+        selectedClassFilter === "all" ||
+        fClass === selectedClassFilter.toLowerCase() ||
+        (f.class || "").toLowerCase().includes(selectedClassFilter.toLowerCase())
+      ) {
+        if (f.section) divSet.add(String(f.section).trim());
+        const parts = (f.class || "").split("-");
+        if (parts.length > 1 && parts[1]) {
+          divSet.add(parts[1].trim());
+        }
+      }
+    });
+
+    return Array.from(divSet).filter(Boolean).sort();
+  }, [classes, students, fees, selectedClassFilter]);
 
   // Compute all fee items to be paid together for checkout modal
   const payingFeeItems = React.useMemo(() => {
@@ -205,15 +307,46 @@ export function FeesUI({
 
       const matchesStatus = statusFilter === "all" || f.status === statusFilter;
       const matchesType = feeTypeFilter === "all" || f.feeType === feeTypeFilter;
-      const matchesMonth = monthFilter === "all" || f.month === monthFilter;
+      const matchesMonth =
+        monthFilter === "all" ||
+        f.month === monthFilter ||
+        Boolean(f.month && (f.month.endsWith("-" + monthFilter) || f.month.includes(monthFilter)));
+
+      const fClass = (f.class || "").toLowerCase();
+      const fSection = (f.section || "").toLowerCase();
 
       const matchesClass =
         selectedClassFilter === "all" ||
-        (f.class && f.class.toLowerCase().includes(selectedClassFilter.toLowerCase()));
+        fClass === selectedClassFilter.toLowerCase() ||
+        fClass.startsWith(selectedClassFilter.toLowerCase() + "-") ||
+        fClass.startsWith(selectedClassFilter.toLowerCase() + " ") ||
+        fClass.includes(selectedClassFilter.toLowerCase());
 
-      return matchesSearch && matchesStatus && matchesType && matchesMonth && matchesClass;
+      const matchesDivision =
+        selectedDivisionFilter === "all" ||
+        fSection === selectedDivisionFilter.toLowerCase() ||
+        fClass.endsWith("-" + selectedDivisionFilter.toLowerCase()) ||
+        fClass.endsWith(" " + selectedDivisionFilter.toLowerCase()) ||
+        fClass.includes("-" + selectedDivisionFilter.toLowerCase());
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesType &&
+        matchesMonth &&
+        matchesClass &&
+        matchesDivision
+      );
     });
-  }, [fees, searchQuery, statusFilter, feeTypeFilter, monthFilter, selectedClassFilter]);
+  }, [
+    fees,
+    searchQuery,
+    statusFilter,
+    feeTypeFilter,
+    monthFilter,
+    selectedClassFilter,
+    selectedDivisionFilter,
+  ]);
 
   // Filtered class fee structures computation
   const filteredClassFeeStructures = React.useMemo(() => {
@@ -287,7 +420,7 @@ export function FeesUI({
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, feeTypeFilter, selectedClassFilter]);
+  }, [searchQuery, statusFilter, feeTypeFilter, selectedClassFilter, selectedDivisionFilter, monthFilter]);
 
   const totalFeesCount = meta ? meta.total : filteredFees.length;
   const totalPages = meta ? meta.totalPages : Math.max(1, Math.ceil(totalFeesCount / pageSize));
@@ -611,28 +744,41 @@ export function FeesUI({
         handleOpenAddModal={handleOpenAddModal}
         handleOpenAddStructModal={handleOpenAddStructModal}
         setShowGenerateModal={setShowGenerateModal}
-      />
-
-      {/* Search & Filters Toolbar */}
-      <FeesToolbar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
-        feeTypeFilter={feeTypeFilter}
-        setFeeTypeFilter={setFeeTypeFilter}
-        monthFilter={monthFilter}
-        setMonthFilter={setMonthFilter}
-        selectedClassFilter={selectedClassFilter}
-        setSelectedClassFilter={setSelectedClassFilter}
-        classes={classes}
-        isMyFees={isMyFees}
-        activeSubTab={activeSubTab}
-        filteredCount={activeSubTab === "invoices" ? filteredFees.length : filteredClassFeeStructures.length}
       />
 
-      {/* Main Active Sub-Tab Data Table */}
-      {activeSubTab === "invoices" ? (
+      {/* Search & Filters Toolbar (Shown for Invoices & Structures) */}
+      {(activeSubTab === "invoices" || activeSubTab === "structures") && (
+        <FeesToolbar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          feeTypeFilter={feeTypeFilter}
+          setFeeTypeFilter={setFeeTypeFilter}
+          monthFilter={monthFilter}
+          setMonthFilter={setMonthFilter}
+          sessionFilter={sessionFilter}
+          setSessionFilter={setSessionFilter}
+          selectedClassFilter={selectedClassFilter}
+          setSelectedClassFilter={(val) => {
+            setSelectedClassFilter(val);
+            setSelectedDivisionFilter("all");
+          }}
+          selectedDivisionFilter={selectedDivisionFilter}
+          setSelectedDivisionFilter={setSelectedDivisionFilter}
+          availableClasses={availableClassesList}
+          availableDivisions={availableDivisionsList}
+          classes={classes}
+          isMyFees={isMyFees}
+          activeSubTab={activeSubTab}
+          filteredCount={activeSubTab === "invoices" ? filteredFees.length : filteredClassFeeStructures.length}
+        />
+      )}
+
+      {/* Main Active Sub-Tab Content */}
+      {activeSubTab === "invoices" && (
         <FeesTable
           fees={fees}
           loading={loading}
@@ -649,7 +795,43 @@ export function FeesUI({
           handleOpenEditModal={handleOpenEditModal}
           handleDeleteFee={handleDeleteFee}
         />
-      ) : (
+      )}
+
+      {activeSubTab === "schedules" && (
+        <FeeSchedulesTab
+          schedules={feeSchedules}
+          schoolSettings={schoolSettings}
+          onGenerateDefaults={handleGenerateDefaultSchedule || (() => {})}
+          onSaveScheduleItem={handleSaveScheduleItem || (() => {})}
+          onDeleteScheduleItem={handleDeleteScheduleItem || (() => {})}
+          onUpdateSchoolSettings={handleUpdateSchoolSettings}
+          onOpenGenerateInvoices={(preset) => {
+            if (preset) {
+              if ((preset as any).isEntireYear) {
+                if (setGenerateIsEntireYear) setGenerateIsEntireYear(true);
+                if (setGenerateScheduleId) setGenerateScheduleId("entire_year");
+                if (preset.sessionStart && setGenerateSessionStart) setGenerateSessionStart(preset.sessionStart);
+                if (preset.format && setGenerateFormat) setGenerateFormat(preset.format);
+              } else {
+                if (setGenerateIsEntireYear) setGenerateIsEntireYear(false);
+                if (setGenerateScheduleId) setGenerateScheduleId(preset.scheduleId || "");
+                if (setGenerateInstallmentName) setGenerateInstallmentName(preset.installmentName || "");
+                if (setGenerateMonth && preset.month) {
+                  const yr = new Date().getFullYear();
+                  setGenerateMonth(`${yr}-${preset.month}`);
+                }
+                if (setGenerateMultiplier && preset.multiplier) setGenerateMultiplier(preset.multiplier);
+                if (setGenerateSessionStart && preset.sessionStart) setGenerateSessionStart(preset.sessionStart);
+                if (setGenerateFormat && preset.format) setGenerateFormat(preset.format);
+              }
+            }
+            if (setShowGenerateModal) setShowGenerateModal(true);
+          }}
+          isGenerating={isGeneratingSchedule}
+        />
+      )}
+
+      {activeSubTab === "structures" && (
         <ClassFeeStructuresTable
           classFeeStructures={classFeeStructures}
           paginatedStructs={paginatedStructs}
@@ -660,6 +842,17 @@ export function FeesUI({
           setStructPage={setStructPage}
           structTotalPages={totalStructPages}
           totalStructCount={totalStructsCount}
+        />
+      )}
+
+      {activeSubTab === "analytics" && (
+        <FeeAnalyticsTab
+          stats={feeStats}
+          currencySymbol="₹"
+          onNavigateToInvoices={(targetStatus) => {
+            if (setStatusFilter && targetStatus) setStatusFilter(targetStatus);
+            if (setActiveSubTab) setActiveSubTab("invoices");
+          }}
         />
       )}
 
@@ -723,7 +916,7 @@ export function FeesUI({
         />
       )}
 
-      {/* Auto-Generate Invoices Modal */}
+      {/* Auto-Generate Invoices Modal (V2) */}
       {showGenerateModal && setShowGenerateModal && (
         <GenerateInvoicesModal
           showGenerateModal={showGenerateModal}
@@ -734,10 +927,23 @@ export function FeesUI({
           setGenerateDueDate={setGenerateDueDate}
           generateMonth={generateMonth}
           setGenerateMonth={setGenerateMonth}
+          generateScheduleId={generateScheduleId}
+          setGenerateScheduleId={setGenerateScheduleId}
+          generateInstallmentName={generateInstallmentName}
+          setGenerateInstallmentName={setGenerateInstallmentName}
+          generateMultiplier={generateMultiplier}
+          setGenerateMultiplier={setGenerateMultiplier}
+          generateSessionStart={generateSessionStart}
+          setGenerateSessionStart={setGenerateSessionStart}
+          generateFormat={generateFormat}
+          setGenerateFormat={setGenerateFormat}
+          generateIsEntireYear={generateIsEntireYear}
+          setGenerateIsEntireYear={setGenerateIsEntireYear}
           handleGenerateInvoices={handleGenerateInvoices}
           isGenerating={isGenerating}
           classes={classes}
           classFeeStructures={classFeeStructures}
+          feeSchedules={feeSchedules}
           students={students}
           handleCloseGenerateModal={handleCloseGenerateModal}
         />

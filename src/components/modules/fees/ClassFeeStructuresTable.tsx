@@ -140,11 +140,11 @@ export const ClassFeeStructuresTable: React.FC<ClassFeeStructuresTableProps> = (
           <Layers className="h-5 w-5 text-primary" />
           Class-Wise Master Fee Structures
         </CardTitle>
-        {setShowGenerateModal && (
+        {/* {setShowGenerateModal && (
           <Button size="sm" variant="outline" onClick={() => setShowGenerateModal(true)}>
             <Sparkles className="h-4 w-4 mr-2 text-primary" /> Auto-Generate Invoices
           </Button>
-        )}
+        )} */}
       </CardHeader>
       <CardContent className="p-0">
         <DataTable
@@ -155,27 +155,37 @@ export const ClassFeeStructuresTable: React.FC<ClassFeeStructuresTableProps> = (
           emptyText="No class fee structures configured."
           emptyIcon={<Layers className="h-8 w-8 opacity-30 text-muted-foreground" />}
           renderMobileCard={(struct) => (
-            <div className="space-y-3">
+            <div className="p-3.5 rounded-2xl bg-card border border-border/80 shadow-2xs space-y-3 transition-all hover:border-primary/40">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <span className="font-bold text-sm text-foreground block">
+                <div className="min-w-0">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-bold mb-1">
                     {struct.className || `Class ${struct.classMasterId}`}
-                  </span>
-                  <span className="font-semibold text-xs text-primary">{struct.feeName}</span>
+                  </div>
+                  <h4 className="font-extrabold text-sm text-foreground truncate">
+                    {struct.feeName}
+                  </h4>
+                  {struct.description && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                      {struct.description}
+                    </p>
+                  )}
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Badge variant={struct.isMandatory ? "success" : "warning"} className="text-[10px]">
+                <div className="flex items-center gap-1 shrink-0">
+                  <Badge
+                    variant={struct.isMandatory ? "success" : "warning"}
+                    className="text-[10px] font-bold"
+                  >
                     {struct.isMandatory ? "Mandatory" : "Optional"}
                   </Badge>
-                  <Badge variant="secondary" className="capitalize text-[10px]">
+                  <Badge variant="secondary" className="capitalize text-[10px] font-bold">
                     {struct.feeType}
                   </Badge>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs bg-muted/30 p-2.5 rounded-xl border border-border/40">
+              <div className="grid grid-cols-2 gap-2 text-xs bg-muted/40 p-2.5 rounded-xl border border-border/50">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase text-muted-foreground tracking-wider block">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider block">
                     Amount
                   </span>
                   <span className="font-black text-foreground text-sm">
@@ -183,7 +193,7 @@ export const ClassFeeStructuresTable: React.FC<ClassFeeStructuresTableProps> = (
                   </span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase text-muted-foreground tracking-wider block">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider block">
                     Applicable Month
                   </span>
                   <span className="font-bold text-primary text-xs">
@@ -192,11 +202,11 @@ export const ClassFeeStructuresTable: React.FC<ClassFeeStructuresTableProps> = (
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs">
-                <span className="text-muted-foreground text-[11px] font-medium">
+              <div className="flex items-center justify-between pt-1 border-t border-border/40 text-xs gap-2">
+                <span className="text-muted-foreground text-[11px] font-medium truncate">
                   {struct.frequency} • Day {struct.dueDay} of month
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   {handleOpenEditStructModal && (
                     <Button
                       variant="ghost"
@@ -206,6 +216,7 @@ export const ClassFeeStructuresTable: React.FC<ClassFeeStructuresTableProps> = (
                         handleOpenEditStructModal(struct);
                       }}
                       className="hover:text-primary h-8 w-8"
+                      title="Edit Structure"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -219,6 +230,7 @@ export const ClassFeeStructuresTable: React.FC<ClassFeeStructuresTableProps> = (
                         handleDeleteStruct(struct.id);
                       }}
                       className="hover:text-destructive h-8 w-8"
+                      title="Delete Structure"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

@@ -8,4 +8,6 @@ export * from "./CheckoutModal";
 export * from "./AddEditFeeModal";
 export * from "./ClassFeeStructureModal";
 export * from "./GenerateInvoicesModal";
+export * from "./FeeSchedulesTab";
+export * from "./FeeAnalyticsTab";
 export * from "./FeesUI";

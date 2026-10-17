@@ -16,6 +16,47 @@ export interface ClassFeeStructureItem {
   description?: string;
 }
 
+export interface FeePaymentScheduleItem {
+  id: string;
+  schoolId: string;
+  scheduleName: string;
+  sessionStart: "april" | "july";
+  installmentFormat: "monthly" | "quarterly" | "half_yearly" | "annually";
+  orderSeq: number;
+  monthPayable: string;
+  feeForMonths?: string;
+  monthMultiplier: number;
+  dueDay: number;
+  dueDate?: string;
+  extensionDays: number;
+  lateFeeDay: number;
+  lateFeeAmount: number;
+  paymentMethodsAllowed: string;
+  notes?: string;
+  isActive: boolean;
+}
+
+export interface SchoolFeeSettings {
+  schoolId: string;
+  schoolName: string;
+  academicYear: string;
+  feeSessionStart: "april" | "july";
+  feeFrequency: "monthly" | "quarterly";
+}
+
+export interface FeeStatsResponse {
+  totalBilled: number;
+  totalCollected: number;
+  totalPending: number;
+  totalOverdue: number;
+  totalInvoicesCount: number;
+  paidCount: number;
+  pendingCount: number;
+  overdueCount: number;
+  collectionRate: number;
+  typeBreakdown: Record<string, { billed: number; collected: number; count: number }>;
+}
+
 export interface FeeQueryParams {
   page?: number;
   limit?: number;
@@ -25,6 +66,10 @@ export interface FeeQueryParams {
   month?: string;
   studentId?: string;
   schoolId?: string;
+  scheduleId?: string;
+  installmentName?: string;
+  sessionStart?: string;
+  classMasterId?: string;
 }
 
 export interface PaginatedFeeResponse {
@@ -48,6 +93,10 @@ export const feeService = {
       if (params.feeType && params.feeType !== "all") queryParts.push(`feeType=${encodeURIComponent(params.feeType)}`);
       if (params.month && params.month !== "all") queryParts.push(`month=${encodeURIComponent(params.month)}`);
       if (params.studentId) queryParts.push(`studentId=${encodeURIComponent(params.studentId)}`);
+      if (params.scheduleId) queryParts.push(`scheduleId=${encodeURIComponent(params.scheduleId)}`);
+      if (params.installmentName && params.installmentName !== "all") queryParts.push(`installmentName=${encodeURIComponent(params.installmentName)}`);
+      if (params.sessionStart && params.sessionStart !== "all") queryParts.push(`sessionStart=${encodeURIComponent(params.sessionStart)}`);
+      if (params.classMasterId && params.classMasterId !== "all") queryParts.push(`classMasterId=${encodeURIComponent(params.classMasterId)}`);
     }
 
     const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
@@ -67,6 +116,56 @@ export const feeService = {
     return httpService.delete(`/api/fees/${id}`);
   },
 
+  // --- Fee Payment Schedules APIs (Version 2) ---
+  getFeeSchedules: async (
+    schoolId = "1",
+    filters?: { sessionStart?: string; format?: string; academicYear?: string }
+  ): Promise<FeePaymentScheduleItem[]> => {
+    const params: string[] = [];
+    if (filters?.sessionStart && filters.sessionStart !== "all") params.push(`sessionStart=${filters.sessionStart}`);
+    if (filters?.format && filters.format !== "all") params.push(`format=${filters.format}`);
+    if (filters?.academicYear && filters.academicYear !== "all") params.push(`academicYear=${filters.academicYear}`);
+    const query = params.length > 0 ? `?${params.join("&")}` : "";
+    return httpService.get<FeePaymentScheduleItem[]>(`/api/${schoolId}/fees/schedules${query}`);
+  },
+
+  saveFeeSchedule: async (schoolId = "1", data: Partial<FeePaymentScheduleItem>): Promise<any> => {
+    return httpService.post(`/api/${schoolId}/fees/schedules`, data);
+  },
+
+  deleteFeeSchedule: async (schoolId = "1", id: string): Promise<any> => {
+    return httpService.delete(`/api/${schoolId}/fees/schedules/${id}`);
+  },
+
+  generateDefaultSchedule: async (
+    schoolId = "1",
+    payload: {
+      sessionStart: "april" | "july";
+      format: "monthly" | "quarterly";
+      academicYear?: string;
+      dueDay?: number;
+    }
+  ): Promise<{ success: boolean; count: number; message: string }> => {
+    return httpService.post(`/api/${schoolId}/fees/schedules/generate-defaults`, payload);
+  },
+
+  // --- School Fee Settings APIs ---
+  getSchoolFeeSettings: async (schoolId = "1"): Promise<SchoolFeeSettings> => {
+    return httpService.get<SchoolFeeSettings>(`/api/${schoolId}/fees/settings`);
+  },
+
+  updateSchoolFeeSettings: async (
+    schoolId = "1",
+    payload: { feeSessionStart?: string; feeFrequency?: string }
+  ): Promise<SchoolFeeSettings> => {
+    return httpService.put<SchoolFeeSettings>(`/api/${schoolId}/fees/settings`, payload);
+  },
+
+  // --- Fee Statistics KPI API ---
+  getFeeStats: async (schoolId = "1"): Promise<FeeStatsResponse> => {
+    return httpService.get<FeeStatsResponse>(`/api/${schoolId}/fees/stats`);
+  },
+
   // Class-wise Fee Structure APIs
   getClassFeeStructures: async (schoolId = "1", classMasterId?: string): Promise<ClassFeeStructureItem[]> => {
     const query = classMasterId ? `?classMasterId=${classMasterId}` : "";
@@ -81,8 +180,30 @@ export const feeService = {
     return httpService.delete(`/api/${schoolId}/fees/structures/${id}`);
   },
 
-  generateClassInvoices: async (schoolId = "1", classMasterId: string, dueDate?: string, month?: string): Promise<any> => {
-    return httpService.post(`/api/${schoolId}/fees/generate-invoices`, { classMasterId, dueDate, month });
+  generateClassInvoices: async (
+    schoolId = "1",
+    payload: {
+      classMasterId?: string | number;
+      dueDate?: string;
+      month?: string;
+      scheduleId?: string | number;
+      installmentName?: string;
+      sessionStart?: string;
+      installmentFormat?: string;
+      multiplier?: number;
+      isEntireYear?: boolean;
+    } | string,
+    dueDate?: string,
+    month?: string
+  ): Promise<any> => {
+    if (typeof payload === "object") {
+      return httpService.post(`/api/${schoolId}/fees/generate-invoices`, payload);
+    }
+    return httpService.post(`/api/${schoolId}/fees/generate-invoices`, {
+      classMasterId: payload,
+      dueDate,
+      month,
+    });
   },
 
   payStudentFeeBundle: async (schoolId = "1", payload: {

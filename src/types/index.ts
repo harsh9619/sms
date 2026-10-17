@@ -218,6 +218,11 @@ export interface FeeRecord {
   paidDate?: string;
   status: "pending" | "paid" | "overdue";
   remarks?: string;
+  scheduleId?: string;
+  installmentName?: string;
+  sessionStart?: string;
+  isOverdue?: boolean;
+  createdAt?: string;
 }
 
 
