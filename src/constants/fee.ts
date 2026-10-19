@@ -29,28 +29,32 @@ export const BASE_FEE_COMPONENTS: FeeComponentDefinition[] = [
   { id: "library", label: "Library Fee", icon: Layers },
   { id: "sports", label: "Sports Fee", icon: Sparkles },
   { id: "hostel", label: "Hostel Fee", icon: DollarSign },
-  { id: "lab", label: "Lab / Computer Fee", icon: DollarSign },
+  { id: "lab", label: "Science Lab Fee", icon: DollarSign },
   { id: "annual", label: "Annual Charges", icon: Sparkles },
-  { id: "uniforms", label: "Uniforms & Books", icon: Layers },
-  { id: "other", label: "Other Fee", icon: DollarSign },
+  { id: "uniforms", label: "Uniform Charge", icon: Layers },
+  { id: "other", label: "Other Component Fee", icon: DollarSign },
 ];
 
 export const DEFAULT_FEE_TYPES = [
   { id: "tuition", label: "Tuition Fee" },
+  { id: "lab", label: "Science Lab Fee" },
+  { id: "uniforms", label: "Uniform Charge" },
   { id: "exam", label: "Exam Fee" },
   { id: "transport", label: "Transport Fee" },
   { id: "library", label: "Library Fee" },
   { id: "sports", label: "Sports Fee" },
-  { id: "other", label: "Other Fee" },
+  { id: "other", label: "Other Component Fee" },
 ];
 
 export const DEFAULT_SELECTED_FEE_ITEMS = [
   { feeType: "tuition", label: "Tuition Fee", amount: "", selected: true },
+  { feeType: "lab", label: "Science Lab Fee", amount: "", selected: false },
+  { feeType: "uniforms", label: "Uniform Charge", amount: "", selected: false },
   { feeType: "exam", label: "Exam Fee", amount: "", selected: false },
   { feeType: "transport", label: "Transport Fee", amount: "", selected: false },
   { feeType: "library", label: "Library Fee", amount: "", selected: false },
   { feeType: "sports", label: "Sports Fee", amount: "", selected: false },
-  { feeType: "other", label: "Other Fee", amount: "", selected: false },
+  { feeType: "other", label: "Other Component Fee", amount: "", selected: false },
 ];
 
 // ============================================================================
@@ -273,6 +277,33 @@ export const FEE_PRESET_TEMPLATES = [
     badge: "Popular",
   },
   {
+    name: "Uniform Set Charge",
+    feeType: "uniforms",
+    amount: "1500",
+    frequency: "one_time",
+    month: "anytime",
+    description: "Uniform set charge - payable any time in year",
+    badge: "Any Time in Year",
+  },
+  {
+    name: "Science Lab Fee",
+    feeType: "lab",
+    amount: "1200",
+    frequency: "one_time",
+    month: "anytime",
+    description: "Science & practical lab fee - payable any time in year",
+    badge: "Any Time in Year",
+  },
+  {
+    name: "Other Component Fee",
+    feeType: "other",
+    amount: "500",
+    frequency: "one_time",
+    month: "anytime",
+    description: "General / miscellaneous component fee - payable any time in year",
+    badge: "Any Time in Year",
+  },
+  {
     name: "Term 1 Mid-Term Exam Fee",
     feeType: "exam",
     amount: "500",
@@ -316,15 +347,6 @@ export const FEE_PRESET_TEMPLATES = [
     month: "04",
     description: "Annual academic activity and sports fee",
     badge: "April Annual",
-  },
-  {
-    name: "Uniform Set Charge",
-    feeType: "uniforms",
-    amount: "1500",
-    frequency: "one_time",
-    month: "04",
-    description: "One-time uniform set charge",
-    badge: "One Time",
   },
 ];
 

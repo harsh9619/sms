@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../ui/Card";
 import { Button } from "../../ui/Button";
 import { Badge } from "../../ui/Badge";
 import { DataTable, ColumnDef } from "../../ui/DataTable";
-import { Layers, Sparkles, Edit, Trash2 } from "lucide-react";
+import { Layers, Sparkles, Edit, Trash2, Clock } from "lucide-react";
 import { ClassFeeStructureItem } from "../../../Services/fee.service";
+import { MONTH_NAMES_MAP } from "../../../constants/fee";
 
 interface ClassFeeStructuresTableProps {
   classFeeStructures: ClassFeeStructureItem[];
@@ -60,11 +61,47 @@ export const ClassFeeStructuresTable: React.FC<ClassFeeStructuresTableProps> = (
     {
       key: "month",
       header: "Applicable Month",
-      cell: (struct) => (
-        <Badge variant="outline" className="capitalize font-bold text-primary border-primary/30 text-xs">
-          {struct.month === "all" || !struct.month ? "Every Month" : struct.month}
-        </Badge>
-      ),
+      cell: (struct) => {
+        const isAnyTime =
+          struct.month === "anytime" ||
+          struct.month === "any_time" ||
+          struct.month === "any" ||
+          struct.month === "flexible" ||
+          struct.month === "on_demand";
+
+        if (isAnyTime) {
+          return (
+            <Badge
+              variant="outline"
+              className="font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30 text-xs flex items-center gap-1.5 w-fit shadow-2xs"
+            >
+              <Clock className="h-3 w-3 shrink-0" />
+              <span>Any Time in Year</span>
+            </Badge>
+          );
+        }
+
+        if (struct.month === "all" || !struct.month) {
+          return (
+            <Badge
+              variant="outline"
+              className="capitalize font-bold text-primary bg-primary/10 border-primary/30 text-xs"
+            >
+              Every Month
+            </Badge>
+          );
+        }
+
+        const monthName = MONTH_NAMES_MAP[struct.month] || `Month ${struct.month}`;
+        return (
+          <Badge
+            variant="outline"
+            className="capitalize font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/30 text-xs"
+          >
+            {monthName}
+          </Badge>
+        );
+      },
     },
     {
       key: "amount",

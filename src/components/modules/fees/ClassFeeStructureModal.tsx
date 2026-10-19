@@ -9,9 +9,15 @@ import {
   RefreshCw,
   CalendarDays,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import { ClassFeeStructureItem } from "../../../Services/fee.service";
-import { ALL_CLASS_OPTIONS, FEE_PRESET_TEMPLATES, MONTH_GRID_ITEMS } from "./types";
+import {
+  ALL_CLASS_OPTIONS,
+  FEE_PRESET_TEMPLATES,
+  MONTH_GRID_ITEMS,
+  MONTH_NAMES_MAP,
+} from "./types";
 
 interface ClassFeeStructureModalProps {
   showStructModal: boolean;
@@ -229,22 +235,48 @@ export const ClassFeeStructureModal: React.FC<ClassFeeStructureModalProps> = ({
                 <select
                   className="w-full h-10 rounded-lg border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none"
                   value={structFormData.feeType || "tuition"}
-                  onChange={(e) =>
-                    setStructFormData &&
-                    setStructFormData({ ...structFormData, feeType: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    const updates: any = { ...structFormData, feeType: newType };
+
+                    // Intelligently configure anytime schedule for uniform, science lab, and other components
+                    if (newType === "uniforms" || newType === "lab" || newType === "other") {
+                      if (!structFormData.month || structFormData.month === "all") {
+                        updates.month = "anytime";
+                      }
+                      if (!structFormData.frequency || structFormData.frequency === "monthly") {
+                        updates.frequency = "one_time";
+                      }
+                      if (!structFormData.feeName) {
+                        if (newType === "uniforms") updates.feeName = "Uniform Charge";
+                        else if (newType === "lab") updates.feeName = "Science Lab Fee";
+                        else if (newType === "other") updates.feeName = "Other Component Fee";
+                      }
+                    } else if (newType === "tuition" || newType === "transport") {
+                      if (structFormData.month === "anytime") {
+                        updates.month = "all";
+                      }
+                      if (structFormData.frequency === "one_time") {
+                        updates.frequency = "monthly";
+                      }
+                    }
+
+                    if (setStructFormData) {
+                      setStructFormData(updates);
+                    }
+                  }}
                 >
                   <option value="tuition">📚 Tuition Fee</option>
                   <option value="transport">🚌 Transport Fee</option>
                   <option value="exam">📝 Exam Fee</option>
                   <option value="library">📖 Library Fee</option>
-                  <option value="lab">🔬 Science Lab Fee</option>
+                  <option value="lab">🔬 Science Lab Fee (Anytime)</option>
                   <option value="sports">🏆 Sports Fee</option>
                   <option value="hostel">🏢 Hostel Fee</option>
                   <option value="annual">🎉 Annual Charge</option>
                   <option value="computer">💻 Computer & IT Fee</option>
-                  <option value="uniforms">👔 Uniform Charge</option>
-                  <option value="other">📦 Other Component</option>
+                  <option value="uniforms">👔 Uniform Charge (Anytime)</option>
+                  <option value="other">📦 Other Component (Anytime)</option>
                 </select>
               </div>
 
@@ -275,10 +307,10 @@ export const ClassFeeStructureModal: React.FC<ClassFeeStructureModalProps> = ({
                     setStructFormData({ ...structFormData, frequency: e.target.value })
                   }
                 >
+                  <option value="one_time">One Time Charge</option>
                   <option value="monthly">Monthly Recurring (12x / yr)</option>
                   <option value="quarterly">Quarterly (4x / yr)</option>
                   <option value="annually">Annually (1x / yr)</option>
-                  <option value="one_time">One Time Charge</option>
                 </select>
               </div>
             </div>
@@ -298,7 +330,41 @@ export const ClassFeeStructureModal: React.FC<ClassFeeStructureModalProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* 3 Schedule Options: Any Time in Year, Every Month, Specific Month */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {/* Option 1: Any Time in Year (Uniforms, Science Lab, Other) */}
+              <button
+                type="button"
+                onClick={() => setStructFormData && setStructFormData({ ...structFormData, month: "anytime" })}
+                className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
+                  structFormData.month === "anytime" || structFormData.month === "any_time"
+                    ? "bg-amber-500/15 border-amber-500 shadow-xs"
+                    : "bg-background border-input hover:border-amber-500/50"
+                }`}
+              >
+                <div
+                  className={`p-1.5 rounded-lg mt-0.5 ${
+                    structFormData.month === "anytime" || structFormData.month === "any_time"
+                      ? "bg-amber-500 text-white"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="font-bold text-xs text-foreground flex items-center gap-1">
+                    <span>Any Time in Year</span>
+                    <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30">
+                      Flexible
+                    </Badge>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
+                    Payable any time in year (e.g. Uniforms, Science Lab, Other Fee). No specific month.
+                  </div>
+                </div>
+              </button>
+
+              {/* Option 2: Every Month (Recurring) */}
               <button
                 type="button"
                 onClick={() => setStructFormData && setStructFormData({ ...structFormData, month: "all" })}
@@ -319,30 +385,43 @@ export const ClassFeeStructureModal: React.FC<ClassFeeStructureModalProps> = ({
                 </div>
                 <div>
                   <div className="font-bold text-xs text-foreground">Every Month (Recurring)</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
                     Generates in all monthly billing cycles (e.g. Tuition, Bus).
                   </div>
                 </div>
               </button>
 
+              {/* Option 3: Specific Month Only */}
               <button
                 type="button"
                 onClick={() =>
                   setStructFormData &&
                   setStructFormData({
                     ...structFormData,
-                    month: structFormData.month && structFormData.month !== "all" ? structFormData.month : "06",
+                    month:
+                      structFormData.month &&
+                      structFormData.month !== "all" &&
+                      structFormData.month !== "anytime" &&
+                      structFormData.month !== "any_time"
+                        ? structFormData.month
+                        : "06",
                   })
                 }
                 className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
-                  structFormData.month && structFormData.month !== "all"
+                  structFormData.month &&
+                  structFormData.month !== "all" &&
+                  structFormData.month !== "anytime" &&
+                  structFormData.month !== "any_time"
                     ? "bg-primary/10 border-primary shadow-xs"
                     : "bg-background border-input hover:border-primary/50"
                 }`}
               >
                 <div
                   className={`p-1.5 rounded-lg mt-0.5 ${
-                    structFormData.month && structFormData.month !== "all"
+                    structFormData.month &&
+                    structFormData.month !== "all" &&
+                    structFormData.month !== "anytime" &&
+                    structFormData.month !== "any_time"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
                   }`}
@@ -351,48 +430,69 @@ export const ClassFeeStructureModal: React.FC<ClassFeeStructureModalProps> = ({
                 </div>
                 <div>
                   <div className="font-bold text-xs text-foreground">Specific Month Only</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                  <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
                     Generates only in a target month (e.g. June Exam Fee).
                   </div>
                 </div>
               </button>
             </div>
 
-            {structFormData.month && structFormData.month !== "all" && (
-              <div className="space-y-1.5 bg-muted/20 p-3 rounded-xl border border-border">
-                <label className="text-[11px] font-semibold text-muted-foreground">Select Target Month:</label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5">
-                  {MONTH_GRID_ITEMS.map((m) => {
-                    const isMonthSelected = structFormData.month === m.value;
-                    return (
-                      <button
-                        key={m.value}
-                        type="button"
-                        onClick={() =>
-                          setStructFormData && setStructFormData({ ...structFormData, month: m.value })
-                        }
-                        className={`p-2 rounded-lg border text-center transition-all ${
-                          isMonthSelected
-                            ? "bg-primary text-primary-foreground border-primary font-bold shadow-xs"
-                            : "bg-background text-muted-foreground border-input hover:border-primary/50 hover:text-foreground"
-                        }`}
-                      >
-                        <div className="text-xs">{m.label}</div>
-                        {m.badge && (
-                          <div
-                            className={`text-[9px] mt-0.5 truncate ${
-                              isMonthSelected ? "text-primary-foreground/90 font-medium" : "text-primary"
-                            }`}
-                          >
-                            {m.badge}
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+            {/* If Any Time in Year is selected: Do NOT show month grid ("dont show on specific month") */}
+            {(structFormData.month === "anytime" || structFormData.month === "any_time") && (
+              <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3 text-xs animate-fade-in">
+                <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="font-bold text-amber-800 dark:text-amber-300">
+                    Flexible Any Time in Year Component (Not Tied to a Specific Month)
+                  </div>
+                  <div className="text-muted-foreground text-[11px] leading-relaxed">
+                    This component (e.g. <strong>Uniform Charge</strong>, <strong>Science Lab Fee</strong>, or <strong>Other Component Fee</strong>) is marked as flexible. It will <strong>not show on or be locked to any specific calendar month</strong>, allowing students to settle it at any time throughout the academic year.
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* Target Month Grid: Shown ONLY when Specific Month is selected */}
+            {structFormData.month &&
+              structFormData.month !== "all" &&
+              structFormData.month !== "anytime" &&
+              structFormData.month !== "any_time" && (
+                <div className="space-y-1.5 bg-muted/20 p-3 rounded-xl border border-border animate-fade-in">
+                  <label className="text-[11px] font-semibold text-muted-foreground">Select Target Month:</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5">
+                    {MONTH_GRID_ITEMS.map((m) => {
+                      const isMonthSelected = structFormData.month === m.value;
+                      return (
+                        <button
+                          key={m.value}
+                          type="button"
+                          onClick={() =>
+                            setStructFormData && setStructFormData({ ...structFormData, month: m.value })
+                          }
+                          className={`p-2 rounded-lg border text-center transition-all ${
+                            isMonthSelected
+                              ? "bg-primary text-primary-foreground border-primary font-bold shadow-xs"
+                              : "bg-background text-muted-foreground border-input hover:border-primary/50 hover:text-foreground"
+                          }`}
+                        >
+                          <div className="text-xs">{m.label}</div>
+                          {m.badge && (
+                            <div
+                              className={`text-[9px] mt-0.5 truncate ${
+                                isMonthSelected ? "text-primary-foreground/90 font-medium" : "text-primary"
+                              }`}
+                            >
+                              {m.badge}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
               <div className="space-y-1.5">
@@ -432,7 +532,7 @@ export const ClassFeeStructureModal: React.FC<ClassFeeStructureModalProps> = ({
               <span className="text-primary font-black text-base">
                 ₹{Number(structFormData.amount || 0).toLocaleString("en-IN")}
                 <span className="text-xs font-normal text-muted-foreground">
-                  {" "}/ {structFormData.frequency || "monthly"}
+                  {" "}/ {structFormData.frequency || "one_time"}
                 </span>
               </span>
             </div>
@@ -445,16 +545,21 @@ export const ClassFeeStructureModal: React.FC<ClassFeeStructureModalProps> = ({
               </div>
               <div>
                 🗓️ <strong className="text-foreground">Schedule:</strong>{" "}
-                {structFormData.month === "all" || !structFormData.month
+                {structFormData.month === "anytime" || structFormData.month === "any_time"
+                  ? "Any Time in Year (Flexible / On-Demand)"
+                  : structFormData.month === "all" || !structFormData.month
                   ? "Every Month (12x/yr)"
-                  : `Specific Month (${structFormData.month})`}
+                  : `Specific Month (${MONTH_NAMES_MAP[structFormData.month] || structFormData.month})`}
               </div>
               <div>
                 📅 <strong className="text-foreground">Due Day:</strong> Day {structFormData.dueDay || 10} of month
               </div>
               <div>
-                💡 <strong className="text-foreground">Est. Annual Total:</strong> ₹
-                {summaryDetails.totalAnnualStudent.toLocaleString("en-IN")} / student / year
+                💡 <strong className="text-foreground">Est. Total:</strong> ₹
+                {summaryDetails.totalAnnualStudent.toLocaleString("en-IN")} / student
+                {structFormData.month === "anytime" || structFormData.month === "any_time"
+                  ? " (any time in year)"
+                  : " / year"}
               </div>
             </div>
           </div>

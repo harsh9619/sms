@@ -179,6 +179,11 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
     if (isTerm2Struct) return isTerm2Applicable;
     if (isGenericTermStruct) return isTerm1Applicable || isTerm2Applicable;
 
+    // Any time in year fees (Uniforms, Science Lab, Other) are flexible and not generated in regular month cycles
+    if (s.month === "anytime" || s.month === "any_time" || s.month === "any" || s.month === "flexible" || s.month === "on_demand") {
+      return false;
+    }
+
     // Monthly recurring fees
     if (!s.month || s.month === "all" || s.month === "every_month" || freqLower === "monthly") {
       return true;

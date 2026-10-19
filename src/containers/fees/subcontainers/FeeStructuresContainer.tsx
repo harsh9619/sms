@@ -215,6 +215,8 @@ export const FeeStructuresContainer: React.FC<FeeStructuresContainerProps> = ({
       if (freqVal === "monthly") timesPerYear = 12;
       else if (freqVal === "quarterly") timesPerYear = 4;
       else timesPerYear = 1;
+    } else if (monthVal === "anytime" || monthVal === "any_time") {
+      timesPerYear = 1;
     } else {
       timesPerYear = 1;
     }
