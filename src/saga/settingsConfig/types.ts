@@ -15,6 +15,10 @@ export interface SchoolEditForm {
   isActive: boolean;
   theme: string;
   appearanceMode: "light" | "dark";
+  razorpayKeyId: string;
+  razorpayKeySecret: string;
+  razorpayEnabled: boolean;
+  razorpayTestMode: boolean;
 }
 
 export interface SettingsConfigState {

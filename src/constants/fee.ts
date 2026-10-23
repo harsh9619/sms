@@ -94,6 +94,13 @@ export interface PaymentOption {
 
 export const PAYMENT_OPTIONS: PaymentOption[] = [
   {
+    id: "razorpay",
+    name: "Razorpay Gateway",
+    desc: "Cards, UPI, NetBanking, Wallets",
+    icon: CreditCard,
+    badge: "Test Mode",
+  },
+  {
     id: "upi",
     name: "UPI / QR Code",
     desc: "Google Pay, PhonePe, Paytm",
@@ -121,6 +128,7 @@ export const PAYMENT_OPTIONS: PaymentOption[] = [
 ];
 
 export const PAYMENT_METHOD_LABEL_MAP: Record<string, string> = {
+  razorpay: "Razorpay Gateway (Test Mode)",
   credit_card: "Credit / Debit Card",
   upi: "UPI / QR Code",
   net_banking: "Net Banking",

@@ -28,6 +28,10 @@ export interface School {
   maxStudents?: number;
   academicYear?: string;
   schoolAcademicYearId?: string;
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
+  razorpayEnabled?: boolean;
+  razorpayTestMode?: boolean;
   academicYears?: AcademicYearItem[];
   createdAt?: string;
   updatedAt?: string;

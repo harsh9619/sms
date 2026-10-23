@@ -28,6 +28,10 @@ function makeForm(s: School): SchoolEditForm {
     isActive: s.isActive ?? true,
     theme: s.theme ?? "default",
     appearanceMode: (s.appearanceMode as any) ?? "light",
+    razorpayKeyId: s.razorpayKeyId ?? "rzp_test_school_dummy_key",
+    razorpayKeySecret: s.razorpayKeySecret ?? "mock_rzp_secret_dummy_test",
+    razorpayEnabled: s.razorpayEnabled ?? true,
+    razorpayTestMode: s.razorpayTestMode ?? true,
   };
 }
 
@@ -179,6 +183,10 @@ export function SettingsConfigContainer() {
         isActive: schoolForm.isActive,
         theme: schoolForm.theme,
         appearanceMode: schoolForm.appearanceMode,
+        razorpayKeyId: schoolForm.razorpayKeyId.trim(),
+        razorpayKeySecret: schoolForm.razorpayKeySecret.trim(),
+        razorpayEnabled: schoolForm.razorpayEnabled,
+        razorpayTestMode: schoolForm.razorpayTestMode,
       })
     );
   };

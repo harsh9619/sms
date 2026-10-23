@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../ui/Card";
 import { Button } from "../../ui/Button";
 import { Input } from "../../ui/Input";
@@ -30,6 +30,12 @@ import {
   Loader2,
   RefreshCw,
   BookOpen,
+  ShieldCheck,
+  Key,
+  Eye,
+  EyeOff,
+  Sparkles,
+  Copy,
 } from "lucide-react";
 
 const BOARDS = ["CBSE", "ICSE", "State Board", "IB", "Cambridge", "Other"];
@@ -71,6 +77,9 @@ export function SettingsConfigUI(props: SettingsConfigUIProps) {
     handleRefresh,
     getUserCount,
   } = props;
+
+  const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
 
   const inputCls = (err?: boolean) =>
     `w-full h-9 rounded-lg border ${err ? "border-destructive" : "border-input"} bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-all`;
@@ -632,6 +641,159 @@ export function SettingsConfigUI(props: SettingsConfigUIProps) {
                       {schoolForm.isActive ? "Active — school is accessible" : "Inactive — school is hidden"}
                     </span>
                   </button>
+                </div>
+              </div>
+
+              {/* Razorpay Payment Gateway (School-Wise Configuration) */}
+              <div className="space-y-3 p-3.5 sm:p-4 rounded-2xl border-2 border-indigo-500/20 bg-indigo-50/20 dark:bg-indigo-950/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                      RZP
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground">Razorpay Gateway (School-Wise)</p>
+                      <p className="text-[10px] text-muted-foreground">Configure payment credentials for this school</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-bold border-indigo-400/40 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5">
+                    {schoolForm.razorpayTestMode ? "Test Mode Active" : "Live Mode"}
+                  </Badge>
+                </div>
+
+                {/* Test Mode Banner */}
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-start gap-2 text-amber-700 dark:text-amber-400 text-[11px] leading-relaxed">
+                  <ShieldCheck className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <div>
+                    <span className="font-bold">Test Mode Active:</span> No real payment will be deducted when you use Razorpay Test Mode. All card/UPI transactions in this mode are sandbox simulations.
+                  </div>
+                </div>
+
+                {/* Gateway Enable Toggle */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setField("razorpayEnabled", !schoolForm.razorpayEnabled)}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
+                      schoolForm.razorpayEnabled
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                        : "border-border bg-background text-muted-foreground"
+                    }`}
+                  >
+                    <div
+                      className={`h-4 w-8 rounded-full relative flex-shrink-0 transition-colors ${
+                        schoolForm.razorpayEnabled ? "bg-emerald-500" : "bg-muted-foreground/30"
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                          schoolForm.razorpayEnabled ? "translate-x-4" : "translate-x-0.5"
+                        }`}
+                      />
+                    </div>
+                    <span className="text-xs font-bold">
+                      {schoolForm.razorpayEnabled ? "Razorpay Enabled" : "Razorpay Disabled"}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setField("razorpayTestMode", !schoolForm.razorpayTestMode)}
+                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all ${
+                      schoolForm.razorpayTestMode
+                        ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-400"
+                        : "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                    }`}
+                  >
+                    <div
+                      className={`h-4 w-8 rounded-full relative flex-shrink-0 transition-colors ${
+                        schoolForm.razorpayTestMode ? "bg-indigo-600" : "bg-emerald-600"
+                      }`}
+                    >
+                      <div
+                        className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                          schoolForm.razorpayTestMode ? "translate-x-4" : "translate-x-0.5"
+                        }`}
+                      />
+                    </div>
+                    <span className="text-xs font-bold">
+                      {schoolForm.razorpayTestMode ? "Sandbox / Test Mode" : "Production / Live"}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Credential Inputs */}
+                <div className="space-y-2.5 pt-1">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                        <Key className="h-3.5 w-3.5 text-indigo-500" />
+                        Razorpay Key ID
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (schoolForm.razorpayKeyId) {
+                            navigator.clipboard.writeText(schoolForm.razorpayKeyId);
+                            setCopiedKey(true);
+                            setTimeout(() => setCopiedKey(false), 2000);
+                          }
+                        }}
+                        className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                      >
+                        {copiedKey ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        {copiedKey ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      className={inputCls()}
+                      value={schoolForm.razorpayKeyId || ""}
+                      onChange={(e) => setField("razorpayKeyId", e.target.value)}
+                      placeholder="rzp_test_school_dummy_key"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                        <Key className="h-3.5 w-3.5 text-indigo-500" />
+                        Razorpay Key Secret
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowRazorpaySecret(!showRazorpaySecret)}
+                        className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      >
+                        {showRazorpaySecret ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        {showRazorpaySecret ? "Hide" : "Show"}
+                      </button>
+                    </div>
+                    <input
+                      type={showRazorpaySecret ? "text" : "password"}
+                      className={inputCls()}
+                      value={schoolForm.razorpayKeySecret || ""}
+                      onChange={(e) => setField("razorpayKeySecret", e.target.value)}
+                      placeholder="mock_rzp_secret_dummy_test"
+                    />
+                  </div>
+
+                  {/* Preset Quick Fill */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setField("razorpayKeyId", "rzp_test_school_dummy_key");
+                        setField("razorpayKeySecret", "mock_rzp_secret_dummy_test");
+                        setField("razorpayEnabled", true);
+                        setField("razorpayTestMode", true);
+                      }}
+                      className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                    >
+                      <Sparkles className="h-3 w-3 text-indigo-500" />
+                      Reset to Default Test Credentials
+                    </button>
+                  </div>
                 </div>
               </div>
 

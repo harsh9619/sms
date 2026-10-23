@@ -24,6 +24,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useSchool } from "../../../context/SchoolContext";
 import { generateFeeSummaryReport } from "../../../lib/reportUtils";
 import feeService, { ClassFeeStructureItem } from "../../../Services/fee.service";
+import paymentGatewayService from "../../../Services/paymentGateway.service";
 import type { FeeRecord } from "../../../types";
 import { FeesToolbar } from "../../../components/modules/fees/FeesToolbar";
 import { FeesTable } from "../../../components/modules/fees/FeesTable";
@@ -122,7 +123,7 @@ function FeeInvoicesContainerContent({
 
   // Payment checkout state
   const [payingFee, setPayingFee] = useState<FeeRecord | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState("credit_card");
+  const [paymentMethod, setPaymentMethod] = useState("razorpay");
   const [processing, setProcessing] = useState(false);
 
   // Active Receipt Modal state
@@ -441,21 +442,42 @@ function FeeInvoicesContainerContent({
 
       const feeIds = itemsToPay.map((item: any) => item.id);
 
-      const methodLabel =
-        paymentMethod === "credit_card"
-          ? "Credit / Debit Card"
-          : paymentMethod === "upi"
-            ? "UPI / QR Code"
-            : paymentMethod === "net_banking"
-              ? "Net Banking"
-              : "Mobile Wallet";
+      let res: any = null;
+      let methodLabel = "Razorpay (Test Mode)";
 
-      const res = await feeService.payStudentFeeBundle(schoolId, {
-        studentId: String(payingFee.studentId),
-        feeIds,
-        paymentMethod: methodLabel,
-        remarks: `Paid via Online Gateway (${methodLabel})`,
-      });
+      if (paymentMethod === "razorpay") {
+        methodLabel = "Razorpay (Test Mode)";
+        const order = await paymentGatewayService.createOrder(schoolId, {
+          studentId: String(payingFee.studentId),
+          feeIds,
+          amount: checkoutTotalAmount,
+        });
+        const testPaymentId = `pay_test_${Math.floor(100000 + Math.random() * 900000)}`;
+        res = await paymentGatewayService.verifyPayment(schoolId, {
+          razorpayOrderId: order.orderId,
+          razorpayPaymentId: testPaymentId,
+          razorpaySignature: `test_sig_${order.orderId}`,
+          studentId: String(payingFee.studentId),
+          feeIds,
+          remarks: `Paid via Razorpay Test Mode (${order.schoolName})`,
+        });
+      } else {
+        methodLabel =
+          paymentMethod === "credit_card"
+            ? "Credit / Debit Card"
+            : paymentMethod === "upi"
+              ? "UPI / QR Code"
+              : paymentMethod === "net_banking"
+                ? "Net Banking"
+                : "Mobile Wallet";
+
+        res = await feeService.payStudentFeeBundle(schoolId, {
+          studentId: String(payingFee.studentId),
+          feeIds,
+          paymentMethod: methodLabel,
+          remarks: `Paid via Online Gateway (${methodLabel})`,
+        });
+      }
 
       if (res && res.receiptNumber) {
         toast.success(`Payment of ₹${res.totalAmount.toLocaleString()} processed! Receipt generated: ${res.receiptNumber}`);
@@ -492,7 +514,43 @@ function FeeInvoicesContainerContent({
       toast.error("Failed to process fee payment.");
       setProcessing(false);
     }
-  }, [payingFee, paymentMethod, allFees, schoolId, page, getFetchParams, fetchFeesRequest, onFeeUpdated]);
+  }, [payingFee, paymentMethod, allFees, schoolId, page, getFetchParams, fetchFeesRequest, onFeeUpdated, checkoutTotalAmount]);
+
+  // Handle direct payment success callback from CheckoutModal
+  const handlePaymentSuccess = useCallback(async (res: any) => {
+    fetchFeesRequest(getFetchParams(page));
+    if (onFeeUpdated) onFeeUpdated();
+    setProcessing(false);
+    setPayingFee(null);
+
+    if (res && res.receiptNumber) {
+      toast.success(
+        `Payment of ₹${(res.totalAmount || checkoutTotalAmount).toLocaleString()} processed via Razorpay Test Mode! Receipt: ${res.receiptNumber}`
+      );
+      const receiptDetails = await feeService.getReceiptByNumber(res.receiptNumber);
+      if (receiptDetails) {
+        setActiveReceipt({
+          receiptNo: receiptDetails.receiptNumber,
+          studentId: receiptDetails.studentId,
+          studentName: receiptDetails.studentName,
+          rollNumber: receiptDetails.rollNumber,
+          class: receiptDetails.class,
+          month: receiptDetails.monthsCovered,
+          paidDate: receiptDetails.paymentDate,
+          paymentMethod: res.paymentMethod || "Razorpay (Test Mode)",
+          status: "paid",
+          items: (receiptDetails.fees || []).map((f: any) => ({
+            id: f.id,
+            feeType: f.feeType || "tuition",
+            label: `${(f.feeType || "tuition").toUpperCase()} FEE (${f.month || "N/A"})`,
+            amount: Number(f.amount || 0),
+            remarks: f.remarks || "",
+          })),
+          totalAmount: receiptDetails.totalAmount,
+        });
+      }
+    }
+  }, [page, getFetchParams, fetchFeesRequest, onFeeUpdated, checkoutTotalAmount]);
 
   // View Receipt Handler
   const handleViewReceipt = useCallback(async (fee: FeeRecord) => {
@@ -1127,6 +1185,8 @@ function FeeInvoicesContainerContent({
           setPaymentMethod={setPaymentMethod}
           processing={processing}
           handlePay={handlePay}
+          schoolId={schoolId}
+          onPaymentSuccess={handlePaymentSuccess}
         />
       )}
 
