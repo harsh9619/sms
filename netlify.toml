@@ -1,0 +1,28 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Proxy backend routes to the NestJS API (mirrors vercel.json rewrites)
+[[redirects]]
+  from = "/auth/*"
+  to = "https://sms-nest.onrender.com/auth/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://sms-nest.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/uploads/*"
+  to = "https://sms-nest.onrender.com/uploads/:splat"
+  status = 200
+  force = true
+
+# SPA fallback for client-side routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
